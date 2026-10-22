@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Abonnement" ADD COLUMN     "prixTicketSupp" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "salariesInclus" INTEGER NOT NULL DEFAULT 0;

@@ -1,0 +1,95 @@
+import { connection } from "next/server";
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
+import Navbar from "@/components/Navbar";
+import Sidebar from "@/components/Sidebar";
+import Link from "next/link";
+
+const CATEGORIES: Record<string, string> = {
+  BUG: "🐛 Bug",
+  QUESTION: "❓ Question",
+  SUGGESTION: "💡 Suggestion",
+  PROBLEME_TECHNIQUE: "⚙️ Problème technique",
+};
+
+export default async function ClientHelpdesk() {
+  await connection();
+
+  const session = await getSession();
+  if (!session) redirect("/login");
+  if (session.role !== "CLIENT") redirect("/admin/dashboard");
+
+  const tickets = await prisma.ticketSupport.findMany({
+    where: { entrepriseId: session.entrepriseId! },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <Navbar role={session.role} prenom={session.prenom} permissions={session.entreprise?.permissions || []} />
+      <div className="flex">
+        <Sidebar role={session.role} />
+        <main className="flex-1 p-10">
+
+          <div className="bg-white rounded-xl shadow p-8 mb-6 flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold">🆘 Helpdesk</h1>
+              <p className="text-gray-500 mt-1">Support technique Franeo</p>
+            </div>
+            <Link
+              href="/client/helpdesk/nouveau"
+              className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition"
+            >
+              ➕ Nouveau ticket
+            </Link>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-8">
+            {tickets.length === 0 ? (
+              <p className="text-gray-500">Aucun ticket pour le moment.</p>
+            ) : (
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b">
+                    <th className="pb-3">Titre</th>
+                    <th className="pb-3">Catégorie</th>
+                    <th className="pb-3">Statut</th>
+                    <th className="pb-3">Date</th>
+                    <th className="pb-3"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tickets.map((t) => (
+                    <tr key={t.id} className="border-b hover:bg-gray-50 transition">
+                      <td className="py-3 font-semibold">{t.titre}</td>
+                      <td className="py-3">{CATEGORIES[t.categorie] || t.categorie}</td>
+                      <td className="py-3">
+                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                          t.statut === "Ouvert" ? "bg-green-100 text-green-600" :
+                          t.statut === "En cours" ? "bg-orange-100 text-orange-600" :
+                          "bg-gray-100 text-gray-600"
+                        }`}>
+                          {t.statut}
+                        </span>
+                      </td>
+                      <td className="py-3 text-gray-500 text-sm">
+                        {new Date(t.createdAt).toLocaleDateString("fr-FR")}
+                      </td>
+                      <td className="py-3">
+                        <Link href={`/client/helpdesk/${t.id}`} className="text-orange-500 font-semibold hover:underline">
+                          Voir →
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+        </main>
+      </div>
+    </div>
+  );
+}

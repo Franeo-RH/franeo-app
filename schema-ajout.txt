@@ -1,0 +1,4 @@
+Dans prisma/schema.prisma, dans le modèle Entreprise, ajoutez cette ligne
+(par exemple juste sous "bulletinsUtilises Int @default(0)") :
+
+  demo              Boolean            @default(false)

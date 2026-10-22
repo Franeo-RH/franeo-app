@@ -1,0 +1,399 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Abonnement {
+  id                String       @id @default(cuid())
+  nom               String
+  prixMensuel       Float
+  ticketsRH         Int          @default(0)
+  prixTicketSupp    Float        @default(0)
+  salariesInclus    Int          @default(0)
+  prixSalarieSupp   Float        @default(0)
+  features          String[]
+  createdAt         DateTime     @default(now())
+
+  entreprises       Entreprise[]
+}
+
+model Entreprise {
+  id                String             @id @default(cuid())
+  nom               String
+  siret             String?
+  telephone         String?
+  email             String?
+  siteWeb           String?
+
+  rue               String?
+  codePostal        String?
+  ville             String?
+  pays              String?
+
+  iban              String?
+  bic               String?
+  banque            String?
+
+  abonnementId      String?
+  demo              Boolean            @default(false)
+  actif             Boolean            @default(true)
+  motifSuspension   String?
+  dateSuspension    DateTime?
+  abonnement        Abonnement?        @relation(fields: [abonnementId], references: [id])
+  ticketsUtilises   Int                @default(0)
+
+  permissions       String[]           @default(["salaries", "paie", "tickets", "absences", "entreprise", "helpdesk"])
+
+  createdAt         DateTime           @default(now())
+
+  utilisateurs      Utilisateur[]
+  salaries          Salarie[]
+  demandesEvolution DemandeEvolution[]
+  tickets           Ticket[]
+  variablesPaie     VariablePaie[]
+  absences          Absence[]
+  ticketsSupport    TicketSupport[]
+  facturations      Facturation[]
+  recrutements      DemandeRecrutement[]
+  abonnementPaieId  String?
+  abonnementPaie    AbonnementPaie? @relation(fields: [abonnementPaieId], references: [id])
+  bulletinsUtilises Int             @default(0)
+  demandesEvolutionPaie DemandeEvolutionPaie[]
+}
+
+model Facturation {
+  id              String      @id @default(cuid())
+  mois            Int
+  annee           Int
+  montant         Float
+  dateLimitePaie  DateTime?
+  statut          String      @default("En attente")
+  commentaire     String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  entrepriseId    String
+  entreprise      Entreprise  @relation(fields: [entrepriseId], references: [id])
+}
+
+model DemandeRecrutement {
+  id                String     @id @default(cuid())
+  statut            String     @default("Reçue")
+  poste             String
+  typeContrat       String
+  dateDebut         DateTime?
+  salaireMini       Float?
+  salaireMaxi       Float?
+  primes            String?
+  missions          String
+  profil            String
+  experience        String?
+  formation         String?
+  commentaire       String?
+  cgvAcceptees      Boolean    @default(false)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  entrepriseId      String
+  entreprise        Entreprise @relation(fields: [entrepriseId], references: [id])
+}
+
+model DemandeEvolution {
+  id              String      @id @default(cuid())
+  statut          String      @default("En attente")
+  message         String?
+  createdAt       DateTime    @default(now())
+
+  entrepriseId    String
+  entreprise      Entreprise  @relation(fields: [entrepriseId], references: [id])
+
+  abonnementId    String
+}
+
+model Utilisateur {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  motDePasse   String
+  prenom       String
+  role         Role        @default(CLIENT)
+  createdAt    DateTime    @default(now())
+
+  entrepriseId String?
+  entreprise   Entreprise? @relation(fields: [entrepriseId], references: [id])
+}
+
+model TokenReset {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  email     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model FAQ {
+  id        String   @id @default(cuid())
+  module    String
+  question  String
+  reponse   String
+  ordre     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Salarie {
+  id                    String         @id @default(cuid())
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  statut                String         @default("Actif")
+
+  entrepriseId          String
+  entreprise            Entreprise     @relation(fields: [entrepriseId], references: [id])
+
+  nom                   String
+  prenom                String
+  email                 String?
+  telephone             String?
+  dateNaissance         DateTime?
+  lieuNaissance         String?
+  nationalite           String?
+  numeroSecuriteSociale String?
+
+  rue                   String?
+  codePostal            String?
+  ville                 String?
+  pays                  String?
+
+  poste                 String
+  typeContrat           String?
+  dateDebut             DateTime?
+  dateFin               DateTime?
+  heuresHebdomadaires   Float?
+  manager               String?
+  conventionCollective  String?
+  categorie             String?
+  coefficient           String?
+
+  salaireMensuel        Float?
+  salaireAnnuel         Float?
+  primes                Float?
+  avantages             String?
+
+  titreSejour           DateTime?
+  matricule             String?
+  rappels               RappelSalarie[]
+
+  documents             Document[]
+  variablesPaie         VariablePaie[]
+  absences              Absence[]
+
+  @@unique([entrepriseId, matricule])
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  nom         String
+  type        String
+  url         String
+  dateAjout   DateTime @default(now())
+
+  salarieId   String
+  salarie     Salarie  @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+}
+
+model Ticket {
+  id           String          @id @default(cuid())
+  titre        String
+  description  String
+  statut       String          @default("Ouvert")
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  entrepriseId String
+  entreprise   Entreprise      @relation(fields: [entrepriseId], references: [id])
+
+  messages     MessageTicket[]
+}
+
+model MessageTicket {
+  id        String   @id @default(cuid())
+  contenu   String
+  auteur    String
+  role      Role
+  createdAt DateTime @default(now())
+
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model TicketSupport {
+  id           String                @id @default(cuid())
+  titre        String
+  description  String
+  categorie    CategorieSupport
+  statut       String                @default("Ouvert")
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  entrepriseId String
+  entreprise   Entreprise            @relation(fields: [entrepriseId], references: [id])
+
+  messages     MessageTicketSupport[]
+}
+
+model MessageTicketSupport {
+  id        String        @id @default(cuid())
+  contenu   String
+  auteur    String
+  role      Role
+  createdAt DateTime      @default(now())
+
+  ticketId  String
+  ticket    TicketSupport @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model VariablePaie {
+  id             String       @id @default(cuid())
+  type           TypeVariable
+  valeur         Float
+  commentaire    String?
+  mois           Int
+  annee          Int
+  statut         String       @default("En attente")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  dateValidation DateTime?
+  dateReset      DateTime?
+
+  salarieId      String
+  salarie        Salarie      @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+
+  entrepriseId   String
+  entreprise     Entreprise   @relation(fields: [entrepriseId], references: [id])
+}
+
+model Absence {
+  id           String      @id @default(cuid())
+  type         TypeAbsence
+  dateDebut    DateTime
+  dateFin      DateTime
+  commentaire  String?
+  statut       String      @default("En attente")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  salarieId    String
+  salarie      Salarie     @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+
+  entrepriseId String
+  entreprise   Entreprise  @relation(fields: [entrepriseId], references: [id])
+}
+
+enum TypeVariable {
+  HEURE_SUPPLEMENTAIRE
+  PRIME
+  NOTE_FRAIS
+  ACOMPTE
+}
+
+enum TypeAbsence {
+  CONGE_PAYE
+  RTT
+  CONGE_SANS_SOLDE
+  CONGE_EXCEPTIONNEL
+  CONGE_NAISSANCE
+  MATERNITE_PATERNITE
+  MALADIE
+  ABSENCE_NON_REMUNEREE
+}
+
+enum CategorieSupport {
+  BUG
+  QUESTION
+  SUGGESTION
+  PROBLEME_TECHNIQUE
+}
+
+enum Role {
+  ADMIN
+  CLIENT
+}
+
+model AbonnementPaie {
+  id                    String     @id @default(cuid())
+  code                  String     @unique // "ESSENTIELLE" | "SERENITE" | "PREMIUM"
+  nom                   String
+  couleur               String     @default("#6366f1")
+  prixMensuel           Float
+  bulletinsInclus       Int
+  prixBulletinSupp      Float
+  // Features booléennes
+  relancesVariables     Boolean    @default(false)
+  relancesSalaries      Boolean    @default(false)
+  modificationsIncluses Boolean    @default(false)
+  regularisationsInclus Boolean    @default(false)
+  demandesComplexes     Boolean    @default(false)
+  veillePaie            Boolean    @default(false)
+  conseilPaie           Boolean    @default(false)
+  suiviRH               Boolean    @default(false) // périodes essai, CDD, absences, maladie, visites médicales
+  suiviIJSS             Boolean    @default(false)
+  relancesIJSS          Boolean    @default(false)
+  recouvrementIJSS      Boolean    @default(false)
+  tableauBord           String     @default("none") // "none" | "simple" | "complet"
+  pointPaie             Boolean    @default(false)
+  recommandationsPaie   Boolean    @default(false)
+  traitementPrioritaire Boolean    @default(false)
+  assistanceURSSAF      Boolean    @default(false)
+  createdAt             DateTime   @default(now())
+  entreprises           Entreprise[]
+  demandesAncienne DemandeEvolutionPaie[] @relation("AncienneFormulePaie")
+  demandesNouvelle DemandeEvolutionPaie[] @relation("NouvelleFormulePaie")
+}
+
+model DemandeEvolutionPaie {
+  id            String    @id @default(cuid())
+  entrepriseId  String
+  entreprise    Entreprise @relation(fields: [entrepriseId], references: [id])
+  ancienneFormuleId String?
+  ancienneFormule   AbonnementPaie? @relation("AncienneFormulePaie", fields: [ancienneFormuleId], references: [id])
+  nouvelleFormuleId String
+  nouvelleFormule   AbonnementPaie  @relation("NouvelleFormulePaie", fields: [nouvelleFormuleId], references: [id])
+  statut        String    @default("EN_ATTENTE")
+  createdAt     DateTime  @default(now())
+  traiteeAt     DateTime?
+}
+
+model Actualite {
+  id          String   @id @default(cuid())
+  titre       String
+  contenu     String
+  thematique  String   @default("Général")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model BuddyContexte {
+  userId    String   @id
+  data      String   @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
+model RappelSalarie {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  type         String
+  libelle      String?
+  dateEcheance DateTime
+  commentaire  String?
+  traite       Boolean   @default(false)
+  traiteAt     DateTime?
+
+  salarieId    String
+  salarie      Salarie   @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+
+  @@index([dateEcheance])
+}
