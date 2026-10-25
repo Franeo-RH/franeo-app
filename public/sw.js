@@ -2,7 +2,7 @@
 // - rend l'app installable ;
 // - hors connexion : les pages déjà consultées restent visibles (lecture seule) ;
 // - tout est effacé à la déconnexion (message "vider-cache" envoyé par l'app).
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE_STATIQUE = "franeo-statique-" + VERSION;
 const CACHE_PAGES = "franeo-pages-" + VERSION;
 const HORS_LIGNE = "/hors-ligne.html";

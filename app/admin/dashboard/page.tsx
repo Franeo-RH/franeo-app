@@ -48,7 +48,13 @@ export default async function AdminDashboard() {
   ] = await Promise.all([
     prisma.entreprise.findMany({
       where: filtreClients,
-      select: { abonnement: { select: { prixMensuel: true } }, _count: { select: { salaries: true } } },
+      select: {
+        id: true,
+        ticketsUtilises: true,
+        abonnement: true,
+        abonnementPaie: true,
+        _count: { select: { salaries: true } },
+      },
     }),
     prisma.abonnement.findMany({
       include: { _count: { select: { entreprises: { where: filtreClients } } } },
@@ -71,9 +77,38 @@ export default async function AdminDashboard() {
     // Facturation de l'année (le mois en cours en est extrait)
     prisma.facturation.findMany({
       where: { annee: anneeActuelle, entreprise: { demo: false } },
-      select: { mois: true, montant: true, statut: true },
+      select: { mois: true, montant: true, statut: true, entrepriseId: true },
     }),
   ]);
+
+  // Salariés actifs sur le mois, par entreprise (base des suppléments salariés / bulletins)
+  const debutMoisCA = new Date(anneeActuelle, moisActuel - 1, 1);
+  const finMoisCA = new Date(anneeActuelle, moisActuel, 0);
+  const actifsParEntreprise = await prisma.salarie.groupBy({
+    by: ["entrepriseId"],
+    where: {
+      entreprise: filtreClients,
+      statut: "Actif",
+      OR: [{ dateDebut: null }, { dateDebut: { lte: finMoisCA } }],
+      AND: [{ OR: [{ dateFin: null }, { dateFin: { gte: debutMoisCA } }] }],
+    },
+    _count: { _all: true },
+  });
+  const nbActifs = new Map(actifsParEntreprise.map((g) => [g.entrepriseId, g._count._all]));
+
+  // Estimation mensuelle par client = abonnement RH + formule paie + suppléments (même calcul que la facturation)
+  const estimationClient = (e: (typeof entreprises)[number]) => {
+    const nb = nbActifs.get(e.id) || 0;
+    const abo = e.abonnement;
+    const paie = e.abonnementPaie;
+    const rh = abo
+      ? abo.prixMensuel +
+        Math.max(nb - abo.salariesInclus, 0) * abo.prixSalarieSupp +
+        Math.max((e.ticketsUtilises || 0) - abo.ticketsRH, 0) * abo.prixTicketSupp
+      : 0;
+    const p = paie ? paie.prixMensuel + Math.max(nb - paie.bulletinsInclus, 0) * paie.prixBulletinSupp : 0;
+    return rh + p;
+  };
 
   const masse = await masseP;
   const totalEntreprises = entreprises.length;
@@ -83,21 +118,27 @@ export default async function AdminDashboard() {
   // CA mensuel réel (factures générées ce mois)
   const caMensuelReel = facturationsMois.reduce((acc, f) => acc + f.montant, 0);
   // CA mensuel prévisionnel (abonnements de base)
-  const caMensuelPrev = entreprises.reduce((acc, e) => acc + (e.abonnement?.prixMensuel || 0), 0);
+  const caMensuelPrev = entreprises.reduce((acc, e) => acc + estimationClient(e), 0);
+  // Mois en cours : facture réelle pour les clients déjà facturés, estimation pour les autres
+  const caMoisMixte = entreprises.reduce((acc, e) => {
+    const factures = facturationsMois.filter((f) => f.entrepriseId === e.id);
+    return acc + (factures.length > 0 ? factures.reduce((s, f) => s + f.montant, 0) : estimationClient(e));
+  }, 0);
 
   // CA annuel réel (somme des factures générées cette année)
   const caAnnuelReel = facturationsAnnee.reduce((acc, f) => acc + f.montant, 0);
 
   // CA annuel prévisionnel = réel passé + abonnements de base pour mois restants
   const moisRestants = 12 - moisActuel;
-  const caAnnuelPrev = caAnnuelReel + (caMensuelPrev * moisRestants);
+  // = factures des mois passés + mois en cours (réel ou estimé) + estimation des mois restants
+  const caAnnuelPrev = (caAnnuelReel - caMensuelReel) + caMoisMixte + (caMensuelPrev * moisRestants);
 
   // Grille 12 mois pour onglets
   const grilleMois = MOIS.map((nomMois, i) => {
     const moisNum = i + 1;
     const facts = facturationsAnnee.filter(f => f.mois === moisNum);
     const montantReel = facts.reduce((acc, f) => acc + f.montant, 0);
-    const montantPrev = entreprises.reduce((acc, e) => acc + (e.abonnement?.prixMensuel || 0), 0);
+    const montantPrev = caMensuelPrev;
     const genere = facts.length > 0;
     return { moisNum, nomMois, montantReel, montantPrev, genere, facts };
   });
@@ -112,7 +153,7 @@ export default async function AdminDashboard() {
     { href: "/admin/entreprises/demandes", icone: "📩", label: "Évolutions", n: nbDemandes, couleur: "text-orange-500" },
     { href: "/admin/salaries", icone: "⏰", label: "Échéances", n: echeances.length, couleur: "text-red-500" },
   ];
-  const caMois = Math.round(facturationsMois.length > 0 ? caMensuelReel : caMensuelPrev);
+  const caMois = Math.round(caMoisMixte);
 
   return (
     <div className="min-h-screen bg-gray-100">
