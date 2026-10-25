@@ -15,9 +15,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Franeo",
   description: "ERP RH et Paie",
-  icons: {
-    icon: "/Icone.png",
-  },
 };
 
 export default function RootLayout({

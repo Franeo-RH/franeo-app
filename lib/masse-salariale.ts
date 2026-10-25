@@ -110,7 +110,7 @@ export async function calculerMasseSalariale(options: {
       select: { salarieId: true, type: true, dateDebut: true, dateFin: true },
     }),
     prisma.variablePaie.findMany({
-      where: { ...filtreEntreprise, mois, annee, statut: { not: "Réinitialisé" } },
+      where: { ...filtreEntreprise, mois, annee }, // toutes les variables saisies, validées ou non
       select: { salarieId: true, type: true, valeur: true },
     }),
   ]);
