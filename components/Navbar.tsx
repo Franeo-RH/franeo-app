@@ -5,6 +5,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+// Adresse du site vitrine (modifiable avec la variable NEXT_PUBLIC_SITE_URL sur Vercel)
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://franeo-rh.com";
+
 interface NavbarProps {
   role: "ADMIN" | "CLIENT";
   prenom: string;
@@ -20,6 +23,27 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
   // Ferme le menu téléphone à chaque changement de page
   useEffect(() => {
     setMenuOuvert(false);
+  }, [pathname]);
+
+  // Téléphone : chaque cellule de tableau reçoit le nom de sa colonne,
+  // ce qui permet d'afficher les tableaux sous forme de liste (voir globals.css)
+  useEffect(() => {
+    function etiqueter() {
+      document.querySelectorAll("main table").forEach((table) => {
+        const titres = Array.from(table.querySelectorAll("thead th")).map((th) => (th.textContent || "").trim());
+        if (titres.length === 0) return;
+        table.querySelectorAll("tbody tr").forEach((tr) => {
+          Array.from(tr.children).forEach((td, i) => {
+            const label = titres[i] ?? "";
+            if (td.getAttribute("data-label") !== label) td.setAttribute("data-label", label);
+          });
+        });
+      });
+    }
+    etiqueter();
+    const obs = new MutationObserver(() => etiqueter());
+    obs.observe(document.body, { childList: true, subtree: true });
+    return () => obs.disconnect();
   }, [pathname]);
 
   async function handleLogout() {
@@ -77,6 +101,8 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
           ))}
         </div>
 
+        <a href={SITE_URL} target="_blank" rel="noopener noreferrer" className="fr-nav-offres">Voir toutes nos offres ↗</a>
+
         <div className="fr-nav-profil">
           <span className="fr-nav-prenom">{prenom}</span>
           {role === "CLIENT" && (
@@ -123,6 +149,7 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
               </Link>
             ))}
           </div>
+          <a href={SITE_URL} target="_blank" rel="noopener noreferrer" className="fr-menu-offres">🌐 Voir toutes nos offres</a>
           <div className="fr-menu-pied">
             <span>👤 {prenom}</span>
             <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>

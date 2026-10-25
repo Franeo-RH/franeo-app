@@ -598,6 +598,14 @@ export async function lireRecrutements(env: Env): Promise<ReponseBuddy> {
    ACTUALITÉS RH
    ════════════════════════════════════════════════════════════════ */
 
+/** Démo : les articles d'actualité RH ne sont pas consultables */
+export async function actusInterdites(env: Env): Promise<boolean> {
+  const ent = await prisma.entreprise.findUnique({ where: { id: env.entreprise.id }, select: { demo: true } });
+  return !!ent?.demo;
+}
+
+const REPONSE_ACTUS_DEMO = "🔒 Les actualités RH ne sont pas consultables dans la version démo. Avec un abonnement Franeo, vous recevez nos articles sur la paie, le droit du travail et la réglementation.";
+
 async function chargerActus(): Promise<ActuLite[]> {
   const actus = await prisma.actualite.findMany({ orderBy: { createdAt: "desc" }, take: 500 });
   return actus.map((x) => ({ id: x.id, titre: x.titre, contenu: x.contenu, thematique: x.thematique, createdAt: x.createdAt }));
@@ -697,6 +705,7 @@ function listerActus(selection: ActuLite[], ctx: Ctx, titre: string, avecTheme: 
 }
 
 export async function lireActus(m: Msg, env: Env, ctx: Ctx): Promise<ReponseBuddy> {
+  if (await actusInterdites(env)) return rep(REPONSE_ACTUS_DEMO, { humeur: "neutre" });
   const actus = await chargerActus();
   const theme = detecterThematique(m);
   if (actus.length === 0) {
@@ -719,6 +728,7 @@ export async function lireActus(m: Msg, env: Env, ctx: Ctx): Promise<ReponseBudd
 
 /** Résume (simplifie) une ou plusieurs actualités : par numéro de la dernière liste, par thématique, par mot-clé ou les plus récentes. */
 export async function resumerActus(m: Msg, env: Env, ctx: Ctx): Promise<ReponseBuddy> {
+  if (await actusInterdites(env)) return rep(REPONSE_ACTUS_DEMO, { humeur: "neutre" });
   const actus = await chargerActus();
   if (actus.length === 0) return rep("Aucune actualité RH n'a encore été publiée. 📰", { humeur: "neutre" });
 

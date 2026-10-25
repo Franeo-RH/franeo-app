@@ -31,11 +31,21 @@ body {
 .fr-nav-petit { color: #9ca3af; font-size: 12px; text-decoration: none; }
 .fr-nav-petit:hover { color: #fb923c; }
 .fr-nav-deco { background: none; border: none; color: #f87171; font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; }
+.fr-nav-offres {
+  flex-shrink: 0; background: #f97316; color: #ffffff; text-decoration: none;
+  font-size: 13px; font-weight: 700; padding: 8px 12px; border-radius: 10px; white-space: nowrap;
+}
+.fr-nav-offres:hover { background: #ea580c; }
 .fr-burger { display: none; background: none; border: none; color: #ffffff; cursor: pointer; padding: 8px; border-radius: 8px; }
 .fr-menu-mobile { display: none; }
 
 @media (max-width: 1100px) {
   .fr-nav-liens, .fr-nav-profil { display: none; }
+  .fr-nav-offres { margin-left: auto; font-size: 12px; padding: 8px 10px; }
+  .fr-menu-offres {
+    display: flex; align-items: center; justify-content: center; min-height: 48px; margin-top: 10px;
+    background: #f97316; color: #ffffff; border-radius: 12px; font-weight: 700; text-decoration: none; font-size: 15px;
+  }
   .fr-burger { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
   .fr-nav-barre { padding: 8px 16px; }
   .fr-menu-mobile { display: block; border-top: 1px solid #262626; padding: 12px 16px 16px; }
@@ -71,17 +81,25 @@ body {
    Téléphone et petite tablette
    ========================================================= */
 @media (max-width: 768px) {
+  /* Pas de défilement de gauche à droite */
+  html, body { overflow-x: hidden; }
+  main [class*="min-w-"] { min-width: 0 !important; }
+  main img { max-width: 100%; height: auto; }
+
   /* Barre latérale + contenu : l'un sous l'autre */
   div.flex:has(> aside.fr-sidebar) { flex-direction: column; }
+  /* Barre latérale : petits boutons sur plusieurs lignes, tous visibles */
   aside.fr-sidebar {
     width: 100% !important; min-height: 0 !important;
-    flex-direction: row !important; flex-wrap: nowrap; overflow-x: auto;
-    gap: 8px !important; padding: 10px 12px !important;
+    flex-direction: row !important; flex-wrap: wrap !important;
+    gap: 6px !important; padding: 10px 12px !important;
     box-shadow: none !important; border-bottom: 1px solid #e5e7eb;
-    -webkit-overflow-scrolling: touch;
   }
   aside.fr-sidebar > p { display: none; }
-  aside.fr-sidebar > a { flex-shrink: 0; white-space: nowrap; padding: 10px 14px !important; font-size: 14px; }
+  aside.fr-sidebar > a {
+    padding: 6px 10px !important; font-size: 13px !important; border-radius: 999px !important;
+    border: 1px solid #e5e7eb; gap: 6px; min-height: 34px;
+  }
 
   /* Contenu plus compact */
   main { padding: 12px !important; min-width: 0; width: 100%; box-sizing: border-box; }
@@ -104,9 +122,25 @@ body {
   .fr-grille-2 { grid-template-columns: minmax(0, 1fr) !important; }
   .fr-grille-tuiles { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 
-  /* Tableaux : défilement horizontal dans leur carte */
-  main table { display: block; width: 100%; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
-  main th, main td { padding-right: 14px; }
+  /* Tableaux : liste de fiches, une fiche par ligne, chaque info avec son intitulé */
+  main table, main thead, main tbody, main tr, main th, main td { display: block; width: 100%; box-sizing: border-box; }
+  main table { white-space: normal; }
+  main thead { display: none; }
+  main tbody tr {
+    background: #ffffff; border: 1px solid #e5e7eb !important; border-radius: 12px;
+    padding: 10px 12px; margin-bottom: 10px;
+  }
+  main tbody td {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 5px 0 !important; border: none !important; text-align: right; font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+  main tbody td::before {
+    content: attr(data-label); font-weight: 600; color: #6b7280; text-align: left; flex-shrink: 0; font-size: 13px;
+  }
+  main tbody td[data-label=""]::before, main tbody td:not([data-label])::before { content: none; }
+  main tbody td[data-label=""] { justify-content: flex-start; flex-wrap: wrap; padding-top: 8px !important; }
+  main tbody td:empty { display: none; }
 
   /* Formulaires : pas de zoom automatique sur iPhone, champs pleine largeur */
   main input, main select, main textarea { font-size: 16px !important; max-width: 100%; }

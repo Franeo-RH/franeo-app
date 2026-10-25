@@ -28,6 +28,7 @@ import {
   lireAbonnements,
   lireAbsences,
   chercherDansActus,
+  actusInterdites,
   lireActuComplete,
   lireActus,
   lireFacturation,
@@ -365,7 +366,7 @@ async function traiter(m: Msg, env: Env, ctx: Ctx): Promise<ReponseBuddy> {
   if (faq) return faq;
 
   // Un sujet RH qui figure dans les actualités : on sort l'actualité complète
-  const actu = await chercherDansActus(m, ctx);
+  const actu = (await actusInterdites(env)) ? null : await chercherDansActus(m, ctx);
   if (actu) return actu;
 
   return rep("Je n'ai pas bien compris 🤔 Pouvez-vous reformuler ?\nTapez « aide » pour voir tout ce que je sais faire, ou je peux transmettre votre question à l'équipe via un ticket.", {
