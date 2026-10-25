@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
+import BoutonExport from "@/components/BoutonExport";
 
 const CATEGORIES: Record<string, string> = {
   BUG: "🐛 Bug",
@@ -34,7 +35,12 @@ export default async function ClientHelpdesk() {
 
           <div className="bg-white rounded-xl shadow p-8 mb-6 flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold">🆘 Helpdesk</h1>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                <h1 className="text-3xl font-bold">🆘 Helpdesk</h1>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <BoutonExport type="client-helpdesk" label="📊 Exporter Excel" />
+                </div>
+              </div>
               <p className="text-gray-500 mt-1">Support technique Franeo</p>
             </div>
             <Link

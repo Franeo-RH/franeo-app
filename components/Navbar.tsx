@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface NavbarProps {
   role: "ADMIN" | "CLIENT";
@@ -13,7 +13,14 @@ interface NavbarProps {
 
 export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [chargement, setChargement] = useState(false);
+  const [menuOuvert, setMenuOuvert] = useState(false);
+
+  // Ferme le menu téléphone à chaque changement de page
+  useEffect(() => {
+    setMenuOuvert(false);
+  }, [pathname]);
 
   async function handleLogout() {
     setChargement(true);
@@ -50,70 +57,83 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
     permissions.includes(lien.permission)
   );
 
+  // Section active : /client/paie/historique → "Paie"
+  const estActif = (href: string) => pathname === href || pathname.startsWith(href + "/");
+
   return (
-    <nav className="bg-black text-white w-full px-6 py-3 flex items-center justify-between">
+    <nav className="fr-nav">
+      <div className="fr-nav-barre">
+        <Link href={role === "ADMIN" ? "/admin/dashboard" : "/client/dashboard"} className="fr-nav-logo" aria-label="Accueil Franeo">
+          <Image src="/FRANEO-Logo-Orange.png" alt="Franeo" width={90} height={30} style={{ objectFit: "contain" }} priority />
+        </Link>
 
-      {/* Logo réduit */}
-      <div className="flex-shrink-0">
-        <Image
-          src="/FRANEO-Logo-Orange.png"
-          alt="Franeo"
-          width={90}
-          height={30}
-          style={{ objectFit: "contain" }}
-        />
-      </div>
+        {/* Ordinateur : liens en ligne */}
+        <div className="fr-nav-liens">
+          {liens.map((lien) => (
+            <Link key={lien.href} href={lien.href} className={`fr-nav-lien${estActif(lien.href) ? " fr-actif" : ""}`}>
+              <Image src={lien.icon} alt="" width={18} height={18} className="invert" style={{ objectFit: "contain" }} />
+              <span>{lien.label}</span>
+            </Link>
+          ))}
+        </div>
 
-      {/* Liens centrés */}
-      <div className="flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
-        {liens.map((lien) => (
-          <Link key={lien.href} href={lien.href} className="group">
-            <div className="
-              bg-white/20
-              hover:bg-orange-500/40
-              transition
-              rounded-xl
-              px-3
-              py-2
-              flex
-              flex-col
-              items-center
-              gap-1
-              min-w-[65px]
-            ">
-              <Image
-                src={lien.icon}
-                alt={lien.label}
-                width={18}
-                height={18}
-                className="invert"
-                style={{ objectFit: "contain" }}
-              />
-              <span className="text-xs font-semibold text-white group-hover:text-orange-400 transition">
-                {lien.label}
-              </span>
-            </div>
-          </Link>
-        ))}
-      </div>
+        <div className="fr-nav-profil">
+          <span className="fr-nav-prenom">{prenom}</span>
+          {role === "CLIENT" && (
+            <Link href="/client/profil" className="fr-nav-petit">🔒 Mot de passe</Link>
+          )}
+          <button onClick={handleLogout} disabled={chargement} className="fr-nav-deco">
+            {chargement ? "..." : "Déconnexion"}
+          </button>
+        </div>
 
-      {/* Profil + déconnexion */}
-      <div className="flex-shrink-0 flex flex-col items-end gap-1">
-        <span className="text-gray-300 text-sm font-semibold">{prenom}</span>
-        {role === "CLIENT" && (
-          <Link href="/client/profil" className="text-gray-400 text-xs hover:text-orange-400 transition">
-            🔒 Changer mot de passe
-          </Link>
-        )}
+        {/* Téléphone : bouton menu */}
         <button
-          onClick={handleLogout}
-          disabled={chargement}
-          className="text-xs text-red-400 hover:text-red-300 transition font-semibold"
+          type="button"
+          className="fr-burger"
+          aria-label={menuOuvert ? "Fermer le menu" : "Ouvrir le menu"}
+          aria-expanded={menuOuvert}
+          onClick={() => setMenuOuvert((o) => !o)}
         >
-          {chargement ? "..." : "Déconnexion"}
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            {menuOuvert ? (
+              <>
+                <line x1="6" y1="6" x2="18" y2="18" />
+                <line x1="18" y1="6" x2="6" y2="18" />
+              </>
+            ) : (
+              <>
+                <line x1="4" y1="7" x2="20" y2="7" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="17" x2="20" y2="17" />
+              </>
+            )}
+          </svg>
         </button>
       </div>
 
+      {/* Téléphone : menu déroulant */}
+      {menuOuvert && (
+        <div className="fr-menu-mobile">
+          <div className="fr-menu-grille">
+            {liens.map((lien) => (
+              <Link key={lien.href} href={lien.href} className={`fr-menu-lien${estActif(lien.href) ? " fr-actif" : ""}`}>
+                <Image src={lien.icon} alt="" width={22} height={22} className="invert" style={{ objectFit: "contain" }} />
+                <span>{lien.label}</span>
+              </Link>
+            ))}
+          </div>
+          <div className="fr-menu-pied">
+            <span>👤 {prenom}</span>
+            <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+              {role === "CLIENT" && <Link href="/client/profil" className="fr-nav-petit">🔒 Mot de passe</Link>}
+              <button onClick={handleLogout} disabled={chargement} className="fr-nav-deco">
+                {chargement ? "..." : "Déconnexion"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

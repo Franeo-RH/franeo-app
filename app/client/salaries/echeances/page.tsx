@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import { chargerEcheances } from "@/lib/rappels-serveur";
 import { STYLES_STATUT, formaterDateFR, texteDelai } from "@/lib/rappels";
+import BoutonExport from "@/components/BoutonExport";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,12 @@ export default async function PageEcheances({
         <Sidebar role={session.role} />
         <main className="flex-1 p-10">
           <div className="bg-white rounded-xl shadow p-8 mb-6">
-            <h1 className="text-3xl font-bold">⏰ Échéances</h1>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+              <h1 className="text-3xl font-bold">⏰ Échéances</h1>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <BoutonExport type="client-echeances" label="📊 Exporter Excel" />
+              </div>
+            </div>
             <p className="text-gray-500 mt-1">Visites médicales, titres de séjour, avenants, fins de contrat… (retards et 60 prochains jours)</p>
           </div>
 

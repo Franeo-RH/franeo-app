@@ -31,23 +31,27 @@ export default async function AdminPaie({
   const anneeSelectionnee = parseInt(sp.annee || String(maintenant.getFullYear()));
   const entrepriseSelectionnee = sp.entrepriseId || "";
 
-  const entreprises = await prisma.entreprise.findMany({
-    orderBy: { nom: "asc" },
-  });
 
-  const variables = await prisma.variablePaie.findMany({
-    where: {
-      mois: moisSelectionne,
-      annee: anneeSelectionnee,
-      entreprise: { demo: false },
-      ...(entrepriseSelectionnee ? { entrepriseId: entrepriseSelectionnee } : {}),
-    },
-    include: {
-      salarie: true,
-      entreprise: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+
+  // Requêtes lancées en même temps
+  const [entreprises, variables] = await Promise.all([
+    prisma.entreprise.findMany({
+      orderBy: { nom: "asc" },
+    }),
+    prisma.variablePaie.findMany({
+      where: {
+        mois: moisSelectionne,
+        annee: anneeSelectionnee,
+        entreprise: { demo: false },
+        ...(entrepriseSelectionnee ? { entrepriseId: entrepriseSelectionnee } : {}),
+      },
+      include: {
+        salarie: true,
+        entreprise: true,
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   return (
     <div className="min-h-screen bg-gray-100">

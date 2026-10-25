@@ -16,7 +16,7 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
   // Salariés
   if (pathname.includes("salaries")) {
     return (
-      <aside className="w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
+      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
         <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Salariés</p>
         <SidebarLink href={`${base}/salaries`} label="👥 Liste des salariés" active={pathname === `${base}/salaries`} />
         <SidebarLink href={`${base}/salaries/nouveau`} label="➕ Ajouter un salarié" active={pathname === `${base}/salaries/nouveau`} />
@@ -34,7 +34,7 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
   // Tickets admin (AVANT "entreprises" : /admin/entreprises/tickets contient "entreprises")
   if ((pathname.includes("tickets") || pathname.includes("recrutement")) && role === "ADMIN") {
     return (
-      <aside className="w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
+      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
         <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Tickets RH</p>
         <SidebarLink href="/admin/tickets" label="🎫 Tous les tickets" active={pathname === "/admin/tickets"} badge={ticketsOuverts} />
         <SidebarLink href="/admin/entreprises/tickets" label="💰 Facturation tickets" active={pathname === "/admin/entreprises/tickets"} />
@@ -46,7 +46,7 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
   // Tickets client
   if (pathname.includes("tickets") && role === "CLIENT") {
     return (
-      <aside className="w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
+      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
         <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Tickets RH</p>
         <SidebarLink href="/client/tickets" label="🎫 Mes tickets" active={pathname === "/client/tickets"} />
         <SidebarLink href="/client/tickets/nouveau" label="➕ Nouveau ticket" active={pathname === "/client/tickets/nouveau"} />
@@ -59,7 +59,7 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
   // Abonnement paie client (avant "entreprise" et "paie" pour éviter les conflits)
   if (pathname === "/client/abonnement-paie") {
     return (
-      <aside className="w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
+      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
         <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Mon entreprise</p>
         <SidebarLink href="/client/entreprise" label="🏢 Informations" active={false} />
         <SidebarLink href="/client/entreprise/facturation" label="🧾 Factures" active={false} />
@@ -72,7 +72,7 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
   // Abonnement paie admin (avant "paie")
   if (pathname === "/admin/abonnement-paie") {
     return (
-      <aside className="w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
+      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
         <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Entreprises</p>
         <SidebarLink href="/admin/entreprises" label="🏢 Liste des entreprises" active={false} />
         <SidebarLink href="/admin/entreprises/nouveau" label="➕ Ajouter une entreprise" active={false} />
@@ -86,7 +86,7 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
   // Entreprise client
   if (pathname.includes("entreprise") && role === "CLIENT") {
     return (
-      <aside className="w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
+      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
         <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Mon entreprise</p>
         <SidebarLink href="/client/entreprise" label="🏢 Informations" active={pathname === "/client/entreprise"} />
         <SidebarLink href="/client/entreprise/facturation" label="🧾 Factures" active={pathname === "/client/entreprise/facturation"} />
@@ -99,7 +99,7 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
   // Entreprises admin
   if (pathname.includes("entreprises") && role === "ADMIN") {
     return (
-      <aside className="w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
+      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
         <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Entreprises</p>
         <SidebarLink href="/admin/entreprises" label="🏢 Liste des entreprises" active={pathname === "/admin/entreprises"} />
         <SidebarLink href="/admin/entreprises/nouveau" label="➕ Ajouter une entreprise" active={pathname === "/admin/entreprises/nouveau"} />
@@ -113,7 +113,7 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
   // Paie client
   if (pathname.includes("paie") && role === "CLIENT") {
     return (
-      <aside className="w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
+      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
         <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Paie</p>
         <SidebarLink href="/client/paie" label="📊 Tableau de bord" active={pathname === "/client/paie"} />
         <SidebarLink href="/client/paie/saisie" label="✏️ Saisir des variables" active={pathname === "/client/paie/saisie"} />
@@ -126,7 +126,7 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
   // Paie admin
   if (pathname.includes("paie") && role === "ADMIN") {
     return (
-      <aside className="w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
+      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
         <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Paie</p>
         <SidebarLink href="/admin/paie" label="📊 Tableau de bord" active={pathname === "/admin/paie"} />
         <SidebarLink href="/admin/paie/variables" label="💰 Variables" active={pathname === "/admin/paie/variables"} />
@@ -139,7 +139,7 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
   // Helpdesk client
   if (pathname.includes("helpdesk") && role === "CLIENT") {
     return (
-      <aside className="w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
+      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
         <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Helpdesk</p>
         <SidebarLink href="/client/helpdesk" label="🆘 Mes tickets support" active={pathname === "/client/helpdesk"} />
         <SidebarLink href="/client/helpdesk/nouveau" label="➕ Nouveau ticket" active={pathname === "/client/helpdesk/nouveau"} />
@@ -150,7 +150,7 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
   // Helpdesk admin
   if (pathname.includes("helpdesk") && role === "ADMIN") {
     return (
-      <aside className="w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
+      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
         <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Helpdesk</p>
         <SidebarLink href="/admin/helpdesk" label="🆘 Tous les tickets" active={pathname === "/admin/helpdesk"} />
       </aside>

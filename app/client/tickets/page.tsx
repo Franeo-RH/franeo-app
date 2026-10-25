@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
+import BoutonExport from "@/components/BoutonExport";
 
 export default async function ClientTickets() {
   await connection();
@@ -17,15 +18,19 @@ export default async function ClientTickets() {
     redirect("/client/dashboard");
   }
 
-  const entreprise = await prisma.entreprise.findUnique({
-    where: { id: session.entrepriseId! },
-    include: { abonnement: true },
-  });
 
-  const tickets = await prisma.ticket.findMany({
-    where: { entrepriseId: session.entrepriseId! },
-    orderBy: { createdAt: "desc" },
-  });
+
+  // Requêtes lancées en même temps
+  const [entreprise, tickets] = await Promise.all([
+    prisma.entreprise.findUnique({
+      where: { id: session.entrepriseId! },
+      include: { abonnement: true },
+    }),
+    prisma.ticket.findMany({
+      where: { entrepriseId: session.entrepriseId! },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   const ticketsInclus = entreprise?.abonnement?.ticketsRH || 0;
   const ticketsUtilises = entreprise?.ticketsUtilises || 0;
@@ -40,7 +45,12 @@ export default async function ClientTickets() {
 
           <div className="bg-white rounded-xl shadow p-8 mb-6 flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold">🎫 Tickets RH</h1>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                <h1 className="text-3xl font-bold">🎫 Tickets RH</h1>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <BoutonExport type="client-tickets" label="📊 Exporter Excel" />
+                </div>
+              </div>
               <p className="text-gray-500 mt-1">
                 {ticketsRestants} ticket(s) restant(s) sur {ticketsInclus} ce mois-ci
               </p>

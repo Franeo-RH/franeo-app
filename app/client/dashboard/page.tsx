@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import BlocEcheances from "@/components/BlocEcheances";
 import { chargerEcheances } from "@/lib/rappels-serveur";
+import type { Echeance } from "@/lib/rappels";
 
 export const dynamic = "force-dynamic";
 
@@ -42,42 +43,57 @@ export default async function ClientDashboard() {
   const moisActuel = maintenant.getMonth() + 1;
   const anneeActuelle = maintenant.getFullYear();
 
-  const salaries = permissions.includes("salaries")
-    ? await prisma.salarie.findMany({
-        where: { entrepriseId: session.entrepriseId!, statut: "Actif" },
-      })
-    : [];
+  const entrepriseId = session.entrepriseId!;
+  const debutMois = new Date(anneeActuelle, moisActuel - 1, 1);
+  const finMois = new Date(anneeActuelle, moisActuel, 0);
+  const avecSalaries = permissions.includes("salaries");
+  const avecPaie = permissions.includes("paie");
+  const avecTickets = permissions.includes("tickets");
 
-  const variables = permissions.includes("paie")
-    ? await prisma.variablePaie.findMany({
-        where: { entrepriseId: session.entrepriseId!, mois: moisActuel, annee: anneeActuelle },
-        include: { salarie: true },
-      })
-    : [];
+  // Toutes les requêtes partent en même temps (au lieu de 10 à la suite)
+  const [
+    nbSalaries,
+    variables,
+    nbAbsences,
+    nbTickets,
+    nbTicketsSupport,
+    entreprise,
+    facturesAnnee,
+    nbSalariesMois,
+    echeances,
+  ] = await Promise.all([
+    avecSalaries ? prisma.salarie.count({ where: { entrepriseId, statut: "Actif" } }) : Promise.resolve(0),
+    avecPaie
+      ? prisma.variablePaie.findMany({
+          where: { entrepriseId, mois: moisActuel, annee: anneeActuelle },
+          select: { type: true, valeur: true, statut: true, salarie: { select: { salaireMensuel: true, heuresHebdomadaires: true } } },
+        })
+      : Promise.resolve([] as { type: string; valeur: number; statut: string; salarie: { salaireMensuel: number | null; heuresHebdomadaires: number | null } }[]),
+    avecPaie ? prisma.absence.count({ where: { entrepriseId, statut: "En attente" } }) : Promise.resolve(0),
+    avecTickets ? prisma.ticket.count({ where: { entrepriseId, statut: { not: "Clôturé" } } }) : Promise.resolve(0),
+    prisma.ticketSupport.count({ where: { entrepriseId, statut: { not: "Clôturé" } } }),
+    prisma.entreprise.findUnique({
+      where: { id: entrepriseId },
+      include: { abonnement: true, abonnementPaie: true },
+    }),
+    prisma.facturation.findMany({
+      where: { entrepriseId, annee: anneeActuelle },
+      select: { mois: true, montant: true, statut: true },
+    }),
+    // Estimation (avant génération de la facture) : même calcul que la facturation
+    prisma.salarie.count({
+      where: {
+        entrepriseId,
+        statut: "Actif",
+        dateDebut: { lte: finMois },
+        OR: [{ dateFin: null }, { dateFin: { gte: debutMois } }],
+      },
+    }),
+    // Échéances des salariés (visites médicales, titres de séjour, avenants...)
+    avecSalaries ? chargerEcheances({ entrepriseId }) : Promise.resolve([] as Echeance[]),
+  ]);
 
   const coutPaie = variables.reduce((acc, v) => acc + calculerCout(v.type, v.valeur, v.salarie), 0);
-  const variablesEnAttente = variables.filter(v => v.statut === "En attente").length;
-
-  const absences = permissions.includes("paie")
-    ? await prisma.absence.findMany({
-        where: { entrepriseId: session.entrepriseId!, statut: "En attente" },
-      })
-    : [];
-
-  const tickets = permissions.includes("tickets")
-    ? await prisma.ticket.findMany({
-        where: { entrepriseId: session.entrepriseId!, statut: { not: "Clôturé" } },
-      })
-    : [];
-
-  const ticketsSupport = await prisma.ticketSupport.findMany({
-    where: { entrepriseId: session.entrepriseId!, statut: { not: "Clôturé" } },
-  });
-
-  const entreprise = await prisma.entreprise.findUnique({
-    where: { id: session.entrepriseId! },
-    include: { abonnement: true, abonnementPaie: true },
-  });
 
   const ticketsRestants = Math.max(
     (entreprise?.abonnement?.ticketsRH || 0) - (entreprise?.ticketsUtilises || 0),
@@ -85,30 +101,7 @@ export default async function ClientDashboard() {
   );
 
   // Facturation du mois
-  const facturationMois = await prisma.facturation.findFirst({
-    where: {
-      entrepriseId: session.entrepriseId!,
-      mois: moisActuel,
-      annee: anneeActuelle,
-    },
-  });
-
-  const facturesAnnee = await prisma.facturation.findMany({
-    where: { entrepriseId: session.entrepriseId!, annee: anneeActuelle },
-  });
-
-  // Estimation (avant génération de la facture) : même calcul que la facturation
-  // = abonnement RH + formule paie + suppléments (salariés, tickets, bulletins)
-  const debutMois = new Date(anneeActuelle, moisActuel - 1, 1);
-  const finMois = new Date(anneeActuelle, moisActuel, 0);
-  const nbSalariesMois = await prisma.salarie.count({
-    where: {
-      entrepriseId: session.entrepriseId!,
-      statut: "Actif",
-      dateDebut: { lte: finMois },
-      OR: [{ dateFin: null }, { dateFin: { gte: debutMois } }],
-    },
-  });
+  const facturationMois = facturesAnnee.find((f) => f.mois === moisActuel) || null;
 
   const abo = entreprise?.abonnement;
   const paie = entreprise?.abonnementPaie;
@@ -125,17 +118,12 @@ export default async function ClientDashboard() {
 
   const statutFacture = facturationMois ? facturationMois.statut : "Estimé";
 
-  // Échéances des salariés (visites médicales, titres de séjour, avenants...)
-  const echeances = permissions.includes("salaries")
-    ? await chargerEcheances({ entrepriseId: session.entrepriseId! })
-    : [];
-
   const tuiles = [
-    permissions.includes("salaries") && { href: "/client/salaries", icone: "👥", label: "Salariés", n: salaries.length, couleur: "text-gray-800" },
+    permissions.includes("salaries") && { href: "/client/salaries", icone: "👥", label: "Salariés", n: nbSalaries, couleur: "text-gray-800" },
     permissions.includes("paie") && { href: "/client/paie", icone: "💰", label: "Paie ce mois", n: `${Math.round(coutPaie).toLocaleString("fr-FR")} €`, couleur: "text-red-500" },
-    permissions.includes("paie") && { href: "/client/paie/absences", icone: "📅", label: "Absences", n: absences.length, couleur: "text-orange-500" },
-    permissions.includes("tickets") && { href: "/client/tickets", icone: "🎫", label: "Tickets RH", n: tickets.length, couleur: "text-gray-800" },
-    { href: "/client/helpdesk", icone: "🆘", label: "Helpdesk", n: ticketsSupport.length, couleur: "text-red-500" },
+    permissions.includes("paie") && { href: "/client/paie/absences", icone: "📅", label: "Absences", n: nbAbsences, couleur: "text-orange-500" },
+    permissions.includes("tickets") && { href: "/client/tickets", icone: "🎫", label: "Tickets RH", n: nbTickets, couleur: "text-gray-800" },
+    { href: "/client/helpdesk", icone: "🆘", label: "Helpdesk", n: nbTicketsSupport, couleur: "text-red-500" },
     permissions.includes("salaries") && { href: "/client/salaries", icone: "⏰", label: "Échéances", n: echeances.length, couleur: "text-orange-500" },
   ].filter(Boolean) as { href: string; icone: string; label: string; n: number | string; couleur: string }[];
 
@@ -162,7 +150,7 @@ export default async function ClientDashboard() {
         </div>
 
         {/* Toutes les tuiles sur une seule ligne */}
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${tuiles.length}, minmax(0, 1fr))`, gap: "0.75rem" }}>
+        <div className="fr-grille-tuiles" style={{ display: "grid", gridTemplateColumns: `repeat(${tuiles.length}, minmax(0, 1fr))`, gap: "0.75rem" }}>
           {tuiles.map((t) => (
             <Link key={t.label} href={t.href} className="bg-white rounded-2xl shadow p-3 text-center hover:shadow-md transition">
               <p className="text-2xl">{t.icone}</p>
@@ -173,7 +161,7 @@ export default async function ClientDashboard() {
         </div>
 
         {/* Graphique des coûts + abonnements actuels */}
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
+        <div className="fr-grille-2" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
           <div className="bg-white rounded-2xl shadow p-4">
             <div className="flex justify-between items-center mb-3">
               <h2 className="text-sm font-bold">📊 Évolution de vos coûts Franeo {anneeActuelle}</h2>

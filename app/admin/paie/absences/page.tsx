@@ -57,25 +57,29 @@ export default async function AdminAbsences({
   const moisFin = parseInt(sp.moisFin || String(moisCourant));
   const anneeFin = parseInt(sp.anneeFin || String(anneeCourante));
 
-  const entreprises = await prisma.entreprise.findMany({
-    orderBy: { nom: "asc" },
-  });
 
-  const absences = await prisma.absence.findMany({
-    where: {
-      entreprise: { demo: false },
-      ...(entrepriseId ? { entrepriseId } : {}),
-      ...(typeFiltre !== "tout" ? { type: typeFiltre as any } : {}),
-      ...(statutFiltre !== "tout" ? { statut: statutFiltre } : {}),
-      dateDebut: { gte: new Date(anneeDebut, moisDebut - 1, 1) },
-      dateFin: { lte: new Date(anneeFin, moisFin, 0) },
-    },
-    include: {
-      salarie: true,
-      entreprise: true,
-    },
-    orderBy: { dateDebut: "desc" },
-  });
+
+  // Requêtes lancées en même temps
+  const [entreprises, absences] = await Promise.all([
+    prisma.entreprise.findMany({
+      orderBy: { nom: "asc" },
+    }),
+    prisma.absence.findMany({
+      where: {
+        entreprise: { demo: false },
+        ...(entrepriseId ? { entrepriseId } : {}),
+        ...(typeFiltre !== "tout" ? { type: typeFiltre as any } : {}),
+        ...(statutFiltre !== "tout" ? { statut: statutFiltre } : {}),
+        dateDebut: { gte: new Date(anneeDebut, moisDebut - 1, 1) },
+        dateFin: { lte: new Date(anneeFin, moisFin, 0) },
+      },
+      include: {
+        salarie: true,
+        entreprise: true,
+      },
+      orderBy: { dateDebut: "desc" },
+    }),
+  ]);
 
   const enAttente = absences.filter(a => a.statut === "En attente").length;
 

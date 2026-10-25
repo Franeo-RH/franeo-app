@@ -81,9 +81,6 @@ export default async function AdminHistoriquePaie({
   const categorie = sp.categorie || "tout";
   const entrepriseId = sp.entrepriseId || "";
 
-  const entreprises = await prisma.entreprise.findMany({
-    orderBy: { nom: "asc" },
-  });
 
   const periodes = Array.from(
     { length: (anneeFin - anneeDebut) * 12 + moisFin - moisDebut + 1 },
@@ -93,26 +90,31 @@ export default async function AdminHistoriquePaie({
     }
   );
 
-  const variables = await prisma.variablePaie.findMany({
-    where: {
-      entreprise: { demo: false },
-      ...(entrepriseId ? { entrepriseId } : {}),
-      OR: periodes,
-    },
-    include: { salarie: true, entreprise: true },
-    orderBy: [{ annee: "desc" }, { mois: "desc" }],
-  });
-
-  const absences = await prisma.absence.findMany({
-    where: {
-      entreprise: { demo: false },
-      ...(entrepriseId ? { entrepriseId } : {}),
-      dateDebut: { gte: new Date(anneeDebut, moisDebut - 1, 1) },
-      dateFin: { lte: new Date(anneeFin, moisFin, 0) },
-    },
-    include: { salarie: true, entreprise: true },
-    orderBy: { dateDebut: "desc" },
-  });
+  // Requêtes lancées en même temps
+  const [entreprises, variables, absences] = await Promise.all([
+    prisma.entreprise.findMany({
+      orderBy: { nom: "asc" },
+    }),
+    prisma.variablePaie.findMany({
+      where: {
+        entreprise: { demo: false },
+        ...(entrepriseId ? { entrepriseId } : {}),
+        OR: periodes,
+      },
+      include: { salarie: true, entreprise: true },
+      orderBy: [{ annee: "desc" }, { mois: "desc" }],
+    }),
+    prisma.absence.findMany({
+      where: {
+        entreprise: { demo: false },
+        ...(entrepriseId ? { entrepriseId } : {}),
+        dateDebut: { gte: new Date(anneeDebut, moisDebut - 1, 1) },
+        dateFin: { lte: new Date(anneeFin, moisFin, 0) },
+      },
+      include: { salarie: true, entreprise: true },
+      orderBy: { dateDebut: "desc" },
+    }),
+  ]);
 
   const variablesAvecCout = variables.map((v) => ({
     ...v,

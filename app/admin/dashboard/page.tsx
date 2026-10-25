@@ -7,6 +7,7 @@ import Link from "next/link";
 import DashboardOnglets from "@/components/DashboardOnglets";
 import BlocEcheances from "@/components/BlocEcheances";
 import { chargerEcheances } from "@/lib/rappels-serveur";
+import BoutonResetDemo from "@/components/BoutonResetDemo";
 
 export const dynamic = "force-dynamic";
 
@@ -26,49 +27,54 @@ export default async function AdminDashboard() {
   const moisActuel = maintenant.getMonth() + 1;
   const anneeActuelle = maintenant.getFullYear();
 
-  const entreprises = await prisma.entreprise.findMany({
-    where: { demo: false, actif: true },
-    include: { abonnement: true, _count: { select: { salaries: true } } },
-  });
+  const filtreClients = { demo: false, actif: true };
+
+  // Toutes les requêtes partent en même temps (au lieu de 13 à la suite)
+  const [
+    entreprises,
+    abonnements,
+    abonnementsPaie,
+    entreprisesPaie,
+    nbTicketsRH,
+    nbTicketsSupport,
+    nbAbsences,
+    nbVariables,
+    nbDemandes,
+    echeances,
+    facturationsAnnee,
+  ] = await Promise.all([
+    prisma.entreprise.findMany({
+      where: filtreClients,
+      select: { abonnement: { select: { prixMensuel: true } }, _count: { select: { salaries: true } } },
+    }),
+    prisma.abonnement.findMany({
+      include: { _count: { select: { entreprises: { where: filtreClients } } } },
+      orderBy: { prixMensuel: "asc" },
+    }),
+    prisma.abonnementPaie.findMany({ orderBy: { prixMensuel: "asc" } }),
+    prisma.entreprise.findMany({
+      where: { ...filtreClients, abonnementPaieId: { not: null } },
+      select: { abonnementPaieId: true },
+    }),
+    prisma.ticket.count({ where: { statut: { not: "Clôturé" }, entreprise: filtreClients } }),
+    prisma.ticketSupport.count({
+      where: { statut: { not: "Clôturé" }, OR: [{ entreprise: filtreClients }, { categorie: "SUGGESTION" }] }, // la démo ne remonte que par ses suggestions
+    }),
+    prisma.absence.count({ where: { statut: "En attente", entreprise: filtreClients } }),
+    prisma.variablePaie.count({ where: { statut: "En attente", mois: moisActuel, annee: anneeActuelle, entreprise: filtreClients } }),
+    prisma.demandeEvolution.count({ where: { statut: "En attente", entreprise: filtreClients } }),
+    // Échéances des salariés (tous clients) : retards + 60 prochains jours
+    chargerEcheances({ sansDemo: true }),
+    // Facturation de l'année (le mois en cours en est extrait)
+    prisma.facturation.findMany({
+      where: { annee: anneeActuelle, entreprise: { demo: false } },
+      select: { mois: true, montant: true, statut: true },
+    }),
+  ]);
 
   const totalEntreprises = entreprises.length;
   const totalSalaries = entreprises.reduce((acc, e) => acc + e._count.salaries, 0);
-
-  const abonnements = await prisma.abonnement.findMany({
-    include: { _count: { select: { entreprises: { where: { demo: false, actif: true } } } } },
-    orderBy: { prixMensuel: "asc" },
-  });
-
-  const abonnementsPaie = await prisma.abonnementPaie.findMany({
-    orderBy: { prixMensuel: "asc" },
-  });
-  const entreprisesPaie = await prisma.entreprise.findMany({
-    where: { demo: false, actif: true, abonnementPaieId: { not: null } },
-    select: { abonnementPaieId: true },
-  });
-
-  const ticketsRH = await prisma.ticket.findMany({ where: { statut: { not: "Clôturé" }, entreprise: { demo: false, actif: true } } });
-  const ticketsSupport = await prisma.ticketSupport.findMany({
-    where: { statut: { not: "Clôturé" }, OR: [{ entreprise: { demo: false, actif: true } }, { categorie: "SUGGESTION" }] }, // la démo ne remonte que par ses suggestions
-  });
-  const absences = await prisma.absence.findMany({ where: { statut: "En attente", entreprise: { demo: false, actif: true } } });
-  const variables = await prisma.variablePaie.findMany({ where: { statut: "En attente", mois: moisActuel, annee: anneeActuelle, entreprise: { demo: false, actif: true } } });
-  const demandes = await prisma.demandeEvolution.findMany({ where: { statut: "En attente", entreprise: { demo: false, actif: true } } });
-
-  // Échéances des salariés (tous clients) : retards + 60 prochains jours
-  const echeances = await chargerEcheances({ sansDemo: true });
-
-  // Facturation du mois actuel
-  const facturationsMois = await prisma.facturation.findMany({
-    where: { mois: moisActuel, annee: anneeActuelle, entreprise: { demo: false } },
-    include: { entreprise: { include: { abonnement: true } } },
-  });
-
-  // Facturation annuelle réelle
-  const facturationsAnnee = await prisma.facturation.findMany({
-    where: { annee: anneeActuelle, entreprise: { demo: false } },
-    include: { entreprise: { include: { abonnement: true } } },
-  });
+  const facturationsMois = facturationsAnnee.filter((f) => f.mois === moisActuel);
 
   // CA mensuel réel (factures générées ce mois)
   const caMensuelReel = facturationsMois.reduce((acc, f) => acc + f.montant, 0);
@@ -95,11 +101,11 @@ export default async function AdminDashboard() {
   const tuiles = [
     { href: "/admin/entreprises", icone: "🏢", label: "Entreprises", n: totalEntreprises, couleur: "text-gray-800" },
     { href: "/admin/salaries", icone: "👥", label: "Salariés", n: totalSalaries, couleur: "text-gray-800" },
-    { href: "/admin/tickets", icone: "🎫", label: "Tickets RH", n: ticketsRH.length, couleur: "text-orange-500" },
-    { href: "/admin/helpdesk", icone: "🆘", label: "Helpdesk", n: ticketsSupport.length, couleur: "text-red-500" },
-    { href: "/admin/paie/absences", icone: "📅", label: "Absences", n: absences.length, couleur: "text-orange-500" },
-    { href: "/admin/paie/variables", icone: "💰", label: "Variables", n: variables.length, couleur: "text-orange-500" },
-    { href: "/admin/entreprises/demandes", icone: "📩", label: "Évolutions", n: demandes.length, couleur: "text-orange-500" },
+    { href: "/admin/tickets", icone: "🎫", label: "Tickets RH", n: nbTicketsRH, couleur: "text-orange-500" },
+    { href: "/admin/helpdesk", icone: "🆘", label: "Helpdesk", n: nbTicketsSupport, couleur: "text-red-500" },
+    { href: "/admin/paie/absences", icone: "📅", label: "Absences", n: nbAbsences, couleur: "text-orange-500" },
+    { href: "/admin/paie/variables", icone: "💰", label: "Variables", n: nbVariables, couleur: "text-orange-500" },
+    { href: "/admin/entreprises/demandes", icone: "📩", label: "Évolutions", n: nbDemandes, couleur: "text-orange-500" },
     { href: "/admin/salaries", icone: "⏰", label: "Échéances", n: echeances.length, couleur: "text-red-500" },
   ];
   const caMois = Math.round(facturationsMois.length > 0 ? caMensuelReel : caMensuelPrev);
@@ -109,7 +115,12 @@ export default async function AdminDashboard() {
       <Navbar role={session.role} prenom={session.prenom} />
       <main className="px-6 py-4 flex flex-col gap-4">
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+          <h1 className="text-xl font-bold" style={{ margin: 0 }}>📊 Dashboard</h1>
+          <BoutonResetDemo />
+        </div>
+
+        <div className="fr-grille-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
           <div className="bg-gradient-to-r from-orange-500 to-orange-400 rounded-2xl shadow px-6 py-4 text-white">
             <p className="text-orange-100 text-xs font-semibold uppercase">💰 CA {MOIS[moisActuel - 1]}</p>
             <p className="text-4xl font-bold">{caMois.toLocaleString("fr-FR")} €</p>
@@ -120,7 +131,7 @@ export default async function AdminDashboard() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(8, minmax(0, 1fr))", gap: "0.75rem" }}>
+        <div className="fr-grille-tuiles" style={{ display: "grid", gridTemplateColumns: "repeat(8, minmax(0, 1fr))", gap: "0.75rem" }}>
           {tuiles.map((t) => (
             <Link key={t.label} href={t.href} className="bg-white rounded-2xl shadow p-3 text-center hover:shadow-md transition">
               <p className="text-2xl">{t.icone}</p>
@@ -130,7 +141,7 @@ export default async function AdminDashboard() {
           ))}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
+        <div className="fr-grille-2" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
           <DashboardOnglets grilleMois={grilleMois} annee={anneeActuelle} moisActuel={moisActuel} />
           <div className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3">
             <div>

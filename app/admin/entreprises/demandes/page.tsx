@@ -17,23 +17,26 @@ export default async function DemandesAbonnement() {
   if (!session) redirect("/login");
   if (session.role !== "ADMIN") redirect("/client/dashboard");
 
-  const demandes = await prisma.demandeEvolution.findMany({
-    where: { entreprise: { demo: false } },
-    include: { entreprise: { include: { abonnement: true } } },
-    orderBy: { createdAt: "desc" },
-  });
 
-  const demandesPaie = await prisma.demandeEvolutionPaie.findMany({
-    where: { entreprise: { demo: false } },
-    include: {
-      entreprise: { include: { abonnementPaie: true } },
-      ancienneFormule: true,
-      nouvelleFormule: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
 
-  const abonnements = await prisma.abonnement.findMany();
+  // Requêtes lancées en même temps
+  const [demandes, demandesPaie, abonnements] = await Promise.all([
+    prisma.demandeEvolution.findMany({
+      where: { entreprise: { demo: false } },
+      include: { entreprise: { include: { abonnement: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.demandeEvolutionPaie.findMany({
+      where: { entreprise: { demo: false } },
+      include: {
+        entreprise: { include: { abonnementPaie: true } },
+        ancienneFormule: true,
+        nouvelleFormule: true,
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.abonnement.findMany(),
+  ]);
 
   const demandesEnAttente = demandes.filter(d => d.statut === "En attente").length;
   const demandesPaieEnAttente = demandesPaie.filter(d => d.statut === "EN_ATTENTE").length;

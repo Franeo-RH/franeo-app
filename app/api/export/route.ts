@@ -395,6 +395,167 @@ export async function GET(request: NextRequest) {
   }));
   nomFichier = `facturation-${mois}-${annee}`;
 
+  } else if (type?.startsWith("client-") && session.role === "CLIENT") {
+    // ===== Exports côté client : uniquement les données de son entreprise =====
+    const entrepriseId = session.entrepriseId!;
+    const permissions = session.entreprise?.permissions || [];
+    const fr = (d: Date | null | undefined) => (d ? new Date(d).toLocaleDateString("fr-FR") : "");
+    const MOIS_NOMS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+
+    // Période (par défaut : le mois en cours), reprise des filtres de la page
+    const maintenant = new Date();
+    const moisDebut = parseInt(searchParams.get("moisDebut") || String(maintenant.getMonth() + 1));
+    const anneeDebut = parseInt(searchParams.get("anneeDebut") || String(maintenant.getFullYear()));
+    const moisFin = parseInt(searchParams.get("moisFin") || String(moisDebut));
+    const anneeFin = parseInt(searchParams.get("anneeFin") || String(anneeDebut));
+    const nbMois = Math.min(Math.max((anneeFin - anneeDebut) * 12 + moisFin - moisDebut + 1, 1), 120);
+    const periodes = Array.from({ length: nbMois }, (_, i) => {
+      const d = new Date(anneeDebut, moisDebut - 1 + i);
+      return { mois: d.getMonth() + 1, annee: d.getFullYear() };
+    });
+    const suffixe = `${moisDebut}-${anneeDebut}${nbMois > 1 ? `_${moisFin}-${anneeFin}` : ""}`;
+
+    if (type === "client-salaries" && permissions.includes("salaries")) {
+      const salaries = await prisma.salarie.findMany({ where: { entrepriseId }, orderBy: [{ nom: "asc" }, { prenom: "asc" }] });
+      data = salaries.map((s) => ({
+        "Matricule": s.matricule || "",
+        "Nom": s.nom,
+        "Prénom": s.prenom,
+        "Statut": s.statut,
+        "Poste": s.poste,
+        "Type contrat": s.typeContrat || "",
+        "Date début": fr(s.dateDebut),
+        "Date fin": fr(s.dateFin),
+        "Heures hebdo": s.heuresHebdomadaires ?? "",
+        "Salaire mensuel (€)": s.salaireMensuel ?? "",
+        "Salaire annuel (€)": s.salaireAnnuel ?? "",
+        "Primes (€)": s.primes ?? "",
+        "Manager": s.manager || "",
+        "Convention collective": s.conventionCollective || "",
+        "Catégorie": s.categorie || "",
+        "Coefficient": s.coefficient || "",
+        "Email": s.email || "",
+        "Téléphone": s.telephone || "",
+        "Adresse": [s.rue, s.codePostal, s.ville, s.pays].filter(Boolean).join(" "),
+        "Date de naissance": fr(s.dateNaissance),
+        "Nationalité": s.nationalite || "",
+      }));
+      nomFichier = "salaries";
+
+    } else if (type === "client-variables" && permissions.includes("paie")) {
+      const variables = await prisma.variablePaie.findMany({
+        where: { entrepriseId, OR: periodes },
+        include: { salarie: true },
+        orderBy: [{ annee: "asc" }, { mois: "asc" }],
+      });
+      data = variables.map((v) => {
+        const cout = calculerCout(v.type, v.valeur, v.salarie);
+        return {
+          "Mois": `${MOIS_NOMS[v.mois - 1]} ${v.annee}`,
+          "Matricule": v.salarie.matricule || "",
+          "Salarié": `${v.salarie.prenom} ${v.salarie.nom}`,
+          "Type": TYPES_VARIABLE[v.type] || v.type,
+          "Valeur": v.type === "HEURE_SUPPLEMENTAIRE" ? `${v.valeur}h` : `${v.valeur} €`,
+          "Coût brut (€)": cout.coutBrut,
+          "Coût entreprise (€)": cout.coutEntreprise,
+          "Commentaire": v.commentaire || "",
+          "Statut": v.statut,
+        };
+      });
+      nomFichier = `variables-paie_${suffixe}`;
+
+    } else if (type === "client-absences" && permissions.includes("paie")) {
+      const toutes = searchParams.get("toutes") === "1";
+      const absences = await prisma.absence.findMany({
+        where: {
+          entrepriseId,
+          ...(toutes ? {} : {
+            dateDebut: { lte: new Date(anneeFin, moisFin, 0) },
+            dateFin: { gte: new Date(anneeDebut, moisDebut - 1, 1) },
+          }),
+        },
+        include: { salarie: true },
+        orderBy: { dateDebut: "desc" },
+      });
+      data = absences.map((a) => ({
+        "Matricule": a.salarie.matricule || "",
+        "Salarié": `${a.salarie.prenom} ${a.salarie.nom}`,
+        "Type": TYPES_ABSENCE[a.type] || a.type,
+        "Du": fr(a.dateDebut),
+        "Au": fr(a.dateFin),
+        "Jours": Math.ceil((new Date(a.dateFin).getTime() - new Date(a.dateDebut).getTime()) / 86400000) + 1,
+        "Commentaire": a.commentaire || "",
+        "Statut": a.statut,
+      }));
+      nomFichier = toutes ? "absences" : `absences_${suffixe}`;
+
+    } else if (type === "client-tickets" && permissions.includes("tickets")) {
+      const tickets = await prisma.ticket.findMany({
+        where: { entrepriseId },
+        include: { _count: { select: { messages: true } } },
+        orderBy: { createdAt: "desc" },
+      });
+      data = tickets.map((t) => ({
+        "Titre": t.titre,
+        "Description": t.description,
+        "Statut": t.statut,
+        "Messages": t._count.messages,
+        "Créé le": fr(t.createdAt),
+        "Mis à jour le": fr(t.updatedAt),
+      }));
+      nomFichier = "tickets-rh";
+
+    } else if (type === "client-helpdesk") {
+      const tickets = await prisma.ticketSupport.findMany({
+        where: { entrepriseId },
+        orderBy: { createdAt: "desc" },
+      });
+      data = tickets.map((t) => ({
+        "Titre": t.titre,
+        "Catégorie": t.categorie,
+        "Description": t.description,
+        "Statut": t.statut,
+        "Créé le": fr(t.createdAt),
+      }));
+      nomFichier = "helpdesk";
+
+    } else if (type === "client-factures" && permissions.includes("entreprise")) {
+      const factures = await prisma.facturation.findMany({
+        where: { entrepriseId },
+        orderBy: [{ annee: "desc" }, { mois: "desc" }],
+      });
+      data = factures.map((f) => ({
+        "Mois": `${MOIS_NOMS[f.mois - 1]} ${f.annee}`,
+        "Montant (€)": f.montant,
+        "Échéance": fr(f.dateLimitePaie),
+        "Statut": f.statut,
+        "Détail": f.commentaire || "",
+      }));
+      nomFichier = "factures";
+
+    } else if (type === "client-echeances" && permissions.includes("salaries")) {
+      const rappels = await prisma.rappelSalarie.findMany({
+        where: { salarie: { entrepriseId } },
+        include: { salarie: true },
+        orderBy: { dateEcheance: "asc" },
+      });
+      const aujourdhui = new Date();
+      data = rappels.map((r) => ({
+        "Matricule": r.salarie.matricule || "",
+        "Salarié": `${r.salarie.prenom} ${r.salarie.nom}`,
+        "Type": r.type,
+        "Libellé": r.libelle || "",
+        "Échéance": fr(r.dateEcheance),
+        "Jours restants": Math.ceil((new Date(r.dateEcheance).getTime() - aujourdhui.getTime()) / 86400000),
+        "Traité": r.traite ? "Oui" : "Non",
+        "Commentaire": r.commentaire || "",
+      }));
+      nomFichier = "echeances";
+
+    } else {
+      return NextResponse.json({ erreur: "Export non disponible avec vos accès." }, { status: 403 });
+    }
+
   } else {
     return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   }

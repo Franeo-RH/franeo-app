@@ -78,6 +78,10 @@ model Facturation {
 
   entrepriseId    String
   entreprise      Entreprise  @relation(fields: [entrepriseId], references: [id])
+
+  // index ajouté pour accélérer les recherches
+  @@index([entrepriseId, annee, mois])
+  @@index([annee, mois])
 }
 
 model DemandeRecrutement {
@@ -124,6 +128,9 @@ model Utilisateur {
 
   entrepriseId String?
   entreprise   Entreprise? @relation(fields: [entrepriseId], references: [id])
+
+  // index ajouté pour accélérer les recherches
+  @@index([entrepriseId])
 }
 
 model TokenReset {
@@ -191,6 +198,9 @@ model Salarie {
   absences              Absence[]
 
   @@unique([entrepriseId, matricule])
+
+  // index ajouté pour accélérer les recherches
+  @@index([entrepriseId, statut])
 }
 
 model Document {
@@ -216,6 +226,9 @@ model Ticket {
   entreprise   Entreprise      @relation(fields: [entrepriseId], references: [id])
 
   messages     MessageTicket[]
+
+  // index ajouté pour accélérer les recherches
+  @@index([entrepriseId, statut])
 }
 
 model MessageTicket {
@@ -227,6 +240,9 @@ model MessageTicket {
 
   ticketId  String
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  // index ajouté pour accélérer les recherches
+  @@index([ticketId])
 }
 
 model TicketSupport {
@@ -242,6 +258,9 @@ model TicketSupport {
   entreprise   Entreprise            @relation(fields: [entrepriseId], references: [id])
 
   messages     MessageTicketSupport[]
+
+  // index ajouté pour accélérer les recherches
+  @@index([entrepriseId, statut])
 }
 
 model MessageTicketSupport {
@@ -253,6 +272,9 @@ model MessageTicketSupport {
 
   ticketId  String
   ticket    TicketSupport @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  // index ajouté pour accélérer les recherches
+  @@index([ticketId])
 }
 
 model VariablePaie {
@@ -273,6 +295,11 @@ model VariablePaie {
 
   entrepriseId   String
   entreprise     Entreprise   @relation(fields: [entrepriseId], references: [id])
+
+  // index ajouté pour accélérer les recherches
+  @@index([entrepriseId, annee, mois])
+  @@index([annee, mois, statut])
+  @@index([salarieId])
 }
 
 model Absence {
@@ -290,6 +317,10 @@ model Absence {
 
   entrepriseId String
   entreprise   Entreprise  @relation(fields: [entrepriseId], references: [id])
+
+  // index ajouté pour accélérer les recherches
+  @@index([entrepriseId, statut])
+  @@index([salarieId])
 }
 
 enum TypeVariable {
@@ -396,4 +427,7 @@ model RappelSalarie {
   salarie      Salarie   @relation(fields: [salarieId], references: [id], onDelete: Cascade)
 
   @@index([dateEcheance])
+
+  // index ajouté pour accélérer les recherches
+  @@index([salarieId])
 }

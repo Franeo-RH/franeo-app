@@ -14,23 +14,27 @@ export default async function AdminEntreprises() {
   if (!session) redirect("/login");
   if (session.role !== "ADMIN") redirect("/client/dashboard");
 
-  const entreprises = await prisma.entreprise.findMany({
-    where: { demo: false },
-    include: {
-      abonnement: true,
-      _count: {
-        select: {
-          salaries: true,
-          utilisateurs: true,
+
+
+  // Requêtes lancées en même temps
+  const [entreprises, demandesEnAttente] = await Promise.all([
+    prisma.entreprise.findMany({
+      where: { demo: false },
+      include: {
+        abonnement: true,
+        _count: {
+          select: {
+            salaries: true,
+            utilisateurs: true,
+          },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const demandesEnAttente = await prisma.demandeEvolution.count({
-    where: { statut: "En attente", entreprise: { demo: false } },
-  });
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.demandeEvolution.count({
+      where: { statut: "En attente", entreprise: { demo: false } },
+    }),
+  ]);
 
   return (
     <div className="min-h-screen bg-gray-100">

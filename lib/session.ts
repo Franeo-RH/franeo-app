@@ -1,8 +1,13 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 
-/** Utilisateur connecté, même si son entreprise est suspendue (sert à afficher l'écran « compte suspendu ») */
-export async function getSessionBrute() {
+/**
+ * Utilisateur connecté, même si son entreprise est suspendue (sert à afficher l'écran « compte suspendu »).
+ * `cache` : une seule requête à la base par affichage de page, même si le layout, la page
+ * et les composants appellent la session chacun de leur côté.
+ */
+export const getSessionBrute = cache(async () => {
   const cookieStore = await cookies();
   const userId = cookieStore.get("userId")?.value;
 
@@ -18,7 +23,7 @@ export async function getSessionBrute() {
   });
 
   return utilisateur;
-}
+});
 
 /** Session normale : un client dont l'entreprise est suspendue n'a plus aucun accès (pages et API) */
 export async function getSession() {

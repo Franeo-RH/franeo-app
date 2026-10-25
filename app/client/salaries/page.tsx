@@ -28,32 +28,35 @@ export default async function ClientSalaries({
   const finMois = new Date(maintenant.getFullYear(), maintenant.getMonth() + 1, 0);
   const entrepriseId = session.entrepriseId!;
 
-  const salariesActifs = await prisma.salarie.findMany({
-    where: {
-      entrepriseId,
-      statut: "Actif",
-      dateDebut: { lte: finMois },
-      OR: [{ dateFin: null }, { dateFin: { gte: debutMois } }],
-    },
-    orderBy: { createdAt: "desc" },
-  });
 
-  const salariesAVenir = await prisma.salarie.findMany({
-    where: {
-      entrepriseId,
-      statut: "Actif",
-      dateDebut: { gt: finMois },
-    },
-    orderBy: { dateDebut: "asc" },
-  });
 
-  const salariesAnciens = await prisma.salarie.findMany({
-    where: {
-      entrepriseId,
-      dateFin: { lt: debutMois },
-    },
-    orderBy: { dateFin: "desc" },
-  });
+  // Requêtes lancées en même temps
+  const [salariesActifs, salariesAVenir, salariesAnciens] = await Promise.all([
+    prisma.salarie.findMany({
+      where: {
+        entrepriseId,
+        statut: "Actif",
+        dateDebut: { lte: finMois },
+        OR: [{ dateFin: null }, { dateFin: { gte: debutMois } }],
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.salarie.findMany({
+      where: {
+        entrepriseId,
+        statut: "Actif",
+        dateDebut: { gt: finMois },
+      },
+      orderBy: { dateDebut: "asc" },
+    }),
+    prisma.salarie.findMany({
+      where: {
+        entrepriseId,
+        dateFin: { lt: debutMois },
+      },
+      orderBy: { dateFin: "desc" },
+    }),
+  ]);
 
   function classeOnglet(o: string) {
     return `px-5 py-2 rounded-lg font-semibold transition ${
@@ -86,7 +89,7 @@ export default async function ClientSalaries({
                   📤 Importer Excel
                 </Link>
               )}
-              <BoutonExport type="salaries-client" label="Exporter Excel" />
+              <BoutonExport type="client-salaries" label="📊 Exporter Excel" />
             </div>
           </div>
 
@@ -131,7 +134,7 @@ export default async function ClientSalaries({
                         <td className="py-3"><span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{s.typeContrat || "—"}</span></td>
                         <td className="py-3 text-sm text-gray-500">{s.dateDebut ? new Date(s.dateDebut).toLocaleDateString("fr-FR") : "—"}</td>
                         <td className="py-3">
-                          <Link href={`/client/salaries/${s.id}`} className="bg-orange-500 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-orange-600 transition">Voir</Link>
+                          <div style={{ display: "flex", gap: "8px" }}><Link href={`/client/salaries/${s.id}`} className="bg-orange-500 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-orange-600 transition">Voir</Link><Link href={`/client/salaries/${s.id}/modifier`} style={{ backgroundColor: "#4b5563", color: "#ffffff" }} className="px-3 py-1 rounded-lg text-sm font-semibold hover:opacity-90 transition">Modifier</Link></div>
                         </td>
                       </tr>
                     ))}
@@ -169,7 +172,7 @@ export default async function ClientSalaries({
                         <td className="py-3"><span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{s.typeContrat || "—"}</span></td>
                         <td className="py-3 text-sm text-blue-600 font-semibold">{s.dateDebut ? new Date(s.dateDebut).toLocaleDateString("fr-FR") : "—"}</td>
                         <td className="py-3">
-                          <Link href={`/client/salaries/${s.id}`} className="bg-orange-500 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-orange-600 transition">Voir</Link>
+                          <div style={{ display: "flex", gap: "8px" }}><Link href={`/client/salaries/${s.id}`} className="bg-orange-500 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-orange-600 transition">Voir</Link><Link href={`/client/salaries/${s.id}/modifier`} style={{ backgroundColor: "#4b5563", color: "#ffffff" }} className="px-3 py-1 rounded-lg text-sm font-semibold hover:opacity-90 transition">Modifier</Link></div>
                         </td>
                       </tr>
                     ))}
@@ -207,7 +210,7 @@ export default async function ClientSalaries({
                         <td className="py-3"><span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{s.typeContrat || "—"}</span></td>
                         <td className="py-3 text-sm text-red-500 font-semibold">{s.dateFin ? new Date(s.dateFin).toLocaleDateString("fr-FR") : "—"}</td>
                         <td className="py-3">
-                          <Link href={`/client/salaries/${s.id}`} className="bg-gray-600 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-gray-700 transition">Voir</Link>
+                          <div style={{ display: "flex", gap: "8px" }}><Link href={`/client/salaries/${s.id}`} className="bg-gray-600 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-gray-700 transition">Voir</Link><Link href={`/client/salaries/${s.id}/modifier`} style={{ backgroundColor: "#4b5563", color: "#ffffff" }} className="px-3 py-1 rounded-lg text-sm font-semibold hover:opacity-90 transition">Modifier</Link></div>
                         </td>
                       </tr>
                     ))}

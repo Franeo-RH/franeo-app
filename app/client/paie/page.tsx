@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import BoutonSupprimerVariable from "@/components/BoutonSupprimerVariable";
+import BoutonExport from "@/components/BoutonExport";
 
 const MOIS = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -49,22 +50,26 @@ export default async function ClientPaie() {
   const moisActuel = maintenant.getMonth() + 1;
   const anneeActuelle = maintenant.getFullYear();
 
-  const variables = await prisma.variablePaie.findMany({
-    where: {
-      entrepriseId: session.entrepriseId!,
-      mois: moisActuel,
-      annee: anneeActuelle,
-    },
-    include: { salarie: true },
-  });
 
-  const absences = await prisma.absence.findMany({
-    where: {
-      entrepriseId: session.entrepriseId!,
-      dateDebut: { gte: new Date(anneeActuelle, moisActuel - 1, 1) },
-      dateFin: { lte: new Date(anneeActuelle, moisActuel, 0) },
-    },
-  });
+
+  // Requêtes lancées en même temps
+  const [variables, absences] = await Promise.all([
+    prisma.variablePaie.findMany({
+      where: {
+        entrepriseId: session.entrepriseId!,
+        mois: moisActuel,
+        annee: anneeActuelle,
+      },
+      include: { salarie: true },
+    }),
+    prisma.absence.findMany({
+      where: {
+        entrepriseId: session.entrepriseId!,
+        dateDebut: { gte: new Date(anneeActuelle, moisActuel - 1, 1) },
+        dateFin: { lte: new Date(anneeActuelle, moisActuel, 0) },
+      },
+    }),
+  ]);
 
   const hs = variables.filter(v => v.type === "HEURE_SUPPLEMENTAIRE");
   const primes = variables.filter(v => v.type === "PRIME");
@@ -95,7 +100,12 @@ export default async function ClientPaie() {
 
           <div className="bg-white rounded-xl shadow p-8 mb-6 flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold">💰 Paie</h1>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                <h1 className="text-3xl font-bold">💰 Paie</h1>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <BoutonExport type="client-variables" label="📊 Variables du mois" />
+                </div>
+              </div>
               <p className="text-gray-500 mt-1">{MOIS[moisActuel - 1]} {anneeActuelle}</p>
             </div>
             <Link href="/client/paie/saisie" className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition">

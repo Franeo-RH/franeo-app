@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import BoutonExport from "@/components/BoutonExport";
 
 const MOIS = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -55,7 +56,12 @@ export default async function ClientFacturation() {
         <main className="flex-1 p-10">
 
           <div className="bg-white rounded-xl shadow p-8 mb-6">
-            <h1 className="text-3xl font-bold">🧾 Mes factures</h1>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+              <h1 className="text-3xl font-bold">🧾 Mes factures</h1>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <BoutonExport type="client-factures" label="📊 Exporter Excel" />
+              </div>
+            </div>
             <p className="text-gray-500 mt-1">Historique de facturation — {anneeActuelle}</p>
           </div>
 

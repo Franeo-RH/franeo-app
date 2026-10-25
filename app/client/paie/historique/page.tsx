@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import BoutonSupprimerVariable from "@/components/BoutonSupprimerVariable";
+import BoutonExport from "@/components/BoutonExport";
 
 const MOIS = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -88,24 +89,26 @@ export default async function HistoriquePaie({
     }
   );
 
-  const variables = await prisma.variablePaie.findMany({
-    where: {
-      entrepriseId: session.entrepriseId!,
-      OR: periodes,
-    },
-    include: { salarie: true },
-    orderBy: [{ annee: "desc" }, { mois: "desc" }],
-  });
-
-  const absences = await prisma.absence.findMany({
-    where: {
-      entrepriseId: session.entrepriseId!,
-      dateDebut: { gte: new Date(anneeDebut, moisDebut - 1, 1) },
-      dateFin: { lte: new Date(anneeFin, moisFin, 0) },
-    },
-    include: { salarie: true },
-    orderBy: { dateDebut: "desc" },
-  });
+  // Requêtes lancées en même temps
+  const [variables, absences] = await Promise.all([
+    prisma.variablePaie.findMany({
+      where: {
+        entrepriseId: session.entrepriseId!,
+        OR: periodes,
+      },
+      include: { salarie: true },
+      orderBy: [{ annee: "desc" }, { mois: "desc" }],
+    }),
+    prisma.absence.findMany({
+      where: {
+        entrepriseId: session.entrepriseId!,
+        dateDebut: { gte: new Date(anneeDebut, moisDebut - 1, 1) },
+        dateFin: { lte: new Date(anneeFin, moisFin, 0) },
+      },
+      include: { salarie: true },
+      orderBy: { dateDebut: "desc" },
+    }),
+  ]);
 
   const variablesAvecCout = variables.map((v) => ({
     ...v,
@@ -128,7 +131,13 @@ export default async function HistoriquePaie({
         <main className="flex-1 p-10">
 
           <div className="bg-white rounded-xl shadow p-8 mb-6">
-            <h1 className="text-3xl font-bold">📋 Historique</h1>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+              <h1 className="text-3xl font-bold">📋 Historique</h1>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <BoutonExport type="client-variables" label="📊 Variables (Excel)" />
+                <BoutonExport type="client-absences" label="📊 Absences (Excel)" />
+              </div>
+            </div>
           </div>
 
           <div className="bg-white rounded-xl shadow p-6 mb-6">

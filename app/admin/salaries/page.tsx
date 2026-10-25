@@ -28,39 +28,40 @@ export default async function AdminSalaries({
   const debutMois = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1);
   const finMois = new Date(maintenant.getFullYear(), maintenant.getMonth() + 1, 0);
 
-  const entreprises = await prisma.entreprise.findMany({ where: { demo: false }, orderBy: { nom: "asc" } });
   // La démo n'apparaît jamais côté admin
   const filtreBase = { entreprise: { demo: false }, ...(filtreEntreprise ? { entrepriseId: filtreEntreprise } : {}) };
 
-  const salariesActifs = await prisma.salarie.findMany({
-    where: {
-      ...filtreBase,
-      statut: "Actif",
-      dateDebut: { lte: finMois },
-      OR: [{ dateFin: null }, { dateFin: { gte: debutMois } }],
-    },
-    include: { entreprise: true },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const salariesAVenir = await prisma.salarie.findMany({
-    where: {
-      ...filtreBase,
-      statut: "Actif",
-      dateDebut: { gt: finMois },
-    },
-    include: { entreprise: true },
-    orderBy: { dateDebut: "asc" },
-  });
-
-  const salariesAnciens = await prisma.salarie.findMany({
-    where: {
-      ...filtreBase,
-      dateFin: { lt: debutMois },
-    },
-    include: { entreprise: true },
-    orderBy: { dateFin: "desc" },
-  });
+  // Requêtes lancées en même temps
+  const [entreprises, salariesActifs, salariesAVenir, salariesAnciens] = await Promise.all([
+    prisma.entreprise.findMany({ where: { demo: false }, orderBy: { nom: "asc" } }),
+    prisma.salarie.findMany({
+      where: {
+        ...filtreBase,
+        statut: "Actif",
+        dateDebut: { lte: finMois },
+        OR: [{ dateFin: null }, { dateFin: { gte: debutMois } }],
+      },
+      include: { entreprise: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.salarie.findMany({
+      where: {
+        ...filtreBase,
+        statut: "Actif",
+        dateDebut: { gt: finMois },
+      },
+      include: { entreprise: true },
+      orderBy: { dateDebut: "asc" },
+    }),
+    prisma.salarie.findMany({
+      where: {
+        ...filtreBase,
+        dateFin: { lt: debutMois },
+      },
+      include: { entreprise: true },
+      orderBy: { dateFin: "desc" },
+    }),
+  ]);
 
   function lienOnglet(o: string) {
     return filtreEntreprise

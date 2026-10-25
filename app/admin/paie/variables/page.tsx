@@ -76,9 +76,6 @@ export default async function AdminVariables({
   const entrepriseId = sp.entrepriseId || "";
   const statut = sp.statut || "tout";
 
-  const entreprises = await prisma.entreprise.findMany({
-    orderBy: { nom: "asc" },
-  });
 
   const periodes = Array.from(
     { length: (anneeFin - anneeDebut) * 12 + moisFin - moisDebut + 1 },
@@ -88,16 +85,22 @@ export default async function AdminVariables({
     }
   );
 
-  const variables = await prisma.variablePaie.findMany({
-    where: {
-      entreprise: { demo: false },
-      ...(entrepriseId ? { entrepriseId } : {}),
-      ...(statut !== "tout" ? { statut } : {}),
-      OR: periodes,
-    },
-    include: { salarie: true, entreprise: true },
-    orderBy: [{ annee: "desc" }, { mois: "desc" }],
-  });
+  // Requêtes lancées en même temps
+  const [entreprises, variables] = await Promise.all([
+    prisma.entreprise.findMany({
+      orderBy: { nom: "asc" },
+    }),
+    prisma.variablePaie.findMany({
+      where: {
+        entreprise: { demo: false },
+        ...(entrepriseId ? { entrepriseId } : {}),
+        ...(statut !== "tout" ? { statut } : {}),
+        OR: periodes,
+      },
+      include: { salarie: true, entreprise: true },
+      orderBy: [{ annee: "desc" }, { mois: "desc" }],
+    }),
+  ]);
 
   const variablesFiltrees = variables.filter(v => {
     if (categorie === "hs") return v.type === "HEURE_SUPPLEMENTAIRE";

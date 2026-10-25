@@ -21,18 +21,20 @@ export async function chargerEcheances(options: { entrepriseId?: string; sansDem
   // sansDemo : exclut la démo ET les entreprises suspendues
   const sansDemo = options.sansDemo ? { entreprise: { demo: false, actif: true } } : {};
 
-  const rappels = await prisma.rappelSalarie.findMany({
-    where: { traite: false, dateEcheance: { lte: limite }, salarie: { statut: "Actif", ...filtre, ...sansDemo } },
-    include: { salarie: { include: { entreprise: true } } },
-    orderBy: { dateEcheance: "asc" },
-    take: 500,
-  });
-
-  const fins = await prisma.salarie.findMany({
-    where: { statut: "Actif", dateFin: { gte: debutRetard, lte: limite }, ...filtre, ...sansDemo },
-    include: { entreprise: true },
-    take: 500,
-  });
+  // Les deux requêtes partent en même temps
+  const [rappels, fins] = await Promise.all([
+    prisma.rappelSalarie.findMany({
+      where: { traite: false, dateEcheance: { lte: limite }, salarie: { statut: "Actif", ...filtre, ...sansDemo } },
+      include: { salarie: { include: { entreprise: true } } },
+      orderBy: { dateEcheance: "asc" },
+      take: 500,
+    }),
+    prisma.salarie.findMany({
+      where: { statut: "Actif", dateFin: { gte: debutRetard, lte: limite }, ...filtre, ...sansDemo },
+      include: { entreprise: true },
+      take: 500,
+    }),
+  ]);
 
   const liste: Echeance[] = [];
 

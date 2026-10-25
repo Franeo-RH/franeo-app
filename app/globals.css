@@ -1,7 +1,117 @@
 @import "tailwindcss";
 
+/* Force Tailwind à lire toutes les pages et composants (certaines couleurs n'étaient pas générées) */
+@source "../app";
+@source "../components";
+@source "../lib";
+
 body {
   background-color: #ffffff;
   color: #171717;
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* =========================================================
+   Barre de navigation
+   ========================================================= */
+.fr-nav { background: #000000; color: #ffffff; width: 100%; position: relative; z-index: 50; }
+.fr-nav-barre { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 24px; }
+.fr-nav-logo { flex-shrink: 0; display: flex; align-items: center; }
+.fr-nav-liens { display: flex; align-items: center; justify-content: center; gap: 6px; flex: 1; min-width: 0; flex-wrap: wrap; }
+.fr-nav-lien {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  min-width: 64px; padding: 8px 10px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.15); color: #ffffff; text-decoration: none;
+  font-size: 12px; font-weight: 600; transition: background 0.15s;
+}
+.fr-nav-lien:hover { background: rgba(249, 115, 22, 0.45); }
+.fr-nav-lien.fr-actif { background: #f97316; }
+.fr-nav-profil { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.fr-nav-prenom { color: #d1d5db; font-size: 14px; font-weight: 600; }
+.fr-nav-petit { color: #9ca3af; font-size: 12px; text-decoration: none; }
+.fr-nav-petit:hover { color: #fb923c; }
+.fr-nav-deco { background: none; border: none; color: #f87171; font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; }
+.fr-burger { display: none; background: none; border: none; color: #ffffff; cursor: pointer; padding: 8px; border-radius: 8px; }
+.fr-menu-mobile { display: none; }
+
+@media (max-width: 1100px) {
+  .fr-nav-liens, .fr-nav-profil { display: none; }
+  .fr-burger { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+  .fr-nav-barre { padding: 8px 16px; }
+  .fr-menu-mobile { display: block; border-top: 1px solid #262626; padding: 12px 16px 16px; }
+  .fr-menu-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .fr-menu-lien {
+    display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 10px 12px;
+    border-radius: 12px; background: rgba(255, 255, 255, 0.12); color: #ffffff;
+    text-decoration: none; font-size: 15px; font-weight: 600;
+  }
+  .fr-menu-lien.fr-actif { background: #f97316; }
+  .fr-menu-pied { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; color: #d1d5db; font-size: 14px; flex-wrap: wrap; }
+  .fr-menu-pied .fr-nav-deco, .fr-menu-pied .fr-nav-petit { font-size: 14px; }
+}
+
+/* =========================================================
+   Indicateur de chargement (affiché dès le clic)
+   ========================================================= */
+.fr-chargement { position: relative; min-height: 60vh; }
+.fr-chargement-barre {
+  position: fixed; top: 0; left: 0; height: 3px; width: 40%; background: #f97316; z-index: 100;
+  animation: fr-barre 1s ease-in-out infinite;
+}
+.fr-chargement-centre { display: flex; align-items: center; justify-content: center; gap: 12px; padding-top: 25vh; color: #6b7280; font-size: 15px; }
+.fr-spinner {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 3px solid #fed7aa; border-top-color: #f97316;
+  animation: fr-tourne 0.8s linear infinite;
+}
+@keyframes fr-tourne { to { transform: rotate(360deg); } }
+@keyframes fr-barre { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+
+/* =========================================================
+   Téléphone et petite tablette
+   ========================================================= */
+@media (max-width: 768px) {
+  /* Barre latérale + contenu : l'un sous l'autre */
+  div.flex:has(> aside.fr-sidebar) { flex-direction: column; }
+  aside.fr-sidebar {
+    width: 100% !important; min-height: 0 !important;
+    flex-direction: row !important; flex-wrap: nowrap; overflow-x: auto;
+    gap: 8px !important; padding: 10px 12px !important;
+    box-shadow: none !important; border-bottom: 1px solid #e5e7eb;
+    -webkit-overflow-scrolling: touch;
+  }
+  aside.fr-sidebar > p { display: none; }
+  aside.fr-sidebar > a { flex-shrink: 0; white-space: nowrap; padding: 10px 14px !important; font-size: 14px; }
+
+  /* Contenu plus compact */
+  main { padding: 12px !important; min-width: 0; width: 100%; box-sizing: border-box; }
+  main .p-10 { padding: 16px !important; }
+  main .p-8 { padding: 16px !important; }
+  main .p-6 { padding: 14px !important; }
+  main .px-6 { padding-left: 14px !important; padding-right: 14px !important; }
+  main .mb-6 { margin-bottom: 14px !important; }
+  main h1, main .text-3xl { font-size: 1.4rem !important; line-height: 1.25 !important; }
+  main .text-4xl { font-size: 1.8rem !important; }
+  main .text-xl { font-size: 1.1rem !important; }
+
+  /* En-têtes avec boutons : passent à la ligne au lieu de déborder */
+  main .justify-between { flex-wrap: wrap; gap: 12px; }
+  main .flex.gap-2, main .flex.gap-3, main .flex.gap-4 { flex-wrap: wrap; }
+
+  /* Grilles : une colonne */
+  main .grid { grid-template-columns: minmax(0, 1fr) !important; }
+  main [class*="col-span"] { grid-column: auto !important; }
+  .fr-grille-2 { grid-template-columns: minmax(0, 1fr) !important; }
+  .fr-grille-tuiles { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+  /* Tableaux : défilement horizontal dans leur carte */
+  main table { display: block; width: 100%; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+  main th, main td { padding-right: 14px; }
+
+  /* Formulaires : pas de zoom automatique sur iPhone, champs pleine largeur */
+  main input, main select, main textarea { font-size: 16px !important; max-width: 100%; }
+  main form .flex-1 { min-width: 0; }
+
+  /* Boutons confortables au doigt */
+  main button, main a.rounded-lg { min-height: 40px; }
 }
