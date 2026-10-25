@@ -112,30 +112,88 @@ export default function BuddyChat() {
     [input, chargement, router]
   );
 
+  // ===== Dictée vocale =====
+  // La reconnaissance est créée une seule fois ; on passe par une référence pour toujours
+  // appeler la version à jour de envoyerMessage (avant, elle était recréée à chaque lettre tapée).
+  const envoyerRef = useRef(envoyerMessage);
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    envoyerRef.current = envoyerMessage;
+  }, [envoyerMessage]);
+  const transcriptionRef = useRef("");
+
+  function messageBuddy(contenu: string) {
+    setMessages((prev) => [...prev, { role: "buddy", contenu }]);
+  }
+
+  function creerReconnaissance() {
+    if (typeof window === "undefined") return null;
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return;
+    if (!SR) return null;
     const recognition = new SR();
     recognition.lang = "fr-FR";
     recognition.continuous = false;
+    recognition.interimResults = true; // le texte s'affiche pendant qu'on parle
+    recognition.maxAlternatives = 1;
+
     recognition.onresult = (e: any) => {
-      const texte = e.results[0][0].transcript;
-      setEcoute(false);
-      envoyerMessage(texte);
+      let texte = "";
+      for (let i = 0; i < e.results.length; i++) texte += e.results[i][0].transcript;
+      transcriptionRef.current = texte;
+      setInput(texte);
     };
-    recognition.onend = () => setEcoute(false);
-    recognitionRef.current = recognition;
-  }, [envoyerMessage]);
+    recognition.onerror = (e: any) => {
+      setEcoute(false);
+      transcriptionRef.current = "";
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        messageBuddy("🎤 Je n'ai pas accès au micro. Autorisez-le dans votre navigateur (icône 🔒 à gauche de l'adresse, puis Micro → Autoriser), puis réessayez.");
+      } else if (e.error === "no-speech") {
+        messageBuddy("🎤 Je n'ai rien entendu. Appuyez sur le micro et parlez juste après.");
+      } else if (e.error === "audio-capture") {
+        messageBuddy("🎤 Aucun micro détecté sur cet appareil.");
+      } else if (e.error === "network") {
+        messageBuddy("🎤 La dictée a besoin d'une connexion internet. Réessayez.");
+      }
+    };
+    recognition.onend = () => {
+      setEcoute(false);
+      const texte = transcriptionRef.current.trim();
+      transcriptionRef.current = "";
+      if (texte) envoyerRef.current(texte);
+    };
+    return recognition;
+  }
+
+  // Arrêt du micro si le composant disparaît
+  useEffect(() => {
+    return () => {
+      try { recognitionRef.current?.abort(); } catch {}
+    };
+  }, []);
 
   function toggleEcoute() {
-    if (!recognitionRef.current) return;
     if (ecoute) {
-      recognitionRef.current.stop();
-      setEcoute(false);
-    } else {
+      try { recognitionRef.current?.stop(); } catch {}
+      return; // l'envoi se fait dans onend
+    }
+    if (!recognitionRef.current) recognitionRef.current = creerReconnaissance();
+    if (!recognitionRef.current) {
+      messageBuddy("🎤 La dictée vocale n'est pas disponible sur ce navigateur. Elle fonctionne avec Chrome ou Edge sur ordinateur et Android, et Safari sur iPhone. Vous pouvez aussi utiliser le micro de votre clavier.");
+      return;
+    }
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      messageBuddy("🎤 La dictée nécessite une adresse sécurisée (https).");
+      return;
+    }
+    transcriptionRef.current = "";
+    try {
+      recognitionRef.current.start();
+      setEcoute(true);
+    } catch {
+      // déjà démarrée ou instance bloquée : on en recrée une
+      try { recognitionRef.current.abort(); } catch {}
+      recognitionRef.current = creerReconnaissance();
       try {
-        recognitionRef.current.start();
+        recognitionRef.current?.start();
         setEcoute(true);
       } catch {
         setEcoute(false);
@@ -290,7 +348,10 @@ export default function BuddyChat() {
           {/* Saisie */}
           <div style={{ padding: "12px", borderTop: "1px solid #e5e7eb", background: "white", display: "flex", gap: "8px" }}>
             <button
+              type="button"
               onClick={toggleEcoute}
+              aria-label={ecoute ? "Arrêter la dictée" : "Dicter un message"}
+              title={ecoute ? "Arrêter et envoyer" : "Dicter un message"}
               style={{ padding: "8px 10px", borderRadius: "8px", border: "none", background: ecoute ? "#ef4444" : "#f3f4f6", cursor: "pointer", fontSize: "16px", transition: "all 0.2s" }}
             >
               🎤
