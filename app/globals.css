@@ -14,7 +14,7 @@ body {
 /* =========================================================
    Barre de navigation
    ========================================================= */
-.fr-nav { background: #000000; color: #ffffff; width: 100%; position: relative; z-index: 50; }
+.fr-nav { background: #000000; color: #ffffff; width: 100%; position: relative; z-index: 50; padding-top: env(safe-area-inset-top); }
 .fr-nav-barre { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 24px; }
 .fr-nav-logo { flex-shrink: 0; display: flex; align-items: center; }
 .fr-nav-liens { display: flex; align-items: center; justify-content: center; gap: 6px; flex: 1; min-width: 0; flex-wrap: wrap; }
@@ -56,6 +56,10 @@ body {
     text-decoration: none; font-size: 15px; font-weight: 600;
   }
   .fr-menu-lien.fr-actif { background: #f97316; }
+  .fr-menu-installer {
+    display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; margin-top: 10px;
+    background: #ffffff; color: #111827; border: none; border-radius: 12px; font-weight: 700; font-size: 15px; cursor: pointer;
+  }
   .fr-menu-pied { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; color: #d1d5db; font-size: 14px; flex-wrap: wrap; }
   .fr-menu-pied .fr-nav-deco, .fr-menu-pied .fr-nav-petit { font-size: 14px; }
 }

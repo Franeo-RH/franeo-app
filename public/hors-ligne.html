@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Franeo — hors connexion</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f3f4f6; font-family: Arial, Helvetica, sans-serif; color: #111827; padding: 24px; box-sizing: border-box; }
+  .carte { background: #fff; border-radius: 16px; padding: 32px 24px; max-width: 360px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  img { width: 72px; height: 72px; }
+  h1 { font-size: 20px; margin: 16px 0 8px; }
+  p { color: #6b7280; font-size: 15px; margin: 0 0 20px; }
+  button { background: #f97316; color: #fff; border: 0; border-radius: 10px; padding: 12px 20px; font-size: 16px; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="carte">
+    <img src="/icon-192.png" alt="Franeo">
+    <h1>Pas de connexion internet</h1>
+    <p>Franeo a besoin d'internet pour afficher vos données. Vérifiez votre réseau puis réessayez.</p>
+    <button onclick="location.reload()">Réessayer</button>
+  </div>
+</body>
+</html>

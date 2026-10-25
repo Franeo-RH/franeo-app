@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import InstallerApp from "@/components/InstallerApp";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -123,6 +124,10 @@ export default function LoginPage() {
           {chargementDemo ? "Ouverture de la démo..." : "🧪 Tester la démo"}
         </button>
         <p className="text-xs text-gray-400 text-center mt-2">Sans inscription, avec des données fictives.</p>
+
+        <InstallerApp
+          style={{ width: "100%", marginTop: "16px", background: "#111827", color: "#ffffff", border: "none", borderRadius: "8px", padding: "12px", fontWeight: 600, cursor: "pointer" }}
+        />
       </div>
     </main>
   );

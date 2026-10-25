@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import EnregistrerSW from "@/components/EnregistrerSW";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,6 +16,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Franeo",
   description: "ERP RH et Paie",
+  applicationName: "Franeo",
+  // iPhone : ouverture en plein écran depuis l'écran d'accueil
+  appleWebApp: { capable: true, title: "Franeo", statusBarStyle: "black" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -29,6 +40,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {children}
+        <EnregistrerSW />
       </body>
     </html>
   );

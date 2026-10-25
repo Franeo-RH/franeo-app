@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import InstallerApp from "@/components/InstallerApp";
 
 // Adresse du site vitrine (modifiable avec la variable NEXT_PUBLIC_SITE_URL sur Vercel)
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://franeo-rh.com";
@@ -149,6 +150,7 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
               </Link>
             ))}
           </div>
+          <InstallerApp className="fr-menu-installer" />
           <a href={SITE_URL} target="_blank" rel="noopener noreferrer" className="fr-menu-offres">🌐 Voir toutes nos offres</a>
           <div className="fr-menu-pied">
             <span>👤 {prenom}</span>
