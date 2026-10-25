@@ -273,6 +273,14 @@ export default function NouveauSalarie() {
           </div>
         </main>
       </div>
+      {surcout && (
+        <ModaleSurcout
+          surcout={surcout}
+          chargement={chargement}
+          onAnnuler={() => { setSurcout(null); setChargement(false); }}
+          onAccepter={() => envoyer(true)}
+        />
+      )}
     </div>
   );
 }
@@ -297,14 +305,6 @@ function Verrou({ label }: { label: string }) {
       <div className="w-full rounded-lg px-4 py-3 bg-gray-200 text-gray-500 text-sm cursor-not-allowed select-none">
         🔒 Non disponible dans la version démo
       </div>
-      {surcout && (
-        <ModaleSurcout
-          surcout={surcout}
-          chargement={chargement}
-          onAnnuler={() => { setSurcout(null); setChargement(false); }}
-          onAccepter={() => envoyer(true)}
-        />
-      )}
     </div>
   );
 }
