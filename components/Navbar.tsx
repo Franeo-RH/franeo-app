@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import InstallerApp from "@/components/InstallerApp";
+import { viderCacheHorsLigne } from "@/components/EnregistrerSW";
 
 // Adresse du site vitrine (modifiable avec la variable NEXT_PUBLIC_SITE_URL sur Vercel)
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://franeo-rh.com";
@@ -49,6 +50,7 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
 
   async function handleLogout() {
     setChargement(true);
+    await viderCacheHorsLigne(); // les pages gardées pour le hors-ligne ne restent pas sur l'appareil
     await fetch("/api/logout", { method: "POST" });
     router.push("/login");
     router.refresh();

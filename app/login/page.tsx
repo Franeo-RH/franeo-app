@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import InstallerApp from "@/components/InstallerApp";
+import { viderCacheHorsLigne } from "@/components/EnregistrerSW";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,8 +35,10 @@ export default function LoginPage() {
     }
 
     if (data.role === "ADMIN") {
+      await viderCacheHorsLigne(); // nouvelle session : on repart d'un cache vide
       router.push("/admin/dashboard");
     } else {
+      await viderCacheHorsLigne(); // nouvelle session : on repart d'un cache vide
       router.push("/client/dashboard");
     }
   }
@@ -51,6 +54,7 @@ export default function LoginPage() {
         setChargementDemo(false);
         return;
       }
+      await viderCacheHorsLigne(); // nouvelle session : on repart d'un cache vide
       router.push("/client/dashboard");
     } catch {
       setErreur("Problème de connexion, réessayez.");
