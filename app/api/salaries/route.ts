@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import { matriculeDejaPris, nettoyerMatricule } from "@/lib/matricule";
 import { lireRappel } from "@/lib/rappels";
 import { estSessionDemo, LIMITE_SALARIES_DEMO, NOM_FAMILLE_DEMO } from "@/lib/demo";
+import { evaluerSurcout, STATUT_ACCORD_REQUIS } from "@/lib/surcout";
 
 export async function GET() {
   const session = await getSession();
@@ -122,6 +123,14 @@ export async function POST(request: NextRequest) {
     }
   }
 
+
+  // Supplément (salarié / bulletin au-delà de la formule) : accord du client requis
+  if (session.role === "CLIENT" && !demo && brut.accepteSurcout !== true) {
+    const surcout = await evaluerSurcout(entrepriseId, { salaries: 1 });
+    if (surcout) {
+      return NextResponse.json({ surcoutRequis: true, surcout }, { status: STATUT_ACCORD_REQUIS });
+    }
+  }
 
   const rappels: {
     type: string;

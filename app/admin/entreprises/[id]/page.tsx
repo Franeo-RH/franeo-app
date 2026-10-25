@@ -9,6 +9,7 @@ import BoutonsEntreprise from "@/components/BoutonsEntreprise";
 import BoutonsDecision from "@/components/BoutonsDecision";
 import BoutonsDecisionPaie from "@/components/BoutonsDecisionPaie";
 import SelectAbonnementPaieEntreprise from "@/components/SelectAbonnementPaieEntreprise";
+import ChampTauxCharges from "@/components/ChampTauxCharges";
 
 export const dynamic = "force-dynamic";
 
@@ -119,6 +120,10 @@ export default async function FicheEntrepriseAdmin({
                 <Info label="Formule" value={entreprise.abonnementPaie?.nom} />
                 <Info label="Prix" value={entreprise.abonnementPaie ? `${entreprise.abonnementPaie.prixMensuel} €/mois` : null} />
                 <Info label="Bulletins inclus" value={entreprise.abonnementPaie?.bulletinsInclus.toString()} />
+              </div>
+              <div className="mb-4">
+                <ChampTauxCharges entrepriseId={id} valeur={entreprise.tauxCharges} />
+                <p className="text-xs text-gray-400 mt-1">Sert au suivi de la masse salariale (salaires + charges + variables).</p>
               </div>
               <p className="text-sm text-gray-500 mb-2">Modifier la formule :</p>
               <SelectAbonnementPaieEntreprise

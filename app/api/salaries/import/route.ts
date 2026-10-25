@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { evaluerSurcout, STATUT_ACCORD_REQUIS } from "@/lib/surcout";
 import { analyserTableau, type LigneErreur } from "@/lib/import-salaries";
 import { fabriquerFichierErreurs, lireFichierExcel } from "@/lib/import-salaries-xlsx";
 
@@ -64,6 +65,14 @@ export async function POST(req: NextRequest) {
     d.heuresHebdomadaires?.toString() ?? "", d.salaireMensuel?.toString() ?? "", d.salaireAnnuel?.toString() ?? "",
     d.email ?? "", d.telephone ?? "",
   ];
+
+  // Supplément (salariés / bulletins au-delà de la formule) : accord du client requis
+  if (analyse.valides.length > 0 && form.get("accepteSurcout") !== "1") {
+    const surcout = await evaluerSurcout(entrepriseId, { salaries: analyse.valides.length });
+    if (surcout) {
+      return NextResponse.json({ surcoutRequis: true, surcout }, { status: STATUT_ACCORD_REQUIS });
+    }
+  }
 
   let crees = 0;
   for (const v of analyse.valides) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { evaluerSurcout, STATUT_ACCORD_REQUIS } from "@/lib/surcout";
 
 export async function GET() {
   const session = await getSession();
@@ -25,26 +26,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   }
 
-  const { titre, description } = await request.json();
+  const { titre, description, accepteSurcout } = await request.json();
 
   if (!titre || !description) {
     return NextResponse.json({ erreur: "Titre et description obligatoires" }, { status: 400 });
   }
 
-  // Vérifier les tickets restants
-  const entreprise = await prisma.entreprise.findUnique({
-    where: { id: session.entrepriseId! },
-    include: { abonnement: true },
-  });
-
-  const ticketsInclus = entreprise?.abonnement?.ticketsRH || 0;
-  const ticketsUtilises = entreprise?.ticketsUtilises || 0;
-
-  if (ticketsUtilises >= ticketsInclus) {
-    return NextResponse.json(
-      { erreur: "Vous n'avez plus de tickets disponibles ce mois-ci" },
-      { status: 400 }
-    );
+  // Tickets inclus épuisés : le ticket est facturé en supplément, avec l'accord du client
+  if (accepteSurcout !== true) {
+    const surcout = await evaluerSurcout(session.entrepriseId!, { tickets: 1 });
+    if (surcout) {
+      return NextResponse.json({ surcoutRequis: true, surcout }, { status: STATUT_ACCORD_REQUIS });
+    }
   }
 
   // Créer le ticket

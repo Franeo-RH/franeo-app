@@ -7,6 +7,8 @@ import Link from "next/link";
 import DashboardOnglets from "@/components/DashboardOnglets";
 import BlocEcheances from "@/components/BlocEcheances";
 import { chargerEcheances } from "@/lib/rappels-serveur";
+import { EncartMasseSalariale } from "@/components/SuiviMasseSalariale";
+import { calculerMasseSalariale } from "@/lib/masse-salariale";
 import BoutonResetDemo from "@/components/BoutonResetDemo";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +30,7 @@ export default async function AdminDashboard() {
   const anneeActuelle = maintenant.getFullYear();
 
   const filtreClients = { demo: false, actif: true };
+  const masseP = calculerMasseSalariale({ mois: moisActuel, annee: anneeActuelle, tousLesClients: true });
 
   // Toutes les requêtes partent en même temps (au lieu de 13 à la suite)
   const [
@@ -72,6 +75,7 @@ export default async function AdminDashboard() {
     }),
   ]);
 
+  const masse = await masseP;
   const totalEntreprises = entreprises.length;
   const totalSalaries = entreprises.reduce((acc, e) => acc + e._count.salaries, 0);
   const facturationsMois = facturationsAnnee.filter((f) => f.mois === moisActuel);
@@ -140,6 +144,8 @@ export default async function AdminDashboard() {
             </Link>
           ))}
         </div>
+
+        <EncartMasseSalariale data={masse} lien="/admin/paie" />
 
         <div className="fr-grille-2" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
           <DashboardOnglets grilleMois={grilleMois} annee={anneeActuelle} moisActuel={moisActuel} />

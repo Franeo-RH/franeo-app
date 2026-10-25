@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import ModaleSurcout from "@/components/ModaleSurcout";
+import type { Surcout } from "@/lib/surcout";
 
 type Resultat = { crees: number; erreurs: { ligne: number; raisons: string[] }[]; fichierErreurs: string | null };
 
@@ -21,9 +23,10 @@ export default function ImportSalaries() {
   const [fichier, setFichier] = useState<File | null>(null);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState("");
+  const [surcout, setSurcout] = useState<Surcout | null>(null);
   const [resultat, setResultat] = useState<Resultat | null>(null);
 
-  async function importer() {
+  async function importer(accepteSurcout = false) {
     if (!fichier) return;
     setEnvoi(true);
     setErreur("");
@@ -31,11 +34,17 @@ export default function ImportSalaries() {
     try {
       const form = new FormData();
       form.append("fichier", fichier);
+      if (accepteSurcout) form.append("accepteSurcout", "1");
       const res = await fetch("/api/salaries/import", { method: "POST", body: form });
       const data = await res.json();
-      if (!res.ok) {
+      if (res.status === 402 && data.surcoutRequis) {
+        // Supplément : on demande l'accord du client
+        setSurcout(data.surcout);
+      } else if (!res.ok) {
+        setSurcout(null);
         setErreur(data.erreur || "L'import a échoué.");
       } else {
+        setSurcout(null);
         setResultat(data);
         if (data.fichierErreurs) telecharger(data.fichierErreurs, "salaries-erreurs.xlsx");
         setFichier(null);
@@ -78,7 +87,7 @@ export default function ImportSalaries() {
           className="block text-sm"
         />
         <button
-          onClick={importer}
+          onClick={() => importer()}
           disabled={!fichier || envoi}
           className="bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white text-sm font-medium px-4 py-2 rounded-lg"
         >
@@ -112,6 +121,14 @@ export default function ImportSalaries() {
             <Link href="/client/salaries" className="inline-block text-sm font-medium text-green-700 hover:underline">Voir les salariés →</Link>
           )}
         </div>
+      )}
+      {surcout && (
+        <ModaleSurcout
+          surcout={surcout}
+          chargement={envoi}
+          onAnnuler={() => setSurcout(null)}
+          onAccepter={() => importer(true)}
+        />
       )}
     </div>
   );

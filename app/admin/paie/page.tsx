@@ -6,6 +6,8 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import BoutonExportPaie from "@/components/BoutonExportPaie";
+import SuiviMasseSalariale from "@/components/SuiviMasseSalariale";
+import { calculerMasseSalariale } from "@/lib/masse-salariale";
 import BoutonResetPaie from "@/components/BoutonResetPaie";
 import BoutonValiderPaie from "@/components/BoutonValiderPaie";
 
@@ -36,6 +38,7 @@ export default async function AdminPaie({
   // Requêtes lancées en même temps
   const [entreprises, variables] = await Promise.all([
     prisma.entreprise.findMany({
+      where: { demo: false },
       orderBy: { nom: "asc" },
     }),
     prisma.variablePaie.findMany({
@@ -52,6 +55,13 @@ export default async function AdminPaie({
       orderBy: { createdAt: "desc" },
     }),
   ]);
+
+  // Suivi global (salaires + absences + variables + charges) : une entreprise ou tous les clients
+  const masse = await calculerMasseSalariale({
+    mois: moisSelectionne,
+    annee: anneeSelectionnee,
+    ...(entrepriseSelectionnee ? { entrepriseId: entrepriseSelectionnee } : { tousLesClients: true }),
+  });
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -125,6 +135,8 @@ export default async function AdminPaie({
               </>
             )}
           </div>
+
+          <SuiviMasseSalariale data={masse} afficherEntreprise={!entrepriseSelectionnee} lienSalarie="/admin/salaries" />
 
           {/* Stats */}
           <div className="grid grid-cols-4 gap-6 mb-8">

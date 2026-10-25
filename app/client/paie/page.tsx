@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
-import BoutonSupprimerVariable from "@/components/BoutonSupprimerVariable";
+import SuiviMasseSalariale from "@/components/SuiviMasseSalariale";
+import { calculerMasseSalariale } from "@/lib/masse-salariale";
 import BoutonExport from "@/components/BoutonExport";
 
 const MOIS = [
@@ -35,7 +36,11 @@ function calculerCout(type: string, valeur: number, salarie: {
   };
 }
 
-export default async function ClientPaie() {
+export default async function ClientPaie({
+  searchParams,
+}: {
+  searchParams: Promise<{ mois?: string; annee?: string }>;
+}) {
   await connection();
 
   const session = await getSession();
@@ -46,9 +51,14 @@ export default async function ClientPaie() {
     redirect("/client/dashboard");
   }
 
+  // Mois affiché (par défaut : le mois en cours)
+  const sp = await searchParams;
   const maintenant = new Date();
-  const moisActuel = maintenant.getMonth() + 1;
-  const anneeActuelle = maintenant.getFullYear();
+  const moisChoisi = parseInt(sp.mois || "");
+  const anneeChoisie = parseInt(sp.annee || "");
+  const moisActuel = moisChoisi >= 1 && moisChoisi <= 12 ? moisChoisi : maintenant.getMonth() + 1;
+  const anneeActuelle = anneeChoisie >= 2000 && anneeChoisie <= 2100 ? anneeChoisie : maintenant.getFullYear();
+  const masseP = calculerMasseSalariale({ mois: moisActuel, annee: anneeActuelle, entrepriseId: session.entrepriseId! });
 
 
 
@@ -70,6 +80,8 @@ export default async function ClientPaie() {
       },
     }),
   ]);
+
+  const masse = await masseP;
 
   const hs = variables.filter(v => v.type === "HEURE_SUPPLEMENTAIRE");
   const primes = variables.filter(v => v.type === "PRIME");
@@ -112,6 +124,25 @@ export default async function ClientPaie() {
               ✏️ Saisir des variables
             </Link>
           </div>
+
+          {/* Choix du mois */}
+          <form method="get" className="bg-white rounded-xl shadow p-4 mb-6" style={{ display: "flex", gap: "10px", alignItems: "flex-end", flexWrap: "wrap" }}>
+            <div>
+              <label htmlFor="mois-suivi" className="block text-sm font-semibold mb-1">Mois</label>
+              <select id="mois-suivi" name="mois" defaultValue={moisActuel} className="border rounded-lg px-3 py-2">
+                {MOIS.map((m, i) => (<option key={m} value={i + 1}>{m}</option>))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="annee-suivi" className="block text-sm font-semibold mb-1">Année</label>
+              <select id="annee-suivi" name="annee" defaultValue={anneeActuelle} className="border rounded-lg px-3 py-2">
+                {[maintenant.getFullYear() - 2, maintenant.getFullYear() - 1, maintenant.getFullYear(), maintenant.getFullYear() + 1].map((a) => (<option key={a} value={a}>{a}</option>))}
+              </select>
+            </div>
+            <button type="submit" style={{ background: "#111827", color: "#ffffff" }} className="px-5 py-2 rounded-lg font-semibold">Afficher</button>
+          </form>
+
+          <SuiviMasseSalariale data={masse} lienSalarie="/client/salaries" />
 
           <div className="grid grid-cols-3 gap-6 mb-6">
             <div className="bg-white rounded-xl shadow p-6">

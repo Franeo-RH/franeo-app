@@ -592,6 +592,14 @@ export const salarieAjout: Flow = {
       const apres = nbFacturables(env, y, mo) + 1;
       if (apres > ab.salariesInclus) {
         texte += `\n\n💳 Ce salarié sera facturé en supplément (+${eur(ab.prixSalarieSupp)} sur la facture de ${NOMS_MOIS_AFFICHAGE[mo - 1]}) : votre formule « ${ab.nom} » inclut ${ab.salariesInclus} salarié(s) et vous en aurez ${apres}.`;
+        texte += `\nEn confirmant, vous acceptez ce supplément.\n💡 Une formule supérieure peut revenir moins cher : page « Mon entreprise › Abonnement RH ».`;
+      }
+    }
+    const fp = env.entreprise.abonnementPaie;
+    if (fp && fp.prixBulletinSupp > 0) {
+      const apres = nbFacturables(env, y, mo) + 1;
+      if (apres > fp.bulletinsInclus) {
+        texte += `\n\n📄 Bulletin de paie en supplément (+${eur(fp.prixBulletinSupp)}/mois) : votre formule paie « ${fp.nom} » inclut ${fp.bulletinsInclus} bulletin(s). En confirmant, vous acceptez ce supplément.`;
       }
     }
     return texte;

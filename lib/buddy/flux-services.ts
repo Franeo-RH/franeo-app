@@ -75,7 +75,7 @@ function noteQuota(env: Env): string {
   const utilises = env.entreprise.ticketsUtilises;
   if (utilises >= ab.ticketsRH) {
     return ab.prixTicketSupp > 0
-      ? `\n\n💳 Vos ${ab.ticketsRH} tickets inclus sont déjà utilisés : ce ticket sera facturé ${eur(ab.prixTicketSupp)}.`
+      ? `\n\n💳 Vos ${ab.ticketsRH} tickets inclus sont déjà utilisés : ce ticket sera facturé ${eur(ab.prixTicketSupp)}. En confirmant, vous acceptez ce supplément.\n💡 Une formule avec plus de tickets peut revenir moins cher : page « Mon entreprise › Abonnement RH ».`
       : `\n\nℹ️ Vos ${ab.ticketsRH} tickets inclus sont déjà utilisés.`;
   }
   const restants = ab.ticketsRH - utilises;

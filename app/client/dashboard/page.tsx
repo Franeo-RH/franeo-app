@@ -6,6 +6,8 @@ import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import BlocEcheances from "@/components/BlocEcheances";
 import { chargerEcheances } from "@/lib/rappels-serveur";
+import { EncartMasseSalariale } from "@/components/SuiviMasseSalariale";
+import { calculerMasseSalariale } from "@/lib/masse-salariale";
 import type { Echeance } from "@/lib/rappels";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +51,7 @@ export default async function ClientDashboard() {
   const avecSalaries = permissions.includes("salaries");
   const avecPaie = permissions.includes("paie");
   const avecTickets = permissions.includes("tickets");
+  const masseP = avecPaie || avecSalaries ? calculerMasseSalariale({ mois: moisActuel, annee: anneeActuelle, entrepriseId }) : null;
 
   // Toutes les requêtes partent en même temps (au lieu de 10 à la suite)
   const [
@@ -93,6 +96,7 @@ export default async function ClientDashboard() {
     avecSalaries ? chargerEcheances({ entrepriseId }) : Promise.resolve([] as Echeance[]),
   ]);
 
+  const masse = masseP ? await masseP : null;
   const coutPaie = variables.reduce((acc, v) => acc + calculerCout(v.type, v.valeur, v.salarie), 0);
 
   const ticketsRestants = Math.max(
@@ -159,6 +163,8 @@ export default async function ClientDashboard() {
             </Link>
           ))}
         </div>
+
+        {masse && <EncartMasseSalariale data={masse} lien="/client/paie" />}
 
         {/* Graphique des coûts + abonnements actuels */}
         <div className="fr-grille-2" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>

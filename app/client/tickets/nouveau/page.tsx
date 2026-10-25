@@ -4,11 +4,14 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import ModaleSurcout from "@/components/ModaleSurcout";
+import type { Surcout } from "@/lib/surcout";
 
 export default function NouveauTicket() {
   const router = useRouter();
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState("");
+  const [surcout, setSurcout] = useState<Surcout | null>(null);
   const [prenom, setPrenom] = useState("");
   const [permissions, setPermissions] = useState<string[]>([]);
 
@@ -30,16 +33,27 @@ export default function NouveauTicket() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    await envoyer(false);
+  }
+
+  async function envoyer(accepteSurcout: boolean) {
     setChargement(true);
     setErreur("");
 
     const res = await fetch("/api/tickets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, accepteSurcout }),
     });
 
     const data = await res.json();
+
+    // Supplément : on demande l'accord du client
+    if (res.status === 402 && data.surcoutRequis) {
+      setSurcout(data.surcout);
+      setChargement(false);
+      return;
+    }
 
     if (!res.ok) {
       setErreur(data.erreur || "Une erreur est survenue");
@@ -47,6 +61,7 @@ export default function NouveauTicket() {
       return;
     }
 
+    setSurcout(null);
     router.push("/client/tickets");
   }
 
@@ -110,6 +125,14 @@ export default function NouveauTicket() {
 
         </main>
       </div>
+      {surcout && (
+        <ModaleSurcout
+          surcout={surcout}
+          chargement={chargement}
+          onAnnuler={() => { setSurcout(null); setChargement(false); }}
+          onAccepter={() => envoyer(true)}
+        />
+      )}
     </div>
   );
 }

@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import ModaleSurcout from "@/components/ModaleSurcout";
+import type { Surcout } from "@/lib/surcout";
 import { TYPES_RAPPEL, formaterDateFR } from "@/lib/rappels";
 
 const ONGLETS = ["Infos personnelles", "Poste", "Salaire", "Documents & échéances"];
@@ -15,6 +17,7 @@ export default function NouveauSalarie() {
   const [onglet, setOnglet] = useState(0);
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState("");
+  const [surcout, setSurcout] = useState<Surcout | null>(null);
   const [prenom, setPrenom] = useState("");
   const [permissions, setPermissions] = useState<string[]>([]);
   const [demo, setDemo] = useState(false);
@@ -56,21 +59,36 @@ export default function NouveauSalarie() {
   }
 
   async function handleSubmit() {
+    await envoyer(false);
+  }
+
+  async function envoyer(accepteSurcout: boolean) {
     setChargement(true);
     setErreur("");
     const res = await fetch("/api/salaries", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, rappels }),
+      body: JSON.stringify({ ...form, rappels, accepteSurcout }),
     });
+    // Supplément : on demande l'accord du client
+    if (res.status === 402) {
+      const data = await res.json();
+      if (data.surcoutRequis) {
+        setSurcout(data.surcout);
+        setChargement(false);
+        return;
+      }
+    }
     if (!res.ok) {
       const data = await res.json();
       const message = data.erreur || "Une erreur est survenue";
       setErreur(message);
       if (message.toLowerCase().includes("matricule")) setOnglet(0);
       setChargement(false);
+      setSurcout(null);
       return;
     }
+    setSurcout(null);
     router.push("/client/salaries");
   }
 
@@ -279,6 +297,14 @@ function Verrou({ label }: { label: string }) {
       <div className="w-full rounded-lg px-4 py-3 bg-gray-200 text-gray-500 text-sm cursor-not-allowed select-none">
         🔒 Non disponible dans la version démo
       </div>
+      {surcout && (
+        <ModaleSurcout
+          surcout={surcout}
+          chargement={chargement}
+          onAnnuler={() => { setSurcout(null); setChargement(false); }}
+          onAccepter={() => envoyer(true)}
+        />
+      )}
     </div>
   );
 }

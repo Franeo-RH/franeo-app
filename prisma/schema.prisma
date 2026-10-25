@@ -40,6 +40,7 @@ model Entreprise {
 
   abonnementId      String?
   demo              Boolean            @default(false)
+  tauxCharges       Float              @default(40) // % de charges patronales (estimation)
   actif             Boolean            @default(true)
   motifSuspension   String?
   dateSuspension    DateTime?
