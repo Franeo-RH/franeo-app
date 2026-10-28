@@ -54,7 +54,7 @@ export default async function DemandesAbonnement() {
       <div className="flex">
         <Sidebar role={session.role} demandesEnAttente={totalEnAttente} />
         <main className="flex-1 p-10">
-          <OngletsAbonnements espace="admin" actif="rh" />
+          <OngletsAbonnements espace="admin" actif="global" />
           <ForcerAbonnement
             entreprises={entreprisesForcage}
             packsRH={[...abonnements].sort((a, b) => a.prixMensuel - b.prixMensuel).map((a) => ({ id: a.id, nom: a.nom, prixMensuel: a.prixMensuel }))}

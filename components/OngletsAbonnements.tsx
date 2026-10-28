@@ -1,11 +1,12 @@
 import Link from "next/link";
 
-/** Deux onglets en haut des pages d'abonnement : RH et Paie */
-export default function OngletsAbonnements({ espace, actif }: { espace: "admin" | "client"; actif: "rh" | "paie" }) {
+/** Onglets en haut des pages d'abonnement (admin : vue globale, Admin RH, Paie ; client : RH, Paie) */
+export default function OngletsAbonnements({ espace, actif }: { espace: "admin" | "client"; actif: "global" | "rh" | "paie" }) {
   const onglets = espace === "admin"
     ? [
-        { cle: "rh", href: "/admin/entreprises/demandes", label: "💳 Abonnements RH & demandes" },
-        { cle: "paie", href: "/admin/abonnement-paie", label: "📦 Formules paie" },
+        { cle: "global", href: "/admin/entreprises/demandes", label: "🌐 Vue globale" },
+        { cle: "rh", href: "/admin/abonnements-rh", label: "💳 Admin RH" },
+        { cle: "paie", href: "/admin/abonnement-paie", label: "📦 Paie" },
       ]
     : [
         { cle: "rh", href: "/client/entreprise/abonnement", label: "💳 Abonnement RH" },
@@ -19,7 +20,7 @@ export default function OngletsAbonnements({ espace, actif }: { espace: "admin" 
           href={o.href}
           role="tab"
           aria-selected={actif === o.cle}
-          style={{ flex: "1 1 180px", textAlign: "center", padding: "10px 14px", borderRadius: "8px", fontWeight: 700, fontSize: "14px", textDecoration: "none", background: actif === o.cle ? "#f97316" : "transparent", color: actif === o.cle ? "#ffffff" : "#374151" }}
+          style={{ flex: "1 1 160px", textAlign: "center", padding: "10px 14px", borderRadius: "8px", fontWeight: 700, fontSize: "14px", textDecoration: "none", background: actif === o.cle ? "#f97316" : "transparent", color: actif === o.cle ? "#ffffff" : "#374151" }}
         >
           {o.label}
         </Link>

@@ -90,7 +90,7 @@ export default async function AdminAbonnementPaie({ searchParams }: { searchPara
           {/* Comparatif des formules */}
           <div className="bg-white rounded-xl shadow p-6 mb-6" style={{ overflowX: "auto" }}>
             <h1 className="text-2xl font-bold mb-4">📦 Formules paie</h1>
-            <table className="w-full text-sm" style={{ minWidth: "640px" }}>
+            <table className="w-full text-sm fr-tableau-fixe" style={{ minWidth: "640px" }}>
               <thead>
                 <tr>
                   <th className="text-left py-2"></th>

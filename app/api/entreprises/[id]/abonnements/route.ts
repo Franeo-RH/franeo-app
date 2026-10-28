@@ -16,8 +16,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const avant = await prisma.entreprise.findUnique({ where: { id }, include: { abonnement: true, abonnementPaie: true } });
   if (!avant) return NextResponse.json({ erreur: "Entreprise introuvable" }, { status: 404 });
 
-  const abonnementId = corps.abonnementId ? String(corps.abonnementId) : null;
-  const abonnementPaieId = corps.abonnementPaieId ? String(corps.abonnementPaieId) : null;
+  // Un champ absent du corps n'est pas modifié (ex. changer seulement le pack RH)
+  const abonnementId = "abonnementId" in corps ? (corps.abonnementId ? String(corps.abonnementId) : null) : avant.abonnementId;
+  const abonnementPaieId = "abonnementPaieId" in corps ? (corps.abonnementPaieId ? String(corps.abonnementPaieId) : null) : avant.abonnementPaieId;
   const [rh, paie] = await Promise.all([
     abonnementId ? prisma.abonnement.findUnique({ where: { id: abonnementId } }) : Promise.resolve(null),
     abonnementPaieId ? prisma.abonnementPaie.findUnique({ where: { id: abonnementPaieId } }) : Promise.resolve(null),

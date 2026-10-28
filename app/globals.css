@@ -140,6 +140,31 @@ body {
   main tbody td[data-label=""] { justify-content: flex-start; flex-wrap: wrap; padding-top: 8px !important; }
   main tbody td:empty { display: none; }
 
+  /* Tableaux comparatifs (formules, packs) : on garde le tableau, on fait défiler de côté,
+     la première colonne (intitulés) reste visible */
+  main table.fr-tableau-fixe { display: table; width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; }
+  main table.fr-tableau-fixe thead { display: table-header-group; }
+  main table.fr-tableau-fixe tbody { display: table-row-group; }
+  main table.fr-tableau-fixe tr { display: table-row; background: none; border: none !important; border-radius: 0; padding: 0; margin: 0; }
+  main table.fr-tableau-fixe th, main table.fr-tableau-fixe td {
+    display: table-cell; width: auto; text-align: center; font-size: 13px;
+    padding: 6px 8px !important; border-top: 1px solid #f3f4f6 !important; vertical-align: top;
+  }
+  main table.fr-tableau-fixe td::before { content: none !important; }
+  main table.fr-tableau-fixe tr > :first-child {
+    position: sticky; left: 0; z-index: 1; background: #ffffff; text-align: left;
+    min-width: 120px; max-width: 140px; box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
+  }
+  main table.fr-tableau-fixe th span.text-2xl { font-size: 1.2rem !important; }
+
+  /* Onglets d'abonnement et puces de filtre : sur une ligne qui défile */
+  main [role="tablist"] { flex-wrap: nowrap !important; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  main [role="tablist"] > * { flex: 0 0 auto !important; white-space: nowrap; }
+
+  /* Chiffres clés : 2 par ligne */
+  main .grid[style*="minmax(160px"], main .grid[style*="minmax(170px"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  main .grid[style*="minmax(160px"] .text-2xl, main .grid[style*="minmax(170px"] .text-3xl { font-size: 1.25rem !important; }
+
   /* Formulaires : pas de zoom automatique sur iPhone, champs pleine largeur */
   main input, main select, main textarea { font-size: 16px !important; max-width: 100%; }
   main form .flex-1 { min-width: 0; }

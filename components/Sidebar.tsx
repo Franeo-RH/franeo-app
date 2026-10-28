@@ -24,11 +24,11 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/recrutement", label: "🎯 Recrutement" },
       ] };
     }
-    if (dans("/admin/entreprises", "/admin/abonnement-paie")) {
+    if (dans("/admin/entreprises", "/admin/abonnement-paie", "/admin/abonnements-rh")) {
       return { titre: "Entreprises", items: [
         { href: "/admin/entreprises/nouveau", label: "➕ Ajouter une entreprise" },
         { href: "/admin/entreprises", label: "🏢 Liste des entreprises" },
-        { href: "/admin/entreprises/demandes", label: "📦 Modifier un abonnement", badge: demandesEnAttente, aussi: ["/admin/abonnement-paie"] },
+        { href: "/admin/entreprises/demandes", label: "📦 Modifier un abonnement", badge: demandesEnAttente, aussi: ["/admin/abonnement-paie", "/admin/abonnements-rh"] },
         { href: "/admin/entreprises/facturation", label: "🧾 Facturation" },
         { href: "/admin/entreprises/prestations", label: "➕ Prestations supplémentaires" },
         { href: "/admin/entreprises/devis", label: "🧾 Demandes de devis" },
