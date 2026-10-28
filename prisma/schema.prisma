@@ -70,6 +70,7 @@ model Entreprise {
   communications    Communication[]
   releves           ReleveMois[]
   devis             Devis[]
+  questionsRH       QuestionRH[]
 }
 
 model Facturation {
@@ -595,6 +596,48 @@ model Devis {
   decideAt       DateTime?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
+  messages       MessageDevis[]
 
   @@index([entrepriseId, statut])
+}
+
+// Échange écrit entre le client et FRANEO RH sur un devis
+model MessageDevis {
+  id        String   @id @default(cuid())
+  devisId   String
+  devis     Devis    @relation(fields: [devisId], references: [id], onDelete: Cascade)
+  role      String   // ADMIN | CLIENT
+  auteur    String
+  contenu   String
+  createdAt DateTime @default(now())
+
+  @@index([devisId])
+}
+
+// Demande RH ponctuelle : question simple, échange rapide, non décomptée des tickets
+// statut : OUVERTE → REPONDUE (ou TICKET si l'admin demande d'ouvrir un ticket) → CLOSE
+model QuestionRH {
+  id           String            @id @default(cuid())
+  entrepriseId String
+  entreprise   Entreprise        @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  sujet        String
+  statut       String            @default("OUVERTE")
+  auteur       String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  messages     MessageQuestionRH[]
+
+  @@index([entrepriseId, statut])
+}
+
+model MessageQuestionRH {
+  id         String     @id @default(cuid())
+  questionId String
+  question   QuestionRH @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  role       String     // ADMIN | CLIENT
+  auteur     String
+  contenu    String
+  // réponse rapide « merci d'ouvrir un ticket » : affiche le lien vers un nouveau ticket
+  versTicket Boolean    @default(false)
+  createdAt  DateTime   @default(now())
 }

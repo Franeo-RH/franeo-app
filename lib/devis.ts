@@ -11,4 +11,5 @@ export type LigneDevis = { code: string; libelle: string; famille: string; quant
 export type DevisVue = {
   id: string; createdAt: string; statut: string; lignes: LigneDevis[]; totalIndicatif: number; message: string | null;
   montantPropose: number | null; reponse: string | null; auteur: string | null; entreprise?: { nom: string };
+  messages?: { id: string; role: string; auteur: string; contenu: string; createdAt: string }[];
 };

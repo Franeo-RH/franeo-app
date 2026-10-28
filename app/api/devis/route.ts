@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     },
     orderBy: { createdAt: "desc" },
     take: 200,
-    include: { entreprise: { select: { nom: true } } },
+    include: { entreprise: { select: { nom: true } }, messages: { orderBy: { createdAt: "asc" } } },
   });
   return NextResponse.json(devis);
 }

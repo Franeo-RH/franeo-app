@@ -19,6 +19,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
     if (dans("/admin/tickets", "/admin/recrutement", "/admin/entreprises/tickets")) {
       return { titre: "Tickets RH", items: [
         { href: "/admin/tickets", label: "🎫 Tous les tickets", badge: ticketsOuverts },
+        { href: "/admin/tickets/questions", label: "💬 Demandes RH ponctuelles" },
         { href: "/admin/entreprises/tickets", label: "💰 Facturation tickets" },
         { href: "/admin/recrutement", label: "🎯 Recrutement" },
       ] };
@@ -72,6 +73,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
     return { titre: "Tickets RH", items: [
       { href: "/client/tickets", label: "🎫 Mes tickets" },
       { href: "/client/tickets/nouveau", label: "➕ Nouveau ticket" },
+      { href: "/client/tickets/questions", label: "💬 Demande RH ponctuelle" },
       { href: "/client/tickets/recrutement", label: "🎯 Demander un recrutement" },
       { href: "/client/tickets/recrutement/historique", label: "📋 Historique recrutement" },
     ] };
@@ -100,7 +102,6 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
       { href: "/client/paie/saisie", label: "✏️ Saisir des variables" },
       { href: "/client/paie/releves", label: "⏱️ Relevés d'heures" },
       { href: "/client/paie/historique", label: "📋 Historique" },
-      { href: "/client/paie/prestations", label: "🛒 Prestations complémentaires" },
     ] };
   }
   if (dans("/client/helpdesk", "/client/faq")) {

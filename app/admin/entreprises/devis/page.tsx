@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import ExportCSV from "@/components/ExportCSV";
 import { STATUTS_DEVIS, type DevisVue } from "@/lib/devis";
+import FilMessages from "@/components/FilMessages";
 
 const eur = (n: number) => `${n.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €`;
 
@@ -96,6 +97,22 @@ export default function AdminDevis() {
                     </div>
                   </div>
                 )}
+                      <details className="mt-3" open={(d.messages?.length ?? 0) > 0}>
+                        <summary className="cursor-pointer text-sm font-semibold text-orange-600">💬 Échange ({d.messages?.length ?? 0})</summary>
+                        <div className="mt-2">
+                          <FilMessages
+                            moi="ADMIN"
+                            messages={d.messages ?? []}
+                            desactive={d.statut === "ANNULE"}
+                            placeholder="Écrire au client…"
+                            onEnvoyer={async (contenu) => {
+                              const res = await fetch(`/api/devis/${d.id}/messages`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contenu }) });
+                              if (res.ok) charger();
+                              return res.ok;
+                            }}
+                          />
+                        </div>
+                      </details>
                 {d.montantPropose !== null && d.statut !== "ENVOYE" && <p className="text-sm mt-2">Proposition envoyée : <strong>{eur(d.montantPropose)}</strong>{d.reponse ? ` — ${d.reponse}` : ""}</p>}
                 <div className="flex gap-2 mt-3 flex-wrap items-center">
                   <select value={d.statut} onChange={(e) => appeler(d.id, { action: "statut", statut: e.target.value })} className="border rounded-lg px-2 py-1 text-sm" aria-label="Changer le statut">

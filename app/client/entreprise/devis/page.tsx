@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import { FAMILLES, OFFRES, type Offre } from "@/lib/catalogue";
 import { STATUTS_DEVIS, type DevisVue } from "@/lib/devis";
+import FilMessages from "@/components/FilMessages";
 
 const eur = (n: number) => `${n.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €`;
 const prixTexte = (o: Offre) => (o.prix === null ? "sur devis" : `${o.apartir ? "dès " : ""}${eur(o.prix)}`);
@@ -183,6 +184,22 @@ export default function DemandeDevis() {
                           {d.reponse && <p className="text-sm mt-1" style={{ whiteSpace: "pre-line" }}>{d.reponse}</p>}
                         </div>
                       )}
+                      <details className="mt-3" open={(d.messages?.length ?? 0) > 0}>
+                        <summary className="cursor-pointer text-sm font-semibold text-orange-600">💬 Échange ({d.messages?.length ?? 0})</summary>
+                        <div className="mt-2">
+                          <FilMessages
+                            moi="CLIENT"
+                            messages={d.messages ?? []}
+                            desactive={d.statut === "ANNULE"}
+                            placeholder="Une question sur ce devis ? Écrivez à FRANEO RH…"
+                            onEnvoyer={async (contenu) => {
+                              const res = await fetch(`/api/devis/${d.id}/messages`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contenu }) });
+                              if (res.ok) charger();
+                              return res.ok;
+                            }}
+                          />
+                        </div>
+                      </details>
                       <div className="flex gap-2 mt-3 flex-wrap">
                         {d.statut === "ENVOYE" && (
                           <>
