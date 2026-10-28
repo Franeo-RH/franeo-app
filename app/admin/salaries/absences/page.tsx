@@ -7,6 +7,7 @@ import Sidebar from "@/components/Sidebar";
 import BoutonDecisionAbsence from "@/components/BoutonDecisionAbsence";
 import BoutonExportAbsences from "@/components/BoutonExportAbsences";
 import FormulaireAbsenceAdmin from "@/components/FormulaireAbsenceAdmin";
+import { BoutonExportComplet, BoutonImportAdmin, BoutonModifierAdmin, BoutonSupprimerAdmin } from "@/components/OutilsAdmin";
 
 const TYPES_ABSENCE: Record<string, string> = {
   CONGE_PAYE: "🏖️ Congés payés",
@@ -102,6 +103,9 @@ export default async function AdminAbsences({
                 </span>
               </div>
             </div>
+            <div className="flex gap-2 flex-wrap items-center">
+            <BoutonExportComplet jeu="absences" />
+            <BoutonImportAdmin jeu="absences" />
             <BoutonExportAbsences
               entrepriseId={entrepriseId}
               type={typeFiltre}
@@ -111,6 +115,7 @@ export default async function AdminAbsences({
               moisFin={moisFin}
               anneeFin={anneeFin}
             />
+            </div>
           </div>
 
           {/* Formulaire ajout */}
@@ -244,9 +249,11 @@ export default async function AdminAbsences({
                             </span>
                           </td>
                           <td className="py-3">
-                            {a.statut === "En attente" && (
-                              <BoutonDecisionAbsence absenceId={a.id} />
-                            )}
+                            <div className="flex gap-1 flex-wrap items-center">
+                              {a.statut === "En attente" && <BoutonDecisionAbsence absenceId={a.id} />}
+                              <BoutonModifierAdmin modele="absence" id={a.id} valeurs={{ type: a.type, dateDebut: a.dateDebut, dateFin: a.dateFin, statut: a.statut, commentaire: a.commentaire }} />
+                              <BoutonSupprimerAdmin modele="absence" id={a.id} quoi="cette absence" />
+                            </div>
                           </td>
                         </tr>
                       );

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import CalendrierReleve from "@/components/CalendrierReleve";
 import { fmtH, NOMS_MOIS, STATUTS_RELEVE, type AbsenceReleve, type JourReleve } from "@/lib/heures";
+import { BoutonExportComplet, BoutonModifierAdmin, BoutonSupprimerAdmin } from "@/components/OutilsAdmin";
 
 type Releve = {
   entreprise?: { nom: string } | null;
@@ -67,6 +68,7 @@ export default function ListeReleves({ admin = false }: { admin?: boolean }) {
           <div className="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
             <div>
               <h1 className="text-3xl font-bold">⏱️ Relevés d&apos;heures</h1>
+              {admin && <div className="flex gap-2 flex-wrap mt-3"><BoutonExportComplet jeu="releves" label="📥 Export complet (relevés + détail des jours)" /></div>}
               <p className="text-gray-500 mt-1">Tous les relevés mensuels des salariés{admin ? ", toutes entreprises confondues" : ""}. À la validation, les heures supplémentaires du mois sont ajoutées aux variables de paie.</p>
             </div>
             <div className="flex gap-2 flex-wrap">
@@ -115,6 +117,12 @@ export default function ListeReleves({ admin = false }: { admin?: boolean }) {
                         <>
                           <button type="button" disabled={occupe} onClick={() => decider(r, "Validé")} style={btn("#16a34a")}>✅ Valider</button>
                           <button type="button" disabled={occupe} onClick={() => decider(r, "Refusé")} style={btn("#dc2626")}>↩️ Refuser</button>
+                        </>
+                      )}
+                      {admin && (
+                        <>
+                          <BoutonModifierAdmin modele="releveMois" id={r.id} valeurs={{ statut: r.statut, motifRefus: r.motifRefus }} onFait={() => charger(filtre, mois, entrepriseId)} />
+                          <BoutonSupprimerAdmin modele="releveMois" id={r.id} quoi="ce relevé et tous ses jours" />
                         </>
                       )}
                     </div>

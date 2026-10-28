@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import { CIBLES } from "@/lib/communications-cibles";
+import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
 type Lecture = { luAt: string; utilisateur: { prenom: string; email: string; role: string; entreprise: { nom: string } | null } };
 type Com = {
@@ -57,6 +58,7 @@ export default function AdminCommunication() {
       <main className="flex-1 p-6 md:p-10 flex flex-col gap-6" style={{ minWidth: 0 }}>
         <div className="bg-white rounded-xl shadow p-6">
           <h1 className="text-3xl font-bold">📢 Communication</h1>
+            <div className="flex gap-2 flex-wrap mt-3"><BoutonExportComplet jeu="communications" label="📥 Export complet (communications + lectures)" /></div>
           <p className="text-gray-500 mt-1">Publiez une information : elle apparaît sur le tableau de bord des destinataires jusqu&apos;à ce qu&apos;ils cliquent « J&apos;ai lu ».</p>
         </div>
 

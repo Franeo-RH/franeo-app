@@ -9,6 +9,7 @@ import BoutonValiderPaie from "@/components/BoutonValiderPaie";
 import BoutonResetPaie from "@/components/BoutonResetPaie";
 import BoutonValiderVariable from "@/components/BoutonValiderVariable";
 import BoutonValiderListe from "@/components/BoutonValiderListe";
+import { BoutonExportComplet, BoutonImportAdmin, BoutonModifierAdmin, BoutonSupprimerAdmin } from "@/components/OutilsAdmin";
 
 const MOIS = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -151,6 +152,9 @@ export default async function AdminVariables({
                 )}
               </div>
             </div>
+            <div className="flex gap-2 flex-wrap items-center">
+            <BoutonExportComplet jeu="variables" />
+            <BoutonImportAdmin jeu="variables" />
             <BoutonExportVariables
               entrepriseId={entrepriseId}
               categorie={categorie}
@@ -160,6 +164,7 @@ export default async function AdminVariables({
               moisFin={moisFin}
               anneeFin={anneeFin}
             />
+            </div>
           </div>
 
           {/* Filtres */}
@@ -303,9 +308,11 @@ export default async function AdminVariables({
                         {new Date(v.createdAt).toLocaleDateString("fr-FR")}
                       </td>
                       <td className="py-3">
-                        {v.statut === "En attente" && (
-                          <BoutonValiderVariable id={v.id} />
-                        )}
+                        <div className="flex gap-1 flex-wrap items-center">
+                          {v.statut === "En attente" && <BoutonValiderVariable id={v.id} />}
+                          <BoutonModifierAdmin modele="variablePaie" id={v.id} valeurs={{ type: v.type, valeur: v.valeur, mois: v.mois, annee: v.annee, statut: v.statut, commentaire: v.commentaire }} />
+                          <BoutonSupprimerAdmin modele="variablePaie" id={v.id} quoi="cette variable" />
+                        </div>
                       </td>
                     </tr>
                   ))}

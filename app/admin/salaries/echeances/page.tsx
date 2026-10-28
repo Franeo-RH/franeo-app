@@ -7,6 +7,7 @@ import Sidebar from "@/components/Sidebar";
 import { chargerEcheances } from "@/lib/rappels-serveur";
 import { STYLES_STATUT, formaterDateFR, texteDelai } from "@/lib/rappels";
 import { prisma } from "@/lib/prisma";
+import { BoutonExportComplet, BoutonImportAdmin, BoutonModifierAdmin, BoutonSupprimerAdmin } from "@/components/OutilsAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,8 @@ export default async function PageEcheances({
             <button type="submit" className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition">Filtrer</button>
           </form>
 
+          <div className="flex gap-2 flex-wrap mb-4"><BoutonExportComplet jeu="echeances" /><BoutonImportAdmin jeu="echeances" /></div>
+
           <div className="bg-white rounded-xl shadow p-8">
             {liste.length === 0 ? (
               <p className="text-gray-500">Aucune échéance. 🎉</p>
@@ -90,7 +93,15 @@ export default async function PageEcheances({
                       <td className="py-3 text-sm text-gray-500">{formaterDateFR(e.date)}</td>
                       <td className="py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STYLES_STATUT[e.statut]}`}>{texteDelai(e.jours)}</span></td>
                       <td className="py-3">
-                        <Link href={`${base}/${e.salarieId}`} className="bg-orange-500 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-orange-600 transition">Voir</Link>
+                        <div className="flex gap-1 flex-wrap items-center">
+                          <Link href={`${base}/${e.salarieId}`} className="bg-orange-500 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-orange-600 transition">Voir</Link>
+                          {!e.auto && (
+                            <>
+                              <BoutonModifierAdmin modele="rappelSalarie" id={e.cle} valeurs={{ libelle: e.label, dateEcheance: e.date, traite: false, commentaire: null }} />
+                              <BoutonSupprimerAdmin modele="rappelSalarie" id={e.cle} quoi="cette échéance" />
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

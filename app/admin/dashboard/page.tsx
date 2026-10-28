@@ -9,6 +9,7 @@ import BoutonResetDemo from "@/components/BoutonResetDemo";
 import RafraichirAuto from "@/components/RafraichirAuto";
 import { chargerEcheances } from "@/lib/rappels-serveur";
 import { calculerFacture } from "@/lib/facturation";
+import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -121,7 +122,10 @@ export default async function AdminDashboard() {
               {totalATraiter > 0 ? `${totalATraiter} élément(s) à traiter` : "Tout est à jour 🎉"}{enRetard > 0 ? ` · ${enRetard} échéance(s) en retard` : ""}
             </p>
           </div>
-          <BoutonResetDemo />
+          <div className="flex gap-2 flex-wrap items-center">
+            <BoutonExportComplet jeu="tout" label="💾 Sauvegarde complète (Excel)" />
+            <BoutonResetDemo />
+          </div>
         </div>
 
         {/* Repères clients */}

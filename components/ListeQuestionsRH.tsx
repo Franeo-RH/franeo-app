@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import FilMessages from "@/components/FilMessages";
 import { REPONSE_TICKET, STATUTS_QUESTION, type QuestionVue } from "@/lib/questions-rh";
+import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
 /** Demandes RH ponctuelles : formulaire (client) + liste avec échanges (client et admin) */
 export default function ListeQuestionsRH({ admin = false }: { admin?: boolean }) {
@@ -49,6 +50,7 @@ export default function ListeQuestionsRH({ admin = false }: { admin?: boolean })
     <div className="flex flex-col gap-6">
       <div className="bg-white rounded-xl shadow p-6">
         <h1 className="text-3xl font-bold">💬 Demandes RH ponctuelles</h1>
+        {admin && <div className="flex gap-2 flex-wrap mt-3"><BoutonExportComplet jeu="questions" label="📥 Export complet (questions + échanges)" /></div>}
         <p className="text-gray-500 mt-1">
           {admin
             ? "Questions simples des clients, incluses dans toutes les formules et non décomptées des tickets. Pour une demande plus lourde, utilisez la réponse rapide « ouvrir un ticket »."

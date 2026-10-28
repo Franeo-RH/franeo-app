@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
+import { BoutonExportComplet, BoutonImportAdmin, BoutonModifierAdmin, BoutonSupprimerAdmin } from "@/components/OutilsAdmin";
 
 const CATEGORIES: Record<string, string> = {
   BUG: "🐛 Bug",
@@ -48,6 +49,8 @@ export default async function AdminHelpdesk() {
             </div>
           </div>
 
+          <div className="flex gap-2 flex-wrap mb-4"><BoutonExportComplet jeu="helpdesk" /></div>
+
           <div className="bg-white rounded-xl shadow p-8">
             {tickets.length === 0 ? (
               <p className="text-gray-500">Aucun ticket support.</p>
@@ -89,9 +92,13 @@ export default async function AdminHelpdesk() {
                         {new Date(t.createdAt).toLocaleDateString("fr-FR")}
                       </td>
                       <td className="py-3">
-                        <Link href={`/admin/helpdesk/${t.id}`} className="text-orange-500 font-semibold hover:underline">
-                          Voir →
-                        </Link>
+                        <div className="flex gap-1 flex-wrap items-center">
+                          <Link href={`/admin/helpdesk/${t.id}`} className="text-orange-500 font-semibold hover:underline">
+                            Voir →
+                          </Link>
+                          <BoutonModifierAdmin modele="ticketSupport" id={t.id} valeurs={{ titre: t.titre, statut: t.statut }} />
+                          <BoutonSupprimerAdmin modele="ticketSupport" id={t.id} quoi="ce ticket support" />
+                        </div>
                       </td>
                     </tr>
                   ))}

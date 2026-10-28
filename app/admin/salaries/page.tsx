@@ -8,6 +8,7 @@ import BoutonExport from "@/components/BoutonExport";
 import BoutonSupprimer from "@/components/BoutonSupprimer";
 import Link from "next/link";
 import FiltresSalaries from "@/components/FiltresSalaries";
+import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -92,7 +93,7 @@ export default async function AdminSalaries({
                 ➕ Ajouter
               </Link>
               <Link href="/admin/salaries/import" className="bg-white border border-orange-500 text-orange-600 px-5 py-2 rounded-lg font-semibold hover:bg-orange-50 transition">📤 Importer Excel</Link>
-              <BoutonExport type="salaries-admin" label="Exporter Excel" />
+              <BoutonExportComplet jeu="salaries" label="📥 Export complet" />
             </div>
           </div>
 

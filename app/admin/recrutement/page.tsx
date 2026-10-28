@@ -8,6 +8,7 @@ import Sidebar from "@/components/Sidebar";
 import BoutonSupprimerRecrutement from "@/components/BoutonSupprimerRecrutement";
 import ActionsRecrutement from "@/components/ActionsRecrutement";
 import { categorieRecrutement, ETAPES_RECRUTEMENT, LANCEMENT_RECRUTEMENT } from "@/lib/recrutement";
+import { BoutonExportComplet, BoutonModifierAdmin } from "@/components/OutilsAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,7 @@ export default async function AdminRecrutement({ searchParams }: { searchParams:
           <div className="bg-white rounded-xl shadow p-8 mb-6 flex justify-between items-center gap-4 flex-wrap">
             <div>
               <h1 className="text-3xl font-bold">🎯 Recrutement</h1>
+              <div className="flex gap-2 flex-wrap mt-3"><BoutonExportComplet jeu="recrutements" /></div>
               <p className="text-gray-500 mt-1">Lancement {LANCEMENT_RECRUTEMENT} € à la demande, puis primes au succès déclenchées ici. Tout est ajouté automatiquement à la facture du mois.</p>
             </div>
             <form method="get" className="flex gap-2 items-center">
@@ -86,7 +88,7 @@ export default async function AdminRecrutement({ searchParams }: { searchParams:
                         <p className="text-gray-500">{r.entreprise.nom} — {r.typeContrat} · <strong>{cat.label}</strong></p>
                         <p className="text-gray-400 text-sm mt-1">Reçue le {fr(r.createdAt)} · statut : {r.statut}{r.candidat ? ` · candidat : ${r.candidat}` : ""}</p>
                       </div>
-                      <BoutonSupprimerRecrutement id={r.id} poste={r.poste} />
+                      <div className="flex gap-1 items-center"><BoutonModifierAdmin modele="demandeRecrutement" id={r.id} valeurs={{ poste: r.poste, statut: r.statut, candidat: r.candidat, categorie: r.categorie }} /><BoutonSupprimerRecrutement id={r.id} poste={r.poste} /></div>
                     </div>
 
                     <div className="grid gap-3 mt-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>

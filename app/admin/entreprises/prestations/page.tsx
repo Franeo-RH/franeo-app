@@ -10,6 +10,7 @@ import RafraichirAuto from "@/components/RafraichirAuto";
 import { STATUTS_PRESTATION } from "@/lib/prestations";
 import { LIBELLES_CATEGORIE, lignesFacture, type CategorieLigne } from "@/lib/facturation";
 import { moisDepuisParam, NOMS_MOIS_FR } from "@/lib/mois";
+import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,7 @@ export default async function AdminSupplements({ searchParams }: { searchParams:
         <main className="flex-1 p-10" style={{ minWidth: 0 }}>
           <div className="bg-white rounded-xl shadow p-8 mb-6">
             <h1 className="text-3xl font-bold">➕ Prestations supplémentaires</h1>
+            <div className="flex gap-2 flex-wrap mt-3"><BoutonExportComplet jeu="prestations" label="📥 Prestations commandées (complet)" /><BoutonExportComplet jeu="facturations" label="📥 Factures (complet)" /></div>
             <p className="text-gray-500 mt-1">Tous les suppléments de {NOMS_MOIS_FR[mois - 1]} {annee} : salariés et bulletins en plus, arrivées, sorties, tickets, recrutements, espace salarié et prestations commandées. Mis à jour en temps réel, ils sont repris sur la facture du mois.</p>
             <form method="get" className="flex gap-2 flex-wrap mt-4">
               <input type="month" name="mois" defaultValue={valeur} className="border rounded-lg px-3 py-2" aria-label="Mois" />

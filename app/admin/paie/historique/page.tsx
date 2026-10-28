@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import BoutonExportPaieHistorique from "@/components/BoutonExportPaieHistorique";
+import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
 const MOIS = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -140,6 +141,7 @@ export default async function AdminHistoriquePaie({
 
           <div className="bg-white rounded-xl shadow p-8 mb-6">
             <h1 className="text-3xl font-bold">📋 Historique paie</h1>
+            <div className="flex gap-2 flex-wrap mt-3"><BoutonExportComplet jeu="variables" label="📥 Variables (complet)" /><BoutonExportComplet jeu="absences" label="📥 Absences (complet)" /><BoutonExportComplet jeu="releves" label="📥 Relevés d'heures (complet)" /></div>
             <p className="text-gray-500 mt-1">Vue administrateur — toutes entreprises</p>
           </div>
 

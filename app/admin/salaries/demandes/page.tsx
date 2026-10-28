@@ -8,6 +8,7 @@ import Sidebar from "@/components/Sidebar";
 import BoutonsDemandeSalarie from "@/components/BoutonsDemandeSalarie";
 import StatutDemande from "@/components/StatutDemande";
 import { LIBELLES_TYPE } from "@/lib/demandes-salaries";
+import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,7 @@ export default async function AdminDemandesSalaries() {
         <main className="flex-1 p-10">
           <div className="bg-white rounded-xl shadow p-8 mb-6">
             <h1 className="text-3xl font-bold">📝 Demandes sur les salariés</h1>
+            <div className="flex gap-2 flex-wrap mt-3"><BoutonExportComplet jeu="demandes" /></div>
             <p className="text-gray-500 mt-1">Ajouts, modifications et suppressions demandés par les clients en paie. Valider applique la modification.</p>
           </div>
 

@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import BoutonExport from "@/components/BoutonExport";
+import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
 export default async function AdminEntreprises() {
   await connection();
@@ -49,7 +50,8 @@ export default async function AdminEntreprises() {
               <p className="text-gray-500 mt-1">{entreprises.filter((e) => e.actif).length} active(s) · {entreprises.filter((e) => !e.actif).length} suspendue(s)</p>
             </div>
             <div className="flex gap-3">
-              <BoutonExport type="entreprises" />
+              <BoutonExportComplet jeu="entreprises" label="📥 Export complet (entreprises + comptes)" />
+              <BoutonExportComplet jeu="comptes" label="📥 Comptes utilisateurs" />
               <Link
                 href="/admin/entreprises/nouveau"
                 className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition"

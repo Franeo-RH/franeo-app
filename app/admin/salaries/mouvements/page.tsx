@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import BoutonExport from "@/components/BoutonExport";
+import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,7 @@ export default async function MouvementsPersonnel() {
               <p className="text-gray-500 mt-1">Entrées et sorties prévues — {anneeActuelle}</p>
             </div>
             <BoutonExport type="mouvements" label="📥 Exporter Excel" />
+            <BoutonExportComplet jeu="salaries" label="📥 Salariés (complet)" />
           </div>
 
           {/* Stats */}

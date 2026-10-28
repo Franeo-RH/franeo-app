@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
+import { BoutonExportComplet, BoutonImportAdmin, BoutonModifierAdmin, BoutonSupprimerAdmin } from "@/components/OutilsAdmin";
 
 export default async function AdminTickets() {
   await connection();
@@ -44,6 +45,8 @@ export default async function AdminTickets() {
             </div>
           </div>
 
+          <div className="flex gap-2 flex-wrap mb-4"><BoutonExportComplet jeu="tickets" label="📥 Export complet (tickets + messages)" /><BoutonExportComplet jeu="questions" label="📥 Export demandes RH ponctuelles" /></div>
+
           <div className="bg-white rounded-xl shadow p-8">
             {tickets.length === 0 ? (
               <p className="text-gray-500">Aucun ticket pour le moment.</p>
@@ -82,12 +85,16 @@ export default async function AdminTickets() {
                         {new Date(t.createdAt).toLocaleDateString("fr-FR")}
                       </td>
                       <td className="py-3">
-                        <Link
-                          href={`/admin/tickets/${t.id}`}
-                          className="text-orange-500 font-semibold hover:underline"
-                        >
-                          Voir →
-                        </Link>
+                        <div className="flex gap-1 flex-wrap items-center">
+                          <Link
+                            href={`/admin/tickets/${t.id}`}
+                            className="text-orange-500 font-semibold hover:underline"
+                          >
+                            Voir →
+                          </Link>
+                          <BoutonModifierAdmin modele="ticket" id={t.id} valeurs={{ titre: t.titre, statut: t.statut }} />
+                          <BoutonSupprimerAdmin modele="ticket" id={t.id} quoi="ce ticket et ses messages" />
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -6,6 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import ExportCSV from "@/components/ExportCSV";
 import { STATUTS_DEVIS, type DevisVue } from "@/lib/devis";
 import FilMessages from "@/components/FilMessages";
+import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
 const eur = (n: number) => `${n.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €`;
 
@@ -44,6 +45,7 @@ export default function AdminDevis() {
         <main className="flex-1 p-6 md:p-10 flex flex-col gap-6" style={{ minWidth: 0 }}>
           <div className="bg-white rounded-xl shadow p-6">
             <h1 className="text-3xl font-bold">🧾 Demandes de devis</h1>
+            <div className="flex gap-2 flex-wrap mt-3"><BoutonExportComplet jeu="devis" label="📥 Export complet (devis + échanges)" /></div>
             <p className="text-gray-500 mt-1">Les clients composent leur devis depuis le catalogue. Envoyez une proposition chiffrée : ils l&apos;acceptent ou la refusent dans leur espace.</p>
             <div className="flex gap-2 flex-wrap mt-4 items-center">
               <select value={statut} onChange={(e) => setStatut(e.target.value)} className="border rounded-lg px-3 py-2" aria-label="Statut">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import { BoutonExportComplet, BoutonModifierAdmin } from "@/components/OutilsAdmin";
 
 const MOIS = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -247,7 +248,8 @@ export default function AdminFacturation() {
               <h1 className="text-3xl font-bold">🧾 Facturation</h1>
               <p className="text-gray-500 mt-1">Suivi des factures clients</p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
+              <BoutonExportComplet jeu="facturations" label="📥 Export complet" />
               <button
                 onClick={() => { setMode(mode === "generer" ? "" : "generer"); setErreur(""); setSucces(""); setDetailsSucces([]); setApercuGeneration(null); }}
                 className={`px-5 py-2 rounded-lg font-semibold transition ${mode === "generer" ? "bg-gray-800 text-white" : "bg-black text-white hover:bg-gray-800"}`}
@@ -535,9 +537,12 @@ export default function AdminFacturation() {
                           </select>
                         </td>
                         <td className="py-3">
-                          <button onClick={() => handleSupprimer(f.id)} className="text-red-500 hover:text-red-700 text-sm font-semibold">
-                            🗑️
-                          </button>
+                          <div className="flex gap-1 items-center">
+                            <BoutonModifierAdmin modele="facturation" id={f.id} valeurs={{ montant: f.montant, statut: f.statut, dateLimitePaie: f.dateLimitePaie ?? null, commentaire: f.commentaire ?? null }} onFait={() => recharger(setFacturations)} />
+                            <button onClick={() => handleSupprimer(f.id)} className="text-red-500 hover:text-red-700 text-sm font-semibold">
+                              🗑️
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
