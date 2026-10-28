@@ -5,13 +5,15 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 
 const MODULES = [
+  "Général",
   "Salariés",
   "Paie",
   "Absences",
+  "Espace salarié",
   "Tickets RH",
+  "Facturation",
   "Helpdesk",
   "Entreprise",
-  "Général",
 ];
 
 type FAQ = {
@@ -20,6 +22,8 @@ type FAQ = {
   question: string;
   reponse: string;
   ordre: number;
+  entrepriseId?: string | null;
+  entreprise?: { nom: string } | null;
 };
 
 export default function AdminFAQ() {
@@ -35,10 +39,14 @@ export default function AdminFAQ() {
     question: "",
     reponse: "",
     ordre: 0,
+    entrepriseId: "",
   });
+  const [entreprises, setEntreprises] = useState<{ id: string; nom: string }[]>([]);
+  const [filtreEntreprise, setFiltreEntreprise] = useState("");
 
   useEffect(() => {
     fetch("/api/faq").then(r => r.json()).then(setFaqs);
+    fetch("/api/entreprises").then(r => r.json()).then(d => Array.isArray(d) && setEntreprises(d));
   }, []);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
@@ -47,14 +55,14 @@ export default function AdminFAQ() {
 
   function handleEditer(faq: FAQ) {
     setFaqEnEdition(faq);
-    setForm({ module: faq.module, question: faq.question, reponse: faq.reponse, ordre: faq.ordre });
+    setForm({ module: faq.module, question: faq.question, reponse: faq.reponse, ordre: faq.ordre, entrepriseId: faq.entrepriseId || "" });
     setAfficherFormulaire(true);
   }
 
   function handleAnnuler() {
     setAfficherFormulaire(false);
     setFaqEnEdition(null);
-    setForm({ module: moduleActif, question: "", reponse: "", ordre: 0 });
+    setForm({ module: moduleActif, question: "", reponse: "", ordre: 0, entrepriseId: "" });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -91,7 +99,8 @@ export default function AdminFAQ() {
     }
   }
 
-  const faqsFiltrees = faqs.filter(f => f.module === moduleActif);
+  const parEntreprise = (f: FAQ) => filtreEntreprise === "" || (filtreEntreprise === "tous" ? !f.entrepriseId : f.entrepriseId === filtreEntreprise);
+  const faqsFiltrees = faqs.filter(f => f.module === moduleActif && parEntreprise(f));
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -106,7 +115,7 @@ export default function AdminFAQ() {
               <p className="text-gray-500 mt-1">Gérez les questions fréquentes</p>
             </div>
             <button
-              onClick={() => { setAfficherFormulaire(!afficherFormulaire); setFaqEnEdition(null); setForm({ module: moduleActif, question: "", reponse: "", ordre: 0 }); }}
+              onClick={() => { setAfficherFormulaire(!afficherFormulaire); setFaqEnEdition(null); setForm({ module: moduleActif, question: "", reponse: "", ordre: 0, entrepriseId: "" }); }}
               className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition"
             >
               {afficherFormulaire ? "← Annuler" : "➕ Ajouter une question"}
@@ -123,6 +132,13 @@ export default function AdminFAQ() {
             <div className="bg-white rounded-xl shadow p-8 mb-6">
               <h2 className="text-xl font-bold mb-6">{faqEnEdition ? "✏️ Modifier la question" : "➕ Nouvelle question"}</h2>
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                <div>
+                  <label className="block text-sm font-semibold mb-1">Visible par *</label>
+                  <select name="entrepriseId" value={form.entrepriseId} onChange={handleChange} className="w-full border rounded-lg px-4 py-3">
+                    <option value="">🌍 Tous les clients</option>
+                    {entreprises.map(en => <option key={en.id} value={en.id}>🏢 Uniquement {en.nom}</option>)}
+                  </select>
+                </div>
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-semibold mb-1">Module *</label>
@@ -155,6 +171,15 @@ export default function AdminFAQ() {
             </div>
           )}
 
+          <div className="mb-4 flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold">Afficher :</span>
+            <select value={filtreEntreprise} onChange={e => setFiltreEntreprise(e.target.value)} className="border rounded-lg px-3 py-2 bg-white">
+              <option value="">Toutes les questions</option>
+              <option value="tous">🌍 Communes à tous les clients</option>
+              {entreprises.map(en => <option key={en.id} value={en.id}>🏢 Réservées à {en.nom}</option>)}
+            </select>
+          </div>
+
           {/* Onglets modules */}
           <div className="flex gap-2 mb-6 flex-wrap">
             {MODULES.map(m => (
@@ -163,7 +188,7 @@ export default function AdminFAQ() {
                 onClick={() => setModuleActif(m)}
                 className={`px-4 py-2 rounded-lg font-semibold transition ${moduleActif === m ? "bg-orange-500 text-white" : "bg-white text-black hover:bg-gray-100"}`}
               >
-                {m} <span className="text-xs ml-1 opacity-70">({faqs.filter(f => f.module === m).length})</span>
+                {m} <span className="text-xs ml-1 opacity-70">({faqs.filter(f => f.module === m && parEntreprise(f)).length})</span>
               </button>
             ))}
           </div>
@@ -179,8 +204,11 @@ export default function AdminFAQ() {
                 <div key={faq.id} className="bg-white rounded-xl shadow p-6">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
+                      <p className="text-xs font-semibold mb-1" style={{ color: faq.entrepriseId ? "#7c3aed" : "#6b7280" }}>
+                        {faq.entrepriseId ? `🏢 Uniquement ${faq.entreprise?.nom || "1 client"}` : "🌍 Tous les clients"}
+                      </p>
                       <p className="font-bold text-lg mb-2">❓ {faq.question}</p>
-                      <p className="text-gray-600">{faq.reponse}</p>
+                      <p className="text-gray-600" style={{ whiteSpace: "pre-line" }}>{faq.reponse}</p>
                     </div>
                     <div className="flex gap-2 ml-4">
                       <button onClick={() => handleEditer(faq)} className="bg-orange-100 text-orange-600 px-3 py-1 rounded-lg text-sm font-semibold hover:bg-orange-200 transition">

@@ -39,6 +39,7 @@ export async function PUT(
   const data = await request.json();
 
   const salarie = await prisma.salarie.findUnique({ where: { id } });
+  let demandeEnvoyee = false;
 
   if (!salarie) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
 
@@ -50,13 +51,23 @@ export async function PUT(
     if (!aDroit(session.entreprise?.permissions, "salaries.modifier")) {
       return NextResponse.json({ erreur: "Vous n'avez pas le droit de modifier les salariés. Contactez votre gestionnaire." }, { status: 403 });
     }
-    // Client « paie » : la modification devient une demande, validée par le gestionnaire
+    // Client « paie » : seuls le POSTE et le SALAIRE passent par une demande validée par le gestionnaire.
+    // Tout le reste de la fiche est enregistré tout de suite.
     if (passeParValidation(session.entreprise)) {
-      await creerDemande({ entrepriseId: salarie.entrepriseId, type: "MODIFICATION", salarieId: id, donnees: data, auteur: `${session.prenom} (${session.email})` });
-      return NextResponse.json(
-        { demande: true, message: "Votre demande de modification a été envoyée. Elle sera appliquée dès sa validation par votre gestionnaire." },
-        { status: 202 }
-      );
+      const num = (v: unknown) => (v === null || v === undefined || v === "" ? null : parseFloat(String(v)));
+      const sensibles: Record<string, unknown> = {};
+      if (data.poste !== undefined && String(data.poste ?? "").trim() !== (salarie.poste ?? "")) sensibles.poste = String(data.poste ?? "").trim();
+      if (data.salaireMensuel !== undefined && num(data.salaireMensuel) !== salarie.salaireMensuel) sensibles.salaireMensuel = num(data.salaireMensuel);
+      if (data.salaireAnnuel !== undefined && num(data.salaireAnnuel) !== salarie.salaireAnnuel) sensibles.salaireAnnuel = num(data.salaireAnnuel);
+
+      if (Object.keys(sensibles).length > 0) {
+        await creerDemande({ entrepriseId: salarie.entrepriseId, type: "MODIFICATION", salarieId: id, donnees: { partiel: true, ...sensibles }, auteur: `${session.prenom} (${session.email})` });
+        demandeEnvoyee = true;
+      }
+      // Le reste est appliqué directement, avec le poste et le salaire actuels
+      data.poste = salarie.poste;
+      data.salaireMensuel = salarie.salaireMensuel;
+      data.salaireAnnuel = salarie.salaireAnnuel;
     }
   }
 
@@ -122,6 +133,12 @@ export async function PUT(
       },
     });
 
+    if (demandeEnvoyee) {
+      return NextResponse.json(
+        { succes: true, updated, demande: true, message: "Modifications enregistrées. Le changement de poste ou de salaire a été envoyé à votre gestionnaire pour validation." },
+        { status: 202 }
+      );
+    }
     return NextResponse.json({ succes: true, updated });
   } catch (e) {
     if ((e as { code?: string }).code === "P2002") {

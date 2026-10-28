@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
+import BandeauCommunications from "@/components/BandeauCommunications";
+import { communicationsNonLues } from "@/lib/communications";
 import Link from "next/link";
 import BlocEcheances from "@/components/BlocEcheances";
 import { chargerEcheances } from "@/lib/rappels-serveur";
@@ -42,6 +44,7 @@ export default async function ClientDashboard() {
   if (session.role !== "CLIENT") redirect("/admin/dashboard");
 
   const permissions = session.entreprise?.permissions || [];
+  const communicationsP = communicationsNonLues({ id: session.id, role: session.role, entrepriseId: session.entrepriseId });
   const maintenant = new Date();
   const moisActuel = maintenant.getMonth() + 1;
   const anneeActuelle = maintenant.getFullYear();
@@ -142,6 +145,8 @@ export default async function ClientDashboard() {
   const maxCout = Math.max(...couts.map((m) => m.valeur), 1);
   const totalCouts = couts.reduce((acc, m) => acc + m.valeur, 0);
 
+  const communications = await communicationsP;
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar role={session.role} prenom={session.prenom} permissions={permissions} />
@@ -151,6 +156,8 @@ export default async function ClientDashboard() {
           <h1 className="text-xl font-bold">👋 Bonjour {session.prenom} !</h1>
           <p className="text-gray-500 text-sm">{entreprise?.nom} — {MOIS[moisActuel - 1]} {anneeActuelle}</p>
         </div>
+
+        <BandeauCommunications communications={communications} />
 
         {/* Toutes les tuiles sur une seule ligne */}
         <div className="fr-grille-tuiles" style={{ display: "grid", gridTemplateColumns: `repeat(${tuiles.length}, minmax(0, 1fr))`, gap: "0.75rem" }}>

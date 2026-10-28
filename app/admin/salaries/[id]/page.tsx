@@ -8,6 +8,7 @@ import Link from "next/link";
 import BoutonSupprimer from "@/components/BoutonSupprimer";
 import RappelsSalarie, { type RappelLite } from "@/components/RappelsSalarie";
 import { versISO } from "@/lib/rappels";
+import EspaceSalarieFiche from "@/components/EspaceSalarieFiche";
 
 export default async function FicheSalarieAdmin({
   params,
@@ -24,7 +25,7 @@ export default async function FicheSalarieAdmin({
 
   const salarie = await prisma.salarie.findUnique({
     where: { id },
-    include: { entreprise: true, rappels: { orderBy: { dateEcheance: "asc" } } },
+    include: { entreprise: true, compte: { select: { actif: true } }, rappels: { orderBy: { dateEcheance: "asc" } } },
   });
 
   if (!salarie) redirect("/admin/salaries");
@@ -130,6 +131,20 @@ export default async function FicheSalarieAdmin({
 
           </div>
 
+          <div className="bg-white rounded-xl shadow p-6 mt-6">
+            <h2 className="text-lg font-bold mb-3">📱 Espace salarié</h2>
+            {salarie.entreprise.permissions.includes("espace-salaries") && !salarie.entreprise.demo ? (
+              <EspaceSalarieFiche
+                salarieId={salarie.id}
+                email={salarie.email}
+                statut={!salarie.compte ? "aucun" : salarie.compte.actif ? "actif" : "coupe"}
+              />
+            ) : (
+              <p className="text-sm text-gray-500">
+                {salarie.entreprise.demo ? "Non disponible sur l'entreprise démo." : "Option non activée pour cette entreprise : activez le module « Espace salarié » dans Accès & droits."}
+              </p>
+            )}
+          </div>
         </main>
       </div>
     </div>

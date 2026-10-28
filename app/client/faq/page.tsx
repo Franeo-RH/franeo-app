@@ -9,7 +9,9 @@ const MODULES = [
   "Salariés",
   "Paie",
   "Absences",
+  "Espace salarié",
   "Tickets RH",
+  "Facturation",
   "Helpdesk",
   "Entreprise",
 ];
@@ -20,6 +22,8 @@ type FAQ = {
   question: string;
   reponse: string;
   ordre: number;
+  entrepriseId?: string | null;
+  entreprise?: { nom: string } | null;
 };
 
 export default function ClientFAQ() {
@@ -30,7 +34,7 @@ export default function ClientFAQ() {
   const [permissions, setPermissions] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch("/api/faq").then(r => r.json()).then(setFaqs);
+    fetch("/api/faq").then(r => r.json()).then(d => Array.isArray(d) && setFaqs(d));
     fetch("/api/me").then(r => r.json()).then(data => {
       if (data.prenom) setPrenom(data.prenom);
       if (data.permissions) setPermissions(data.permissions);
@@ -81,14 +85,14 @@ export default function ClientFAQ() {
                     onClick={() => setOuvert(ouvert === faq.id ? null : faq.id)}
                     className="w-full flex justify-between items-center p-6 text-left hover:bg-gray-50 transition"
                   >
-                    <span className="font-semibold text-lg">{faq.question}</span>
+                    <span className="font-semibold text-lg">{faq.entrepriseId ? "⭐ " : ""}{faq.question}</span>
                     <span className="text-orange-500 text-xl ml-4">
                       {ouvert === faq.id ? "−" : "+"}
                     </span>
                   </button>
                   {ouvert === faq.id && (
                     <div className="px-6 pb-6 border-t pt-4">
-                      <p className="text-gray-600 leading-relaxed">{faq.reponse}</p>
+                      <p className="text-gray-600 leading-relaxed" style={{ whiteSpace: "pre-line" }}>{faq.reponse}</p>
                     </div>
                   )}
                 </div>

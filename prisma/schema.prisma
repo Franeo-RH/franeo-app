@@ -66,6 +66,9 @@ model Entreprise {
   demandesEvolutionPaie DemandeEvolutionPaie[]
   demandesSalaries  DemandeSalarie[]
   prestations       CommandePrestation[]
+  faqs              FAQ[]
+  communications    Communication[]
+  releves           ReleveMois[]
 }
 
 model Facturation {
@@ -136,6 +139,7 @@ model Utilisateur {
   salarieId    String?     @unique
   salarie      Salarie?    @relation(fields: [salarieId], references: [id], onDelete: Cascade)
   actif        Boolean     @default(true)
+  lectures     LectureCommunication[]
 
   // index ajouté pour accélérer les recherches
   @@index([entrepriseId])
@@ -151,6 +155,9 @@ model TokenReset {
 
 model FAQ {
   id        String   @id @default(cuid())
+  // vide = visible par tous les clients ; sinon réservée à une seule entreprise
+  entrepriseId String?
+  entreprise   Entreprise? @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
   module    String
   question  String
   reponse   String
@@ -205,6 +212,7 @@ model Salarie {
   documents             Document[]
   variablesPaie         VariablePaie[]
   absences              Absence[]
+  releves               ReleveMois[]
 
   @@unique([entrepriseId, matricule])
 
@@ -493,4 +501,70 @@ model CommandePrestation {
 
   @@index([entrepriseId, annee, mois])
   @@index([statut])
+}
+
+
+// Communication publiée par l'admin : affichée sur le tableau de bord jusqu'à ce que la personne clique « J'ai lu »
+model Communication {
+  id           String      @id @default(cuid())
+  titre        String
+  contenu      String
+  // CLIENTS, SALARIES ou TOUS
+  cible        String      @default("CLIENTS")
+  // vide = toutes les entreprises
+  entrepriseId String?
+  entreprise   Entreprise? @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  importante   Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  lectures     LectureCommunication[]
+
+  @@index([createdAt])
+}
+
+model LectureCommunication {
+  id              String        @id @default(cuid())
+  communicationId String
+  communication   Communication @relation(fields: [communicationId], references: [id], onDelete: Cascade)
+  utilisateurId   String
+  utilisateur     Utilisateur   @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  luAt            DateTime      @default(now())
+
+  @@unique([communicationId, utilisateurId])
+}
+
+// Relevé d'activité mensuel du salarié : brouillon enregistré au fil du mois, puis envoyé (verrouillé)
+// statut : Brouillon → Envoyé → Validé (ou Refusé, qui le rouvre au salarié)
+model ReleveMois {
+  id           String         @id @default(cuid())
+  salarieId    String
+  salarie      Salarie        @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+  entrepriseId String
+  entreprise   Entreprise     @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  mois         Int
+  annee        Int
+  statut       String         @default("Brouillon")
+  motifRefus   String?
+  envoyeAt     DateTime?
+  valideAt     DateTime?
+  // variable de paie « heures supplémentaires » créée à la validation
+  variableId   String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  jours        ReleveJour[]
+
+  @@unique([salarieId, annee, mois])
+  @@index([entrepriseId, statut])
+}
+
+model ReleveJour {
+  id          String     @id @default(cuid())
+  releveId    String
+  releve      ReleveMois @relation(fields: [releveId], references: [id], onDelete: Cascade)
+  // jour (stocké à midi UTC)
+  date        DateTime
+  heures      Float?
+  heuresSupp  Float      @default(0)
+  commentaire String?
+
+  @@unique([releveId, date])
 }

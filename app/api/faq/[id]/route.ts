@@ -12,11 +12,11 @@ export async function PUT(
   }
 
   const { id } = await params;
-  const { module, question, reponse, ordre } = await request.json();
+  const { module, question, reponse, ordre, entrepriseId } = await request.json();
 
   const faq = await prisma.fAQ.update({
     where: { id },
-    data: { module, question, reponse, ordre },
+    data: { module, question, reponse, ordre: Number(ordre) || 0, entrepriseId: entrepriseId || null },
   });
 
   return NextResponse.json({ succes: true, faq });

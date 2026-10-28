@@ -35,7 +35,7 @@ export default async function ClientDemandesSalaries({
         <main className="flex-1 p-10">
           <div className="bg-white rounded-xl shadow p-8 mb-6">
             <h1 className="text-3xl font-bold">📝 Mes demandes</h1>
-            <p className="text-gray-500 mt-1">Les ajouts, modifications et suppressions de salariés sont validés par votre gestionnaire paie avant d&apos;être appliqués.</p>
+            <p className="text-gray-500 mt-1">Les ajouts et suppressions de salariés, ainsi que les changements de poste et de salaire, sont validés par votre gestionnaire paie avant d&apos;être appliqués. Les autres informations se modifient directement.</p>
           </div>
 
           {envoyee && (

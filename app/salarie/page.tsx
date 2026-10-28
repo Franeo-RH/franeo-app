@@ -4,6 +4,9 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { getSessionSalarie } from "@/lib/session";
 import { LIBELLES_ABSENCE } from "@/lib/espace-salarie";
+import { communicationsNonLues } from "@/lib/communications";
+import BandeauCommunications from "@/components/BandeauCommunications";
+import ReleveHeuresSalarie from "@/components/ReleveHeuresSalarie";
 import { libelleRappel, typeDe } from "@/lib/rappels";
 import { BoutonAnnulerAbsence, BoutonDeconnexionSalarie, FormulaireAbsenceSalarie } from "@/components/EspaceSalarieActions";
 
@@ -47,9 +50,10 @@ export default async function EspaceSalarie() {
 
   const aujourdhui = new Date();
   aujourdhui.setHours(0, 0, 0, 0);
-  const [absences, rappels] = await Promise.all([
+  const [absences, rappels, communications] = await Promise.all([
     prisma.absence.findMany({ where: { salarieId: s.salarie.id }, orderBy: { dateDebut: "desc" }, take: 50 }),
     prisma.rappelSalarie.findMany({ where: { salarieId: s.salarie.id, traite: false, dateEcheance: { gte: aujourdhui } }, orderBy: { dateEcheance: "asc" }, take: 10 }),
+    communicationsNonLues({ id: s.utilisateur.id, role: "SALARIE", entrepriseId: s.utilisateur.entrepriseId }),
   ]);
   const aVenir = absences.filter((a) => new Date(a.dateFin) >= aujourdhui);
   const passees = absences.filter((a) => new Date(a.dateFin) < aujourdhui).slice(0, 10);
@@ -87,9 +91,16 @@ export default async function EspaceSalarie() {
           <p style={{ margin: "4px 0 0", color: "#4b5563", fontSize: "14px" }}>{s.salarie.poste} · {s.utilisateur.entreprise?.nom}</p>
         </div>
 
+        <BandeauCommunications communications={communications} />
+
         <section style={carte} aria-labelledby="t-demande">
           <h1 id="t-demande" style={{ margin: "0 0 12px", fontSize: "18px" }}>📅 Demander une absence</h1>
           <FormulaireAbsenceSalarie />
+        </section>
+
+        <section style={carte} aria-labelledby="t-heures">
+          <h2 id="t-heures" style={{ margin: "0 0 12px", fontSize: "18px" }}>⏱️ Mon relevé d&apos;heures</h2>
+          <ReleveHeuresSalarie />
         </section>
 
         <section style={carte} aria-labelledby="t-absences">

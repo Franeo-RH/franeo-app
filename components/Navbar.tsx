@@ -65,6 +65,7 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
         { href: "/admin/tickets", label: "Tickets", icon: "/TICKET-LOGO.png", permission: null },
         { href: "/admin/actualites", label: "Actualité RH", icon: "/ACTUALITE-LOGO.png", permission: null },
         { href: "/admin/faq", label: "FAQ", icon: "/FAQ-LOGO.png", permission: null },
+        { href: "/admin/communication", label: "Communication", icon: "/ACTUALITE-LOGO.png", permission: null },
         { href: "/admin/helpdesk", label: "Helpdesk", icon: "/HELPDESK-LOGO.png", permission: null },
       ]
     : [

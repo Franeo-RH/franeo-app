@@ -99,6 +99,7 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
   await prisma.demandeEvolution.deleteMany({ where: { entrepriseId } });
   await prisma.demandeEvolutionPaie.deleteMany({ where: { entrepriseId } });
   await prisma.buddyContexte.deleteMany({ where: { userId: utilisateur.id } });
+  await prisma.lectureCommunication.deleteMany({ where: { utilisateurId: utilisateur.id } });
   await prisma.demandeSalarie.deleteMany({ where: { entrepriseId } });
   await prisma.commandePrestation.deleteMany({ where: { entrepriseId } });
 
@@ -140,6 +141,20 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
   await prisma.absence.create({ data: { salarieId: sophie.id, entrepriseId, type: "RTT", dateDebut: jour(21), dateFin: jour(21), declareeParSalarie: true, commentaire: "Rendez-vous personnel" } });
   await prisma.absence.create({ data: { salarieId: sophie.id, entrepriseId, type: "CONGE_SANS_SOLDE", dateDebut: jour(-20), dateFin: jour(-19), declareeParSalarie: true, statut: "Refusé", motifRefus: "Période de clôture, merci de décaler." } });
   await prisma.absence.create({ data: { salarieId: sophie.id, entrepriseId, type: "CONGE_PAYE", dateDebut: jour(-40), dateFin: jour(-36), declareeParSalarie: true, statut: "Validé" } });
+
+  // Relevé d'heures de Sophie : le mois en cours en brouillon (jours ouvrés passés, hors absences)
+  {
+    const r = await prisma.releveMois.create({ data: { salarieId: sophie.id, entrepriseId, mois, annee } });
+    const auj = new Date();
+    const lignes = [];
+    for (let d = 1; d < auj.getDate(); d++) {
+      const date = new Date(Date.UTC(annee, mois - 1, d, 12));
+      const js = date.getUTCDay();
+      if (js === 0 || js === 6) continue;
+      lignes.push({ releveId: r.id, date, heures: d % 5 === 0 ? 9 : 7, heuresSupp: d % 5 === 0 ? 2 : 0, commentaire: d % 5 === 0 ? "Clôture" : null });
+    }
+    if (lignes.length) await prisma.releveJour.createMany({ data: lignes });
+  }
 
   // Variables de paie du mois
   await prisma.variablePaie.create({ data: { salarieId: lucas.id, entrepriseId, type: "PRIME", valeur: 300, mois, annee } });

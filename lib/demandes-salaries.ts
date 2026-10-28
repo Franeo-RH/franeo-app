@@ -64,6 +64,13 @@ async function resumer(type: TypeDemande, donnees: Record<string, unknown>, sala
 
   // Modification : on liste ce qui change
   if (!avant) return `Modifier ${nom}`;
+  if (donnees.partiel) {
+    const lib: Record<string, string> = { poste: "poste", salaireMensuel: "salaire mensuel", salaireAnnuel: "salaire annuel" };
+    const ch = Object.keys(lib)
+      .filter((k) => k in donnees)
+      .map((k) => `${lib[k]} : ${(avant as Record<string, unknown>)[k] ?? "—"} → ${donnees[k] ?? "—"}`);
+    return `Modifier ${nom} : ${ch.join(" ; ") || "aucun changement détecté"}`;
+  }
   const apres = champsSalarie(donnees);
   const changements: string[] = [];
   const libelles: Record<string, string> = {
@@ -149,7 +156,22 @@ export async function appliquerDemande(demandeId: string): Promise<{ erreur?: st
   const salarie = await prisma.salarie.findFirst({ where: { id: d.salarieId, entrepriseId: d.entrepriseId } });
   if (!salarie) return { erreur: "Ce salarié n'existe plus." };
 
-  if (d.type === "MODIFICATION") {
+  if (d.type === "MODIFICATION" && donnees.partiel) {
+    // Demande limitée au poste et au salaire : on n'applique que ces champs
+    const maj: Record<string, unknown> = {};
+    if ("poste" in donnees) {
+      const poste = String(donnees.poste ?? "").trim();
+      if (!poste) return { erreur: "Le poste est obligatoire." };
+      maj.poste = poste;
+    }
+    for (const k of ["salaireMensuel", "salaireAnnuel"]) {
+      if (k in donnees) {
+        const v = donnees[k] === null || donnees[k] === "" ? null : Number(donnees[k]);
+        maj[k] = v === null || Number.isFinite(v) ? v : null;
+      }
+    }
+    await prisma.salarie.update({ where: { id: salarie.id }, data: maj });
+  } else if (d.type === "MODIFICATION") {
     const champs = champsSalarie(donnees);
     if (!champs.nom || !champs.prenom || !champs.poste) return { erreur: "Nom, prénom et poste sont obligatoires." };
     const modifierMatricule = donnees.matricule !== undefined;

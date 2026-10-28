@@ -92,6 +92,7 @@ export default function ModifierSalarie() {
 
     const retour = await res.json().catch(() => ({}));
     if (retour.demande) {
+      alert(retour.message || "Modifications enregistrées. Le changement de poste ou de salaire attend la validation de votre gestionnaire.");
       router.push("/client/salaries/demandes?envoyee=1");
       return;
     }

@@ -80,7 +80,7 @@ export default async function FicheSalarie({
                   href={`/client/salaries/${salarie.id}/modifier`}
                   className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition"
                 >
-                  ✏️ {validation ? "Demander une modification" : "Modifier"}
+                  ✏️ Modifier
                 </Link>
               )}
               {peutSupprimer && <BoutonSupprimer id={salarie.id} redirectUrl="/client/salaries" />}
