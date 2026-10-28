@@ -120,7 +120,7 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
         <SidebarLink href="/client/paie" label="📊 Tableau de bord" active={pathname === "/client/paie"} />
         <SidebarLink href="/client/paie/saisie" label="✏️ Saisir des variables" active={pathname === "/client/paie/saisie"} />
         <SidebarLink href="/client/paie/absences" label="🏖️ Absences" active={pathname === "/client/paie/absences"} />
-        <SidebarLink href="/client/paie/heures" label="⏱️ Relevés d'heures" active={pathname === "/client/paie/heures"} />
+        <SidebarLink href="/client/releves" label="⏱️ Relevés d'heures" active={false} />
         <SidebarLink href="/client/paie/historique" label="📋 Historique" active={pathname === "/client/paie/historique"} />
         <SidebarLink href="/client/paie/prestations" label="🛒 Prestations" active={pathname === "/client/paie/prestations"} />
       </aside>

@@ -80,7 +80,7 @@ export async function PUT(request: NextRequest) {
         `${s.salarie.prenom} ${s.salarie.nom} a envoyé son relevé de ${NOMS_MOIS[mois - 1]} ${annee}.`,
         `Total : ${fmtH(totH)}${totS > 0 ? `, dont ${fmtH(totS)} supplémentaire(s)` : ""}.`,
       ],
-      lien: "/client/paie/heures",
+      lien: "/client/releves",
     });
   }
 

@@ -26,11 +26,11 @@ const FAQ: { module: string; question: string; reponse: string }[] = [
   // Espace salarié
   { module: "Espace salarié", question: "Qu'est-ce que l'espace salarié ?", reponse: "Une option qui permet à vos salariés, depuis leur téléphone, de demander leurs congés, RTT et autres absences, de suivre la réponse et de voir leurs échéances. Vous restez seul à valider. Les arrêts maladie restent saisis par vous ou votre gestionnaire." },
   { module: "Espace salarié", question: "Combien coûte l'espace salarié ?", reponse: "1 € par mois par salarié disposant d'un accès actif. Il est inclus sans supplément dans les formules Premium et Entreprise." },
-  { module: "Espace salarié", question: "Comment donner l'accès à un salarié ?", reponse: "Ouvrez la fiche du salarié, bloc « 📱 Espace salarié », puis cliquez sur Inviter. Le salarié reçoit un mail pour créer son mot de passe (lien valable 7 jours). Son email doit être renseigné dans sa fiche." },
+  { module: "Espace salarié", question: "Comment donner l'accès à un salarié ?", reponse: "Ouvrez la fiche du salarié, bloc « 📱 Espace salarié », puis cliquez sur « 🔗 Créer le lien d'accès ». Copiez le lien et transmettez-le au salarié (SMS, WhatsApp, mail…) : il y choisit son mot de passe (lien valable 7 jours), puis se connecte avec son email sur la page de connexion. Son email doit être renseigné dans sa fiche." },
   { module: "Espace salarié", question: "Comment retirer l'accès à un salarié ?", reponse: "Sur sa fiche, bloc « 📱 Espace salarié », cliquez sur « Couper l'accès ». Vous pouvez le rétablir à tout moment. L'accès est aussi coupé automatiquement après la date de sortie du salarié." },
   { module: "Espace salarié", question: "Mes salariés voient-ils leurs bulletins ou leur salaire ?", reponse: "Non. Ils voient uniquement leurs demandes d'absence, leur statut et leurs échéances. Ils n'ont pas accès aux autres salariés ni aux données de l'entreprise." },
-  { module: "Espace salarié", question: "Mes salariés peuvent-ils saisir leurs heures ?", reponse: "Oui. Dans leur espace, rubrique « ⏱️ Mon relevé d'heures », ils remplissent un calendrier mensuel (du lundi au dimanche) avec leurs heures travaillées et leurs heures supplémentaires. Ils enregistrent au fil du mois, puis envoient le relevé, qui n'est alors plus modifiable. Leurs absences et arrêts s'y affichent automatiquement. Vous validez ou refusez dans Paie › Relevés d'heures ; un refus rouvre le relevé au salarié." },
-  { module: "Paie", question: "Que deviennent les heures supplémentaires validées ?", reponse: "Quand vous validez un relevé dans Paie › Relevés d'heures, le total des heures supplémentaires du mois est automatiquement ajouté aux variables de paie, et transmises à votre gestionnaire pour le bulletin." },
+  { module: "Espace salarié", question: "Mes salariés peuvent-ils saisir leurs heures ?", reponse: "Oui. Dans leur espace, rubrique « ⏱️ Mon relevé d'heures », ils remplissent un calendrier mensuel (du lundi au dimanche) avec leurs heures travaillées et leurs heures supplémentaires. Ils enregistrent au fil du mois, puis envoient le relevé, qui n'est alors plus modifiable. Leurs absences et arrêts s'y affichent automatiquement. Vous validez ou refusez dans l'onglet « Relevés » ; un refus rouvre le relevé au salarié." },
+  { module: "Paie", question: "Que deviennent les heures supplémentaires validées ?", reponse: "Quand vous validez un relevé dans l'onglet « Relevés », le total des heures supplémentaires du mois est automatiquement ajouté aux variables de paie, et transmises à votre gestionnaire pour le bulletin." },
   // Tickets RH
   { module: "Tickets RH", question: "Combien de tickets RH ai-je par mois ?", reponse: "Essentielle : 1 · Sérénité : 3 · Premium : 6 · Entreprise : 10. Les tickets non utilisés ne sont pas reportés. Au-delà, chaque ticket est facturé selon votre formule, avec votre accord préalable." },
   { module: "Tickets RH", question: "Quelle différence entre un ticket RH et un ticket Helpdesk ?", reponse: "Le ticket RH sert à poser une question RH ou paie à votre gestionnaire (contrat, procédure, droit du travail). Le ticket Helpdesk sert à signaler un problème ou proposer une amélioration de l'application. Les tickets Helpdesk ne sont pas décomptés." },
@@ -48,11 +48,14 @@ async function main() {
   let ajoutees = 0;
   for (const [i, f] of FAQ.entries()) {
     const existe = await prisma.fAQ.findFirst({ where: { question: f.question, entrepriseId: null } });
-    if (existe) continue;
+    if (existe) {
+      await prisma.fAQ.update({ where: { id: existe.id }, data: { reponse: f.reponse, module: f.module } }); // réponse mise à jour
+      continue;
+    }
     await prisma.fAQ.create({ data: { ...f, ordre: i, entrepriseId: null } });
     ajoutees++;
   }
-  console.log(`✅ ${ajoutees} question(s) ajoutée(s) — ${FAQ.length - ajoutees} déjà présente(s).`);
+  console.log(`✅ ${ajoutees} question(s) ajoutée(s) — ${FAQ.length - ajoutees} déjà présente(s), mises à jour.`);
 }
 
 main()

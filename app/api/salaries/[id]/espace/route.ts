@@ -3,7 +3,6 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { envoyerMail } from "@/lib/notifications";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -28,7 +27,7 @@ async function controler(id: string) {
   return { session, salarie };
 }
 
-// Inviter (ou renvoyer l'invitation) : le salarié reçoit un lien pour créer son mot de passe
+// Inviter (ou générer un nouveau lien) : renvoie un lien de création du mot de passe à transmettre au salarié
 export async function POST(request: NextRequest, { params }: Ctx) {
   const { id } = await params;
   const r = await controler(id);
@@ -70,21 +69,8 @@ export async function POST(request: NextRequest, { params }: Ctx) {
   const base = (process.env.NEXT_PUBLIC_URL || process.env.APP_URL || request.nextUrl.origin).replace(/\/$/, "");
   const lien = `${base}/reinitialiser-mot-de-passe?token=${token}`;
 
-  const mailEnvoye = await envoyerMail({
-    a: email,
-    sujet: `${salarie.entreprise.nom} vous invite sur votre espace salarié Franeo`,
-    titre: "Bienvenue sur votre espace salarié",
-    lignes: [
-      `Bonjour ${salarie.prenom},`,
-      `${salarie.entreprise.nom} vous ouvre un espace pour déclarer vos congés et absences et suivre leur validation, depuis votre ordinateur ou votre téléphone.`,
-      "Cliquez sur le bouton pour choisir votre mot de passe (lien valable 7 jours). Vous vous connecterez ensuite avec cet email.",
-    ],
-    lien,
-    bouton: "Créer mon mot de passe",
-  });
-
-  // Le lien est aussi renvoyé à l'employeur : il peut le transmettre par SMS si le mail n'arrive pas
-  return NextResponse.json({ succes: true, email, lien, mailEnvoye });
+  // Pas de mail : l'employeur transmet lui-même ce lien au salarié (SMS, WhatsApp, mail…)
+  return NextResponse.json({ succes: true, email, lien });
 }
 
 // Couper l'accès (le compte est gardé, l'historique aussi)

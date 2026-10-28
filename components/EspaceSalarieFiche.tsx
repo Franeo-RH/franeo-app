@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-/** Bloc de la fiche salarié (côté client) : inviter, renvoyer l'invitation ou couper l'accès */
+/** Bloc de la fiche salarié : créer le lien d'accès, en générer un nouveau ou couper l'accès */
 export default function EspaceSalarieFiche({
   salarieId,
   email,
@@ -31,7 +31,7 @@ export default function EspaceSalarieFiche({
     }
     if (methode === "POST") {
       setLien(data.lien || "");
-      setMessage(data.mailEnvoye ? `✅ Invitation envoyée par mail à ${data.email}.` : `⚠️ Le mail n'a pas pu partir. Transmettez ce lien au salarié (SMS, WhatsApp…).`);
+      setMessage(`✅ Lien créé pour ${data.email}. Copiez-le et transmettez-le au salarié (SMS, WhatsApp, mail…).`);
     } else {
       setLien("");
       setMessage("Accès coupé.");
@@ -52,14 +52,14 @@ export default function EspaceSalarieFiche({
           ? "✅ Ce salarié a accès à son espace : il déclare ses congés et absences, vous les validez."
           : statut === "coupe"
             ? "⏸️ L'accès de ce salarié est coupé."
-            : "Ce salarié n'a pas encore d'espace. Il recevra un mail pour créer son mot de passe."}
+            : "Ce salarié n'a pas encore d'espace. Créez son lien d'accès et transmettez-le-lui : il y choisira son mot de passe."}
       </p>
       {!email && statut === "aucun" && (
         <p style={{ margin: 0, fontSize: "13px", color: "#b45309" }}>Renseignez d&apos;abord son email dans la fiche.</p>
       )}
       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-        {statut === "aucun" && bouton("📱 Inviter le salarié", "POST", "#f97316")}
-        {statut === "actif" && bouton("Renvoyer l'invitation", "POST", "#4b5563")}
+        {statut === "aucun" && bouton("🔗 Créer le lien d'accès", "POST", "#f97316")}
+        {statut === "actif" && bouton("🔗 Nouveau lien", "POST", "#4b5563")}
         {statut === "actif" && bouton("Couper l'accès", "DELETE", "#ef4444")}
         {statut === "coupe" && bouton("Rétablir l'accès", "POST", "#16a34a")}
       </div>
@@ -73,7 +73,7 @@ export default function EspaceSalarieFiche({
         </div>
       )}
       <p style={{ margin: 0, fontSize: "12px", color: "#6b7280" }}>
-        Le salarié ouvre le lien, choisit son mot de passe, puis se connecte sur la page de connexion habituelle de Franeo avec son email.
+        Le lien est valable 7 jours. Le salarié l&apos;ouvre, choisit son mot de passe, puis se connecte sur la page de connexion habituelle de Franeo avec son email.
       </p>
     </div>
   );
