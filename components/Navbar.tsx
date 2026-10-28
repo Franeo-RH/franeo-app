@@ -87,8 +87,8 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
         { href: "/admin/salaries", label: "Salariés", icon: "/SALARIE-LOGO.png", visible: true },
         { href: "/admin/paie", label: "Paie", icon: "/PAIE-LOGO.png", visible: true },
         { href: "/admin/tickets", label: "Tickets RH", icon: "/TICKET-LOGO.png", visible: true, actifSur: ["/admin/recrutement", "/admin/entreprises/tickets"] },
-        { href: "/admin/actualites", label: "Actualité", icon: "/ACTUALITE-LOGO.png", visible: true, actifSur: ["/admin/communication"] },
-        { href: "/admin/helpdesk", label: "Helpdesk", icon: "/HELPDESK-LOGO.png", visible: true, actifSur: ["/admin/faq"] },
+        { href: "/admin/communication", label: "Communication", icon: "/COMMUNICATION-LOGO.png", visible: true, actifSur: ["/admin/actualites", "/admin/faq"] },
+        { href: "/admin/helpdesk", label: "Helpdesk", icon: "/HELPDESK-LOGO.png", visible: true },
       ]
     : [
         { href: "/client/dashboard", label: "Dashboard", icon: "/DASHBOARD-LOGO.png", visible: true },
@@ -96,8 +96,8 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
         { href: "/client/salaries", label: "Salariés", icon: "/SALARIE-LOGO.png", visible: a("salaries") || a("absences") },
         { href: "/client/paie", label: "Paie", icon: "/PAIE-LOGO.png", visible: moi ? moi.aPaie : a("paie") },
         { href: "/client/tickets", label: "Tickets RH", icon: "/TICKET-LOGO.png", visible: a("tickets") },
-        { href: "/client/actualites", label: "Actualité", icon: "/ACTUALITE-LOGO.png", visible: true },
-        { href: "/client/helpdesk", label: "Helpdesk", icon: "/HELPDESK-LOGO.png", visible: true, actifSur: ["/client/faq"] },
+        { href: "/client/actualites", label: "Communication", icon: "/COMMUNICATION-LOGO.png", visible: true, actifSur: ["/client/faq"] },
+        { href: "/client/helpdesk", label: "Helpdesk", icon: "/HELPDESK-LOGO.png", visible: true },
       ];
 
   const visibles = liens.filter((l) => l.visible);

@@ -53,16 +53,16 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/paie/historique", label: "📋 Historique" },
       ] };
     }
-    if (dans("/admin/actualites", "/admin/communication")) {
-      return { titre: "Actualité", items: [
+    if (dans("/admin/actualites", "/admin/communication", "/admin/faq")) {
+      return { titre: "Communication", items: [
+        { href: "/admin/communication", label: "📢 Communications" },
         { href: "/admin/actualites", label: "📰 Actualité RH" },
-        { href: "/admin/communication", label: "📢 Communication" },
+        { href: "/admin/faq", label: "❓ FAQ" },
       ] };
     }
-    if (dans("/admin/helpdesk", "/admin/faq")) {
+    if (dans("/admin/helpdesk")) {
       return { titre: "Helpdesk", items: [
         { href: "/admin/helpdesk", label: "🆘 Tous les tickets" },
-        { href: "/admin/faq", label: "❓ FAQ" },
       ] };
     }
     return null;
@@ -104,11 +104,16 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
       { href: "/client/paie/historique", label: "📋 Historique" },
     ] };
   }
-  if (dans("/client/helpdesk", "/client/faq")) {
+  if (dans("/client/actualites", "/client/faq")) {
+    return { titre: "Communication", items: [
+      { href: "/client/actualites", label: "📢 Communications & actualité RH" },
+      { href: "/client/faq", label: "❓ FAQ" },
+    ] };
+  }
+  if (dans("/client/helpdesk")) {
     return { titre: "Helpdesk", items: [
       { href: "/client/helpdesk", label: "🆘 Mes tickets support" },
       { href: "/client/helpdesk/nouveau", label: "➕ Nouveau ticket" },
-      { href: "/client/faq", label: "❓ FAQ" },
     ] };
   }
   return null;

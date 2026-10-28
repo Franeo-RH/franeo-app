@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
+import Sidebar from "@/components/Sidebar";
 import ActualitesVue, { type ActuItem } from "@/components/ActualitesVue";
 import { THEMATIQUES } from "@/lib/actualites";
 import { estSessionDemo } from "@/lib/demo";
@@ -64,9 +65,11 @@ export default async function ClientActualites({
     return (
       <div className="min-h-screen bg-gray-100">
         <Navbar role={session.role} prenom={session.prenom} permissions={session.entreprise?.permissions || []} />
-        <main className="p-10 max-w-6xl mx-auto">
+        <div className="flex">
+        <Sidebar role="CLIENT" />
+        <main className="flex-1 p-10" style={{ minWidth: 0 }}>
           <div className="bg-white rounded-xl shadow p-8 mb-8">
-            <h1 className="text-3xl font-bold">📰 Actualité</h1>
+            <h1 className="text-3xl font-bold">📢 Communication</h1>
             <p className="text-gray-500 mt-1">Les communications de FRANEO RH et les dernières informations RH, paie et réglementation</p>
           </div>
           <CommunicationsRecues communications={communications} />
@@ -84,6 +87,7 @@ export default async function ClientActualites({
             ))}
           </div>
         </main>
+        </div>
       </div>
     );
   }
@@ -108,10 +112,12 @@ export default async function ClientActualites({
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar role={session.role} prenom={session.prenom} permissions={session.entreprise?.permissions || []} />
-      <main className="p-10 max-w-6xl mx-auto">
+      <div className="flex">
+        <Sidebar role="CLIENT" />
+        <main className="flex-1 p-10" style={{ minWidth: 0 }}>
 
         <div className="bg-white rounded-xl shadow p-8 mb-8">
-          <h1 className="text-3xl font-bold">📰 Actualité</h1>
+          <h1 className="text-3xl font-bold">📢 Communication</h1>
           <p className="text-gray-500 mt-1">Les communications de FRANEO RH et les dernières informations RH, paie et réglementation</p>
         </div>
 
@@ -128,6 +134,7 @@ export default async function ClientActualites({
         />
 
       </main>
+        </div>
     </div>
   );
 }
