@@ -130,7 +130,7 @@ export default async function AdminDashboard() {
     { href: "/admin/salaries", icone: "👥", label: "Salariés", n: totalSalaries, couleur: "text-gray-800" },
     { href: "/admin/tickets", icone: "🎫", label: "Tickets RH", n: nbTicketsRH, couleur: "text-orange-500" },
     { href: "/admin/helpdesk", icone: "🆘", label: "Helpdesk", n: nbTicketsSupport, couleur: "text-red-500" },
-    { href: "/admin/paie/absences", icone: "📅", label: "Absences", n: nbAbsences, couleur: "text-orange-500" },
+    { href: "/admin/salaries/absences", icone: "📅", label: "Absences", n: nbAbsences, couleur: "text-orange-500" },
     { href: "/admin/paie/variables", icone: "💰", label: "Variables", n: nbVariables, couleur: "text-orange-500" },
     { href: "/admin/entreprises/demandes", icone: "📩", label: "Évolutions", n: nbDemandes, couleur: "text-orange-500" },
     { href: "/admin/salaries/demandes", icone: "📝", label: "Demandes salariés", n: nbDemandesSalaries, couleur: "text-orange-500" },

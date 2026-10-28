@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
+import Sidebar from "@/components/Sidebar";
 import FormulaireActualite from "@/components/FormulaireActualite";
 import ActualiteAdminCarte from "@/components/ActualiteAdminCarte";
 import { THEMATIQUES } from "@/lib/actualites";
@@ -35,7 +36,9 @@ export default async function AdminActualites({
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar role={session.role} prenom={session.prenom} />
-      <main className="p-10 max-w-5xl mx-auto">
+      <div className="flex">
+      <Sidebar role="ADMIN" />
+      <main className="flex-1 p-10" style={{ minWidth: 0 }}>
 
         <div className="bg-white rounded-xl shadow p-8 mb-6">
           <h1 className="text-3xl font-bold">📰 Actualité RH</h1>
@@ -84,6 +87,7 @@ export default async function AdminActualites({
         )}
 
       </main>
+      </div>
     </div>
   );
 }

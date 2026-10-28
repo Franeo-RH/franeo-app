@@ -13,6 +13,9 @@ export async function POST(request: NextRequest) {
 
   const { code, quantite, salarie, commentaire, accepte } = await request.json();
   const prestation = PRESTATIONS.find((p) => p.code === code);
+  if (prestation?.horsApp && session.role === "CLIENT") {
+    return NextResponse.json({ erreur: "Cette prestation est gérée directement par FRANEO RH." }, { status: 400 });
+  }
   if (!prestation) return NextResponse.json({ erreur: "Prestation inconnue." }, { status: 400 });
 
   const entreprise = await prisma.entreprise.findUnique({

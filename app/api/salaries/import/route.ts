@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { evaluerSurcout, STATUT_ACCORD_REQUIS } from "@/lib/surcout";
-import { aDroit, passeParValidation } from "@/lib/droits";
+import { aDroit, ajoutParValidation } from "@/lib/droits";
 import { creerDemande } from "@/lib/demandes-salaries";
 import { analyserTableau, type LigneErreur } from "@/lib/import-salaries";
 import { fabriquerFichierErreurs, lireFichierExcel } from "@/lib/import-salaries-xlsx";
@@ -17,25 +17,31 @@ const TAILLE_MAX = 5 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session || session.role !== "CLIENT" || !session.entrepriseId) {
+  const admin = session?.role === "ADMIN";
+  if (!session || (!admin && (session.role !== "CLIENT" || !session.entrepriseId))) {
     return NextResponse.json({ erreur: "Non autorisé." }, { status: 401 });
   }
-  const entrepriseId = session.entrepriseId;
+
+  const form = await req.formData();
+  // L'admin importe pour l'entreprise choisie, sans demande de validation
+  const entrepriseId = admin ? String(form.get("entrepriseId") || "") : session.entrepriseId!;
+  if (!entrepriseId) return NextResponse.json({ erreur: "Choisissez l'entreprise." }, { status: 400 });
 
   const entreprise = await prisma.entreprise.findUnique({ where: { id: entrepriseId }, select: { permissions: true, demo: true, abonnementPaieId: true } });
-  if (!entreprise || !entreprise.permissions.includes("salaries")) {
-    return NextResponse.json({ erreur: "Le module Salariés n'est pas activé sur votre espace." }, { status: 403 });
-  }
-
-  if (!aDroit(entreprise.permissions, "salaries.importer")) {
-    return NextResponse.json({ erreur: "Vous n'avez pas le droit d'importer des salariés. Contactez votre gestionnaire." }, { status: 403 });
+  if (!entreprise) return NextResponse.json({ erreur: "Entreprise introuvable." }, { status: 404 });
+  if (!admin) {
+    if (!entreprise.permissions.includes("salaries")) {
+      return NextResponse.json({ erreur: "Le module Salariés n'est pas activé sur votre espace." }, { status: 403 });
+    }
+    if (!aDroit(entreprise.permissions, "salaries.importer")) {
+      return NextResponse.json({ erreur: "Vous n'avez pas le droit d'importer des salariés. Contactez votre gestionnaire." }, { status: 403 });
+    }
   }
 
   if (entreprise.demo) {
     return NextResponse.json({ erreur: "L'import Excel n'est pas disponible dans la version démo." }, { status: 403 });
   }
 
-  const form = await req.formData();
   const fichier = form.get("fichier");
   if (!fichier || typeof fichier === "string") {
     return NextResponse.json({ erreur: "Aucun fichier reçu." }, { status: 400 });
@@ -73,7 +79,7 @@ export async function POST(req: NextRequest) {
   ];
 
   // Supplément (salariés / bulletins au-delà de la formule) : accord du client requis
-  if (analyse.valides.length > 0 && form.get("accepteSurcout") !== "1") {
+  if (!admin && analyse.valides.length > 0 && form.get("accepteSurcout") !== "1") {
     const surcout = await evaluerSurcout(entrepriseId, { salaries: analyse.valides.length });
     if (surcout) {
       return NextResponse.json({ surcoutRequis: true, surcout }, { status: STATUT_ACCORD_REQUIS });
@@ -81,7 +87,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Client « paie » : chaque ligne valide devient une demande d'ajout, validée par le gestionnaire
-  if (passeParValidation(entreprise)) {
+  if (!admin && ajoutParValidation(entreprise)) {
     for (const v of analyse.valides) {
       await creerDemande({ entrepriseId, type: "AJOUT", donnees: v.donnees as unknown as Record<string, unknown>, auteur: `${session.prenom} (${session.email}) — import Excel` });
     }

@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       ...(absence.commentaire ? [`Message : ${absence.commentaire}`] : []),
       "Validez ou refusez la demande dans Paie › Absences.",
     ],
-    lien: "/client/paie/absences",
+    lien: "/client/salaries/absences",
   });
 
   return NextResponse.json({ succes: true, absence });

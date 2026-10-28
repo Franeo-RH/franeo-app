@@ -18,7 +18,10 @@ function telecharger(base64: string, nom: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function ImportSalaries() {
+export default function ImportSalaries({ entreprises }: { entreprises?: { id: string; nom: string }[] } = {}) {
+  const admin = !!entreprises;
+  const retour = admin ? "/admin/salaries" : "/client/salaries";
+  const [entrepriseId, setEntrepriseId] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const [fichier, setFichier] = useState<File | null>(null);
   const [envoi, setEnvoi] = useState(false);
@@ -28,12 +31,14 @@ export default function ImportSalaries() {
 
   async function importer(accepteSurcout = false) {
     if (!fichier) return;
+    if (admin && !entrepriseId) { setErreur("Choisissez l'entreprise."); return; }
     setEnvoi(true);
     setErreur("");
     setResultat(null);
     try {
       const form = new FormData();
       form.append("fichier", fichier);
+      if (admin) form.append("entrepriseId", entrepriseId);
       if (accepteSurcout) form.append("accepteSurcout", "1");
       const res = await fetch("/api/salaries/import", { method: "POST", body: form });
       const data = await res.json();
@@ -60,10 +65,21 @@ export default function ImportSalaries() {
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
       <div>
-        <Link href="/client/salaries" className="text-sm text-gray-500 hover:underline">← Retour aux salariés</Link>
+        <Link href={retour} className="text-sm text-gray-500 hover:underline">← Retour aux salariés</Link>
         <h1 className="text-2xl font-bold mt-2">Importer des salariés</h1>
         <p className="text-gray-500 text-sm mt-1">Ajoutez plusieurs salariés d'un coup depuis un fichier Excel.</p>
       </div>
+
+      {admin && (
+        <div className="bg-white border rounded-2xl p-5 space-y-3">
+          <label className="font-semibold block" htmlFor="imp-ent">Entreprise *</label>
+          <select id="imp-ent" value={entrepriseId} onChange={(e) => setEntrepriseId(e.target.value)} className="w-full border rounded-lg px-3 py-2">
+            <option value="">Choisir l&apos;entreprise…</option>
+            {entreprises!.map((e) => <option key={e.id} value={e.id}>{e.nom}</option>)}
+          </select>
+          <p className="text-xs text-gray-500">En admin, les salariés sont créés directement (sans demande de validation).</p>
+        </div>
+      )}
 
       <div className="bg-white border rounded-2xl p-5 space-y-3">
         <h2 className="font-semibold">1. Téléchargez le modèle</h2>
@@ -124,7 +140,7 @@ export default function ImportSalaries() {
             </>
           )}
           {resultat.crees > 0 && (
-            <Link href="/client/salaries" className="inline-block text-sm font-medium text-green-700 hover:underline">Voir les salariés →</Link>
+            <Link href={retour} className="inline-block text-sm font-medium text-green-700 hover:underline">Voir les salariés →</Link>
           )}
         </div>
       )}

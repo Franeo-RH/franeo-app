@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { notifierAdmin } from "@/lib/notifications";
+import { categorieRecrutement } from "@/lib/recrutement";
 
 export async function GET() {
   const session = await getSession();
@@ -48,46 +50,20 @@ export async function POST(request: NextRequest) {
       formation: data.formation || null,
       commentaire: data.commentaire || null,
       cgvAcceptees: true,
+      categorie: categorieRecrutement(data.categorie).code,
+      facturationAuto: true,
     },
   });
 
-  // Ajouter 400€ à la facturation du mois
-  const maintenant = new Date();
-  const moisActuel = maintenant.getMonth() + 1;
-  const anneeActuelle = maintenant.getFullYear();
-
-  const dateDemande = new Date(recrutement.createdAt).toLocaleDateString("fr-FR");
-  const ligne = `Recrutement du ${dateDemande} (${recrutement.poste}) : 400 €`;
-
-  const facturationExistante = await prisma.facturation.findFirst({
-    where: {
-      entrepriseId: session.entrepriseId!,
-      mois: moisActuel,
-      annee: anneeActuelle,
-      statut: "En attente",
-    },
+  // Facturation : le lancement (400 €) puis les primes au succès sont ajoutés automatiquement
+  // à la facture du mois concerné (lib/facturation.ts)
+  await notifierAdmin({
+    sujet: `Nouvelle demande de recrutement — ${recrutement.poste}`,
+    titre: "🎯 Nouvelle demande de recrutement",
+    lignes: [`Poste : ${recrutement.poste} (${categorieRecrutement(recrutement.categorie).label})`, `Contrat : ${recrutement.typeContrat}`],
+    lien: "/admin/recrutement",
+    entrepriseId: session.entrepriseId!,
   });
-
-  if (facturationExistante) {
-    const ancien = (facturationExistante.commentaire || "").replace(/ \| /g, "\n");
-    await prisma.facturation.update({
-      where: { id: facturationExistante.id },
-      data: {
-        montant: facturationExistante.montant + 400,
-        commentaire: ancien ? `${ancien}\n${ligne}` : ligne,
-      },
-    });
-  } else {
-    await prisma.facturation.create({
-      data: {
-        entrepriseId: session.entrepriseId!,
-        mois: moisActuel,
-        annee: anneeActuelle,
-        montant: 400,
-        commentaire: ligne,
-      },
-    });
-  }
 
   return NextResponse.json({ succes: true, recrutement });
 }

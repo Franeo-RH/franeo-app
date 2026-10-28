@@ -16,11 +16,30 @@ interface NavbarProps {
   permissions?: string[];
 }
 
+type Lien = { href: string; label: string; icon: string; visible: boolean; actifSur?: string[] };
+
+// Les droits sont relus ici : la barre est toujours complète, même si la page ne les a pas encore chargés
+let memoire: { prenom: string; permissions: string[]; aPaie: boolean } | null = null;
+
 export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [chargement, setChargement] = useState(false);
   const [menuOuvert, setMenuOuvert] = useState(false);
+  const [moi, setMoi] = useState(memoire);
+
+  useEffect(() => {
+    let actif = true;
+    fetch("/api/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!actif || !d) return;
+        memoire = { prenom: d.prenom || "", permissions: d.permissions || [], aPaie: !!d.aPaie };
+        setMoi(memoire);
+      })
+      .catch(() => {});
+    return () => { actif = false; };
+  }, []);
 
   // Ferme le menu téléphone à chaque changement de page
   useEffect(() => {
@@ -50,43 +69,55 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
 
   async function handleLogout() {
     setChargement(true);
+    memoire = null;
     await viderCacheHorsLigne(); // les pages gardées pour le hors-ligne ne restent pas sur l'appareil
     await fetch("/api/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
   }
 
-  const tousLesLiens = role === "ADMIN"
+  const perms = moi?.permissions ?? permissions;
+  const nom = prenom || moi?.prenom || "";
+  const a = (p: string) => perms.includes(p);
+
+  const liens: Lien[] = role === "ADMIN"
     ? [
-        { href: "/admin/dashboard", label: "Dashboard", icon: "/DASHBOARD-LOGO.png", permission: null },
-        { href: "/admin/entreprises", label: "Entreprises", icon: "/ENTREPRISE-LOGO.png", permission: null },
-        { href: "/admin/salaries", label: "Salariés", icon: "/SALARIE-LOGO.png", permission: null },
-        { href: "/admin/paie", label: "Paie", icon: "/PAIE-LOGO.png", permission: null },
-        { href: "/admin/tickets", label: "Tickets", icon: "/TICKET-LOGO.png", permission: null },
-        { href: "/admin/actualites", label: "Actualité RH", icon: "/ACTUALITE-LOGO.png", permission: null },
-        { href: "/admin/faq", label: "FAQ", icon: "/FAQ-LOGO.png", permission: null },
-        { href: "/admin/communication", label: "Communication", icon: "/ACTUALITE-LOGO.png", permission: null },
-        { href: "/admin/helpdesk", label: "Helpdesk", icon: "/HELPDESK-LOGO.png", permission: null },
+        { href: "/admin/dashboard", label: "Dashboard", icon: "/DASHBOARD-LOGO.png", visible: true },
+        { href: "/admin/entreprises", label: "Entreprises", icon: "/ENTREPRISE-LOGO.png", visible: true, actifSur: ["/admin/abonnement-paie"] },
+        { href: "/admin/salaries", label: "Salariés", icon: "/SALARIE-LOGO.png", visible: true },
+        { href: "/admin/paie", label: "Paie", icon: "/PAIE-LOGO.png", visible: true },
+        { href: "/admin/tickets", label: "Tickets RH", icon: "/TICKET-LOGO.png", visible: true, actifSur: ["/admin/recrutement", "/admin/entreprises/tickets"] },
+        { href: "/admin/actualites", label: "Actualité", icon: "/ACTUALITE-LOGO.png", visible: true, actifSur: ["/admin/communication"] },
+        { href: "/admin/helpdesk", label: "Helpdesk", icon: "/HELPDESK-LOGO.png", visible: true, actifSur: ["/admin/faq"] },
       ]
     : [
-        { href: "/client/dashboard", label: "Dashboard", icon: "/DASHBOARD-LOGO.png", permission: null },
-        { href: "/client/entreprise", label: "Mon entreprise", icon: "/ENTREPRISE-LOGO.png", permission: "entreprise" },
-        { href: "/client/salaries", label: "Salariés", icon: "/SALARIE-LOGO.png", permission: "salaries" },
-        { href: "/client/paie", label: "Paie", icon: "/PAIE-LOGO.png", permission: "paie" },
-        { href: "/client/tickets", label: "Tickets", icon: "/TICKET-LOGO.png", permission: "tickets" },
-        { href: "/client/actualites", label: "Actualité RH", icon: "/ACTUALITE-LOGO.png", permission: null },
-        { href: "/client/faq", label: "FAQ", icon: "/FAQ-LOGO.png", permission: null },
-        { href: "/client/helpdesk", label: "Helpdesk", icon: "/HELPDESK-LOGO.png", permission: null },
+        { href: "/client/dashboard", label: "Dashboard", icon: "/DASHBOARD-LOGO.png", visible: true },
+        { href: "/client/entreprise", label: "Mon entreprise", icon: "/ENTREPRISE-LOGO.png", visible: a("entreprise"), actifSur: ["/client/abonnement-paie"] },
+        { href: "/client/salaries", label: "Salariés", icon: "/SALARIE-LOGO.png", visible: a("salaries") || a("absences") },
+        { href: "/client/paie", label: "Paie", icon: "/PAIE-LOGO.png", visible: moi ? moi.aPaie : a("paie") },
+        { href: "/client/tickets", label: "Tickets RH", icon: "/TICKET-LOGO.png", visible: a("tickets") },
+        { href: "/client/actualites", label: "Actualité", icon: "/ACTUALITE-LOGO.png", visible: true },
+        { href: "/client/helpdesk", label: "Helpdesk", icon: "/HELPDESK-LOGO.png", visible: true, actifSur: ["/client/faq"] },
       ];
 
-  const liens = tousLesLiens.filter(lien =>
-    lien.permission === null ||
-    role === "ADMIN" ||
-    permissions.includes(lien.permission)
-  );
+  const visibles = liens.filter((l) => l.visible);
+  const sousChemin = (h: string) => pathname === h || pathname.startsWith(h + "/");
+  // Le lien le plus précis gagne (évite que /admin/entreprises/tickets allume « Entreprises »)
+  const actif = (l: Lien) => {
+    if ((l.actifSur || []).some(sousChemin)) return true;
+    if (!sousChemin(l.href)) return false;
+    return !visibles.some((autre) => autre !== l && (autre.actifSur || []).some(sousChemin));
+  };
 
-  // Section active : /client/paie/historique → "Paie"
-  const estActif = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const profil = (
+    <>
+      {role === "CLIENT" && <Link href="/client/profil" className="fr-nav-petit">🔒 Mot de passe</Link>}
+      <a href={SITE_URL} target="_blank" rel="noopener noreferrer" className="fr-nav-petit">🌐 Voir nos offres ↗</a>
+      <button onClick={handleLogout} disabled={chargement} className="fr-nav-deco">
+        {chargement ? "..." : "Déconnexion"}
+      </button>
+    </>
+  );
 
   return (
     <nav className="fr-nav">
@@ -95,26 +126,19 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
           <Image src="/FRANEO-Logo-Orange.png" alt="Franeo" width={90} height={30} style={{ objectFit: "contain" }} priority />
         </Link>
 
-        {/* Ordinateur : liens en ligne */}
+        {/* Ordinateur : onglets centrés */}
         <div className="fr-nav-liens">
-          {liens.map((lien) => (
-            <Link key={lien.href} href={lien.href} className={`fr-nav-lien${estActif(lien.href) ? " fr-actif" : ""}`}>
+          {visibles.map((lien) => (
+            <Link key={lien.href} href={lien.href} className={`fr-nav-lien${actif(lien) ? " fr-actif" : ""}`}>
               <Image src={lien.icon} alt="" width={18} height={18} className="invert" style={{ objectFit: "contain" }} />
               <span>{lien.label}</span>
             </Link>
           ))}
         </div>
 
-        <a href={SITE_URL} target="_blank" rel="noopener noreferrer" className="fr-nav-offres">Voir toutes nos offres ↗</a>
-
         <div className="fr-nav-profil">
-          <span className="fr-nav-prenom">{prenom}</span>
-          {role === "CLIENT" && (
-            <Link href="/client/profil" className="fr-nav-petit">🔒 Mot de passe</Link>
-          )}
-          <button onClick={handleLogout} disabled={chargement} className="fr-nav-deco">
-            {chargement ? "..." : "Déconnexion"}
-          </button>
+          <span className="fr-nav-prenom">{nom || " "}</span>
+          {profil}
         </div>
 
         {/* Téléphone : bouton menu */}
@@ -146,23 +170,17 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
       {menuOuvert && (
         <div className="fr-menu-mobile">
           <div className="fr-menu-grille">
-            {liens.map((lien) => (
-              <Link key={lien.href} href={lien.href} className={`fr-menu-lien${estActif(lien.href) ? " fr-actif" : ""}`}>
+            {visibles.map((lien) => (
+              <Link key={lien.href} href={lien.href} className={`fr-menu-lien${actif(lien) ? " fr-actif" : ""}`}>
                 <Image src={lien.icon} alt="" width={22} height={22} className="invert" style={{ objectFit: "contain" }} />
                 <span>{lien.label}</span>
               </Link>
             ))}
           </div>
           <InstallerApp className="fr-menu-installer" />
-          <a href={SITE_URL} target="_blank" rel="noopener noreferrer" className="fr-menu-offres">🌐 Voir toutes nos offres</a>
           <div className="fr-menu-pied">
-            <span>👤 {prenom}</span>
-            <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-              {role === "CLIENT" && <Link href="/client/profil" className="fr-nav-petit">🔒 Mot de passe</Link>}
-              <button onClick={handleLogout} disabled={chargement} className="fr-nav-deco">
-                {chargement ? "..." : "Déconnexion"}
-              </button>
-            </div>
+            <span>👤 {nom}</span>
+            <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>{profil}</div>
           </div>
         </div>
       )}

@@ -5,7 +5,7 @@ import { matriculeDejaPris, nettoyerMatricule } from "@/lib/matricule";
 import { lireRappel } from "@/lib/rappels";
 import { estSessionDemo, LIMITE_SALARIES_DEMO, NOM_FAMILLE_DEMO } from "@/lib/demo";
 import { evaluerSurcout, STATUT_ACCORD_REQUIS } from "@/lib/surcout";
-import { aDroit, passeParValidation } from "@/lib/droits";
+import { aDroit, ajoutParValidation } from "@/lib/droits";
 import { creerDemande } from "@/lib/demandes-salaries";
 
 export async function GET() {
@@ -138,8 +138,8 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Client « paie » : l'ajout devient une demande, validée par le gestionnaire
-  if (session.role === "CLIENT" && passeParValidation(session.entreprise)) {
+  // Client : l'ajout devient une demande, validée par le gestionnaire
+  if (session.role === "CLIENT" && ajoutParValidation(session.entreprise)) {
     await creerDemande({ entrepriseId, type: "AJOUT", donnees: brut, auteur: `${session.prenom} (${session.email})` });
     return NextResponse.json(
       { demande: true, message: "Votre demande d'ajout a été envoyée. Le salarié apparaîtra dès sa validation par votre gestionnaire." },

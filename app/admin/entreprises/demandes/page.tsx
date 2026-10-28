@@ -7,6 +7,7 @@ import Sidebar from "@/components/Sidebar";
 import BoutonsDecision from "@/components/BoutonsDecision";
 import BoutonsDecisionPaie from "@/components/BoutonsDecisionPaie";
 import Link from "next/link";
+import OngletsAbonnements from "@/components/OngletsAbonnements";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,7 @@ export default async function DemandesAbonnement() {
       <div className="flex">
         <Sidebar role={session.role} demandesEnAttente={totalEnAttente} />
         <main className="flex-1 p-10">
+          <OngletsAbonnements espace="admin" actif="rh" />
 
           <div className="bg-white rounded-xl shadow p-8 mb-6">
             <h1 className="text-3xl font-bold">📩 Demandes de modification d'abonnement</h1>

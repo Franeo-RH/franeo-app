@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
+import Sidebar from "@/components/Sidebar";
 import { CIBLES } from "@/lib/communications-cibles";
 
 type Lecture = { luAt: string; utilisateur: { prenom: string; email: string; role: string; entreprise: { nom: string } | null } };
@@ -51,7 +52,9 @@ export default function AdminCommunication() {
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar role="ADMIN" prenom="" />
-      <main className="p-6 md:p-10 flex flex-col gap-6" style={{ maxWidth: "1000px", margin: "0 auto" }}>
+      <div className="flex">
+      <Sidebar role="ADMIN" />
+      <main className="flex-1 p-6 md:p-10 flex flex-col gap-6" style={{ minWidth: 0 }}>
         <div className="bg-white rounded-xl shadow p-6">
           <h1 className="text-3xl font-bold">📢 Communication</h1>
           <p className="text-gray-500 mt-1">Publiez une information : elle apparaît sur le tableau de bord des destinataires jusqu&apos;à ce qu&apos;ils cliquent « J&apos;ai lu ».</p>
@@ -135,6 +138,7 @@ export default function AdminCommunication() {
           )}
         </div>
       </main>
+      </div>
     </div>
   );
 }

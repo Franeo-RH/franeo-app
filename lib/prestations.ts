@@ -13,11 +13,13 @@ export type Prestation = {
   unite?: string; // affiché si la quantité a un sens (« salarié », « contrat », « dossier »)
   avecSalarie?: boolean; // propose de choisir le salarié concerné
   prix: Record<CodeFormule, number | null>;
+  /** Géré directement par FRANEO RH (facturé via Abby) : non commandable par le client dans l'app */
+  horsApp?: boolean;
 };
 
 export const PRESTATIONS: Prestation[] = [
   {
-    code: "RECTIFICATIF", libelle: "Bulletin rectificatif",
+    code: "RECTIFICATIF", libelle: "Bulletin rectificatif", horsApp: true,
     description: "Refaire un bulletin déjà produit (variables transmises en retard ou à corriger).",
     unite: "bulletin", avecSalarie: true,
     prix: { ESSENTIELLE: 15, SERENITE: 15, PREMIUM: 0, ENTREPRISE: 0 },
@@ -46,7 +48,7 @@ export const PRESTATIONS: Prestation[] = [
     prix: { ESSENTIELLE: 150, SERENITE: 150, PREMIUM: 150, ENTREPRISE: 0 },
   },
   {
-    code: "REPRISE_DOSSIER", libelle: "Reprise du dossier paie",
+    code: "REPRISE_DOSSIER", libelle: "Reprise du dossier paie", horsApp: true,
     description: "Import des salariés, reprise des cumuls et paramétrage du logiciel de paie.",
     unite: "salarié",
     prix: { ESSENTIELLE: 10, SERENITE: 5, PREMIUM: 0, ENTREPRISE: 0 },
@@ -80,3 +82,6 @@ export const NOMS_FORMULES: Record<CodeFormule, string> = {
 export const STATUTS_PRESTATION: Record<string, string> = {
   A_FAIRE: "À traiter", FAITE: "Réalisée", ANNULEE: "Annulée",
 };
+
+/** Prestations que le client peut commander lui-même dans l'app */
+export const PRESTATIONS_CLIENT = PRESTATIONS.filter((p) => !p.horsApp);

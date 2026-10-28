@@ -38,3 +38,13 @@ export function aDroit(permissions: string[] | null | undefined, action: ActionI
 export function passeParValidation(entreprise: { abonnementPaieId?: string | null; demo?: boolean } | null | undefined): boolean {
   return !!entreprise && !!entreprise.abonnementPaieId && !entreprise.demo;
 }
+
+/** Tout ajout de salarié par un client (hors démo) passe par une demande validée par l'admin */
+export function ajoutParValidation(entreprise: { demo?: boolean } | null | undefined): boolean {
+  return !!entreprise && !entreprise.demo;
+}
+
+/** Le client voit l'onglet Paie seulement s'il a une formule paie (et le module activé) */
+export function aAccesPaie(entreprise: { permissions?: string[] | null; abonnementPaieId?: string | null } | null | undefined): boolean {
+  return !!entreprise && !!entreprise.abonnementPaieId && (entreprise.permissions || []).includes("paie");
+}

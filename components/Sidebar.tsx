@@ -9,160 +9,133 @@ interface SidebarProps {
   ticketsOuverts?: number;
 }
 
+type Item = { href: string; label: string; badge?: number; aussi?: string[] };
+
+/** Liste des liens de la barre latérale selon l'onglet ouvert */
+function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente: number, ticketsOuverts: number): { titre: string; items: Item[] } | null {
+  const dans = (...mots: string[]) => mots.some((m) => pathname.includes(m));
+
+  if (role === "ADMIN") {
+    if (dans("/admin/tickets", "/admin/recrutement", "/admin/entreprises/tickets")) {
+      return { titre: "Tickets RH", items: [
+        { href: "/admin/tickets", label: "🎫 Tous les tickets", badge: ticketsOuverts },
+        { href: "/admin/entreprises/tickets", label: "💰 Facturation tickets" },
+        { href: "/admin/recrutement", label: "🎯 Recrutement" },
+      ] };
+    }
+    if (dans("/admin/entreprises", "/admin/abonnement-paie")) {
+      return { titre: "Entreprises", items: [
+        { href: "/admin/entreprises/nouveau", label: "➕ Ajouter une entreprise" },
+        { href: "/admin/entreprises", label: "🏢 Liste des entreprises" },
+        { href: "/admin/entreprises/demandes", label: "📦 Modifier un abonnement", badge: demandesEnAttente, aussi: ["/admin/abonnement-paie"] },
+        { href: "/admin/entreprises/facturation", label: "🧾 Facturation" },
+        { href: "/admin/entreprises/prestations", label: "➕ Prestations supplémentaires" },
+        { href: "/admin/entreprises/devis", label: "🧾 Demandes de devis" },
+      ] };
+    }
+    if (dans("/admin/salaries")) {
+      return { titre: "Salariés", items: [
+        { href: "/admin/salaries", label: "👥 Liste des salariés" },
+        { href: "/admin/salaries/mouvements", label: "🔄 Mouvements" },
+        { href: "/admin/salaries/echeances", label: "⏰ Échéances" },
+        { href: "/admin/salaries/demandes", label: "📝 Demandes clients" },
+        { href: "/admin/salaries/nouveau", label: "➕ Ajouter un salarié" },
+        { href: "/admin/salaries/acces", label: "📱 Gestion des accès" },
+        { href: "/admin/salaries/absences", label: "🏖️ Absences" },
+      ] };
+    }
+    if (dans("/admin/paie")) {
+      return { titre: "Paie", items: [
+        { href: "/admin/paie", label: "📊 Tableau de bord" },
+        { href: "/admin/paie/variables", label: "💰 Variables" },
+        { href: "/admin/paie/releves", label: "⏱️ Relevés d'heures" },
+        { href: "/admin/paie/historique", label: "📋 Historique" },
+      ] };
+    }
+    if (dans("/admin/actualites", "/admin/communication")) {
+      return { titre: "Actualité", items: [
+        { href: "/admin/actualites", label: "📰 Actualité RH" },
+        { href: "/admin/communication", label: "📢 Communication" },
+      ] };
+    }
+    if (dans("/admin/helpdesk", "/admin/faq")) {
+      return { titre: "Helpdesk", items: [
+        { href: "/admin/helpdesk", label: "🆘 Tous les tickets" },
+        { href: "/admin/faq", label: "❓ FAQ" },
+      ] };
+    }
+    return null;
+  }
+
+  // ── Client ──
+  if (dans("/client/tickets")) {
+    return { titre: "Tickets RH", items: [
+      { href: "/client/tickets", label: "🎫 Mes tickets" },
+      { href: "/client/tickets/nouveau", label: "➕ Nouveau ticket" },
+      { href: "/client/tickets/recrutement", label: "🎯 Demander un recrutement" },
+      { href: "/client/tickets/recrutement/historique", label: "📋 Historique recrutement" },
+    ] };
+  }
+  if (dans("/client/entreprise", "/client/abonnement-paie")) {
+    return { titre: "Mon entreprise", items: [
+      { href: "/client/entreprise", label: "🏢 Informations" },
+      { href: "/client/entreprise/facturation", label: "🧾 Mes factures" },
+      { href: "/client/entreprise/abonnement", label: "📦 Gestion de mes abonnements", aussi: ["/client/abonnement-paie"] },
+      { href: "/client/entreprise/supplements", label: "➕ Mes suppléments" },
+      { href: "/client/entreprise/devis", label: "🧾 Demande de devis" },
+    ] };
+  }
+  if (dans("/client/salaries")) {
+    return { titre: "Salariés", items: [
+      { href: "/client/salaries", label: "👥 Liste des salariés" },
+      { href: "/client/salaries/mouvements", label: "🔄 Mouvements" },
+      { href: "/client/salaries/echeances", label: "⏰ Échéances" },
+      { href: "/client/salaries/absences", label: "🏖️ Absences" },
+      { href: "/client/salaries/demandes", label: "📝 Mes demandes", aussi: ["/client/salaries/nouveau"] },
+    ] };
+  }
+  if (dans("/client/paie")) {
+    return { titre: "Paie", items: [
+      { href: "/client/paie", label: "📊 Tableau de bord" },
+      { href: "/client/paie/saisie", label: "✏️ Saisir des variables" },
+      { href: "/client/paie/releves", label: "⏱️ Relevés d'heures" },
+      { href: "/client/paie/historique", label: "📋 Historique" },
+      { href: "/client/paie/prestations", label: "🛒 Prestations complémentaires" },
+    ] };
+  }
+  if (dans("/client/helpdesk", "/client/faq")) {
+    return { titre: "Helpdesk", items: [
+      { href: "/client/helpdesk", label: "🆘 Mes tickets support" },
+      { href: "/client/helpdesk/nouveau", label: "➕ Nouveau ticket" },
+      { href: "/client/faq", label: "❓ FAQ" },
+    ] };
+  }
+  return null;
+}
+
 export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 0 }: SidebarProps) {
   const pathname = usePathname();
-  const base = role === "ADMIN" ? "/admin" : "/client";
+  const r = rubrique(pathname, role, demandesEnAttente, ticketsOuverts);
+  if (!r) return null;
 
-  // Salariés
-  if (pathname.includes("salaries")) {
-    return (
-      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
-        <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Salariés</p>
-        <SidebarLink href={`${base}/salaries`} label="👥 Liste des salariés" active={pathname === `${base}/salaries`} />
-        <SidebarLink href={`${base}/salaries/nouveau`} label="➕ Ajouter un salarié" active={pathname === `${base}/salaries/nouveau`} />
-        {role === "ADMIN" && (
-          <SidebarLink href="/admin/salaries/mouvements" label="🔄 Mouvements" active={pathname === "/admin/salaries/mouvements"} />
-        )}
-        {role === "CLIENT" && (
-          <SidebarLink href="/client/salaries/mouvements" label="🔄 Mouvements" active={pathname === "/client/salaries/mouvements"} />
-        )}
-        <SidebarLink href={`${base}/salaries/echeances`} label="⏰ Échéances" active={pathname === `${base}/salaries/echeances`} />
-        <SidebarLink href={`${base}/salaries/demandes`} label={role === "ADMIN" ? "📝 Demandes clients" : "📝 Mes demandes"} active={pathname === `${base}/salaries/demandes`} />
-      </aside>
-    );
+  // Lien actif : le plus long chemin qui correspond (ex. /admin/paie/variables plutôt que /admin/paie)
+  const correspond = (h: string) => pathname === h || pathname.startsWith(h + "/");
+  let actif: Item | null = null;
+  let longueur = -1;
+  for (const it of r.items) {
+    for (const h of [it.href, ...(it.aussi || [])]) {
+      if (correspond(h) && h.length > longueur) { actif = it; longueur = h.length; }
+    }
   }
 
-  // Tickets admin (AVANT "entreprises" : /admin/entreprises/tickets contient "entreprises")
-  if ((pathname.includes("tickets") || pathname.includes("recrutement")) && role === "ADMIN") {
-    return (
-      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
-        <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Tickets RH</p>
-        <SidebarLink href="/admin/tickets" label="🎫 Tous les tickets" active={pathname === "/admin/tickets"} badge={ticketsOuverts} />
-        <SidebarLink href="/admin/entreprises/tickets" label="💰 Facturation tickets" active={pathname === "/admin/entreprises/tickets"} />
-        <SidebarLink href="/admin/recrutement" label="🎯 Recrutement" active={pathname === "/admin/recrutement"} />
-      </aside>
-    );
-  }
-
-  // Tickets client
-  if (pathname.includes("tickets") && role === "CLIENT") {
-    return (
-      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
-        <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Tickets RH</p>
-        <SidebarLink href="/client/tickets" label="🎫 Mes tickets" active={pathname === "/client/tickets"} />
-        <SidebarLink href="/client/tickets/nouveau" label="➕ Nouveau ticket" active={pathname === "/client/tickets/nouveau"} />
-        <SidebarLink href="/client/tickets/recrutement" label="🎯 Demander un recrutement" active={pathname === "/client/tickets/recrutement"} />
-        <SidebarLink href="/client/tickets/recrutement/historique" label="📋 Historique recrutement" active={pathname === "/client/tickets/recrutement/historique"} />
-      </aside>
-    );
-  }
-
-  // Abonnement paie client (avant "entreprise" et "paie" pour éviter les conflits)
-  if (pathname === "/client/abonnement-paie") {
-    return (
-      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
-        <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Mon entreprise</p>
-        <SidebarLink href="/client/entreprise" label="🏢 Informations" active={false} />
-        <SidebarLink href="/client/entreprise/facturation" label="🧾 Factures" active={false} />
-        <SidebarLink href="/client/entreprise/abonnement" label="💳 Abonnement RH" active={false} />
-        <SidebarLink href="/client/abonnement-paie" label="📦 Abonnement Paie" active={true} />
-      </aside>
-    );
-  }
-
-  // Abonnement paie admin (avant "paie")
-  if (pathname === "/admin/abonnement-paie") {
-    return (
-      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
-        <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Entreprises</p>
-        <SidebarLink href="/admin/entreprises" label="🏢 Liste des entreprises" active={false} />
-        <SidebarLink href="/admin/entreprises/nouveau" label="➕ Ajouter une entreprise" active={false} />
-        <SidebarLink href="/admin/entreprises/demandes" label="📩 Modifs abonnement" active={false} badge={demandesEnAttente} />
-        <SidebarLink href="/admin/entreprises/facturation" label="🧾 Facturation" active={false} />
-        <SidebarLink href="/admin/abonnement-paie" label="📦 Abonnements paie" active={true} />
-      </aside>
-    );
-  }
-
-  // Entreprise client
-  if (pathname.includes("entreprise") && role === "CLIENT") {
-    return (
-      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
-        <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Mon entreprise</p>
-        <SidebarLink href="/client/entreprise" label="🏢 Informations" active={pathname === "/client/entreprise"} />
-        <SidebarLink href="/client/entreprise/facturation" label="🧾 Factures" active={pathname === "/client/entreprise/facturation"} />
-        <SidebarLink href="/client/entreprise/abonnement" label="💳 Abonnement RH" active={pathname === "/client/entreprise/abonnement"} />
-        <SidebarLink href="/client/abonnement-paie" label="📦 Abonnement Paie" active={pathname === "/client/abonnement-paie"} />
-      </aside>
-    );
-  }
-
-  // Entreprises admin
-  if (pathname.includes("entreprises") && role === "ADMIN") {
-    return (
-      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
-        <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Entreprises</p>
-        <SidebarLink href="/admin/entreprises" label="🏢 Liste des entreprises" active={pathname === "/admin/entreprises"} />
-        <SidebarLink href="/admin/entreprises/nouveau" label="➕ Ajouter une entreprise" active={pathname === "/admin/entreprises/nouveau"} />
-        <SidebarLink href="/admin/entreprises/demandes" label="📩 Modifs abonnement" active={pathname === "/admin/entreprises/demandes"} badge={demandesEnAttente} />
-        <SidebarLink href="/admin/entreprises/facturation" label="🧾 Facturation" active={pathname === "/admin/entreprises/facturation"} />
-        <SidebarLink href="/admin/entreprises/prestations" label="🛒 Prestations commandées" active={pathname === "/admin/entreprises/prestations"} />
-        <SidebarLink href="/admin/abonnement-paie" label="📦 Abonnements paie" active={pathname === "/admin/abonnement-paie"} />
-      </aside>
-    );
-  }
-
-  // Paie client
-  if (pathname.includes("paie") && role === "CLIENT") {
-    return (
-      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
-        <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Paie</p>
-        <SidebarLink href="/client/paie" label="📊 Tableau de bord" active={pathname === "/client/paie"} />
-        <SidebarLink href="/client/paie/saisie" label="✏️ Saisir des variables" active={pathname === "/client/paie/saisie"} />
-        <SidebarLink href="/client/paie/absences" label="🏖️ Absences" active={pathname === "/client/paie/absences"} />
-        <SidebarLink href="/client/paie/releves" label="⏱️ Relevés d'heures" active={pathname === "/client/paie/releves"} />
-        <SidebarLink href="/client/paie/historique" label="📋 Historique" active={pathname === "/client/paie/historique"} />
-        <SidebarLink href="/client/paie/prestations" label="🛒 Prestations" active={pathname === "/client/paie/prestations"} />
-      </aside>
-    );
-  }
-
-  // Paie admin
-  if (pathname.includes("paie") && role === "ADMIN") {
-    return (
-      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
-        <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Paie</p>
-        <SidebarLink href="/admin/paie" label="📊 Tableau de bord" active={pathname === "/admin/paie"} />
-        <SidebarLink href="/admin/paie/variables" label="💰 Variables" active={pathname === "/admin/paie/variables"} />
-        <SidebarLink href="/admin/paie/absences" label="🏖️ Absences" active={pathname === "/admin/paie/absences"} />
-        <SidebarLink href="/admin/paie/releves" label="⏱️ Relevés d'heures" active={pathname === "/admin/paie/releves"} />
-        <SidebarLink href="/admin/paie/historique" label="📋 Historique" active={pathname === "/admin/paie/historique"} />
-      </aside>
-    );
-  }
-
-  // Helpdesk client
-  if (pathname.includes("helpdesk") && role === "CLIENT") {
-    return (
-      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
-        <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Helpdesk</p>
-        <SidebarLink href="/client/helpdesk" label="🆘 Mes tickets support" active={pathname === "/client/helpdesk"} />
-        <SidebarLink href="/client/helpdesk/nouveau" label="➕ Nouveau ticket" active={pathname === "/client/helpdesk/nouveau"} />
-      </aside>
-    );
-  }
-
-  // Helpdesk admin
-  if (pathname.includes("helpdesk") && role === "ADMIN") {
-    return (
-      <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
-        <p className="text-xs text-gray-400 font-semibold uppercase mb-4">Helpdesk</p>
-        <SidebarLink href="/admin/helpdesk" label="🆘 Tous les tickets" active={pathname === "/admin/helpdesk"} />
-      </aside>
-    );
-  }
-
-  return null;
+  return (
+    <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
+      <p className="text-xs text-gray-400 font-semibold uppercase mb-4">{r.titre}</p>
+      {r.items.map((it) => (
+        <SidebarLink key={it.href} href={it.href} label={it.label} active={actif === it} badge={it.badge} />
+      ))}
+    </aside>
+  );
 }
 
 function SidebarLink({

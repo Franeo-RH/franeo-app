@@ -91,6 +91,7 @@ export default async function AdminSalaries({
               <Link href="/admin/salaries/nouveau" className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition">
                 ➕ Ajouter
               </Link>
+              <Link href="/admin/salaries/import" className="bg-white border border-orange-500 text-orange-600 px-5 py-2 rounded-lg font-semibold hover:bg-orange-50 transition">📤 Importer Excel</Link>
               <BoutonExport type="salaries-admin" label="Exporter Excel" />
             </div>
           </div>

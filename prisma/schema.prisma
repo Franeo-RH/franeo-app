@@ -69,6 +69,7 @@ model Entreprise {
   faqs              FAQ[]
   communications    Communication[]
   releves           ReleveMois[]
+  devis             Devis[]
 }
 
 model Facturation {
@@ -105,6 +106,14 @@ model DemandeRecrutement {
   formation         String?
   commentaire       String?
   cgvAcceptees      Boolean    @default(false)
+  // Grille : NON_QUALIFIE, TECHNICIEN ou EXPERT (lancement 400 € + primes à la signature et à la fin d'essai)
+  categorie         String     @default("NON_QUALIFIE")
+  // true : lancement et primes calculés dans la facture du mois (les anciennes demandes ont été facturées à part)
+  facturationAuto   Boolean    @default(false)
+  candidat          String?
+  signatureAt       DateTime?
+  finEssaiAt        DateTime?
+  termineAt         DateTime?
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
@@ -567,4 +576,25 @@ model ReleveJour {
   commentaire String?
 
   @@unique([releveId, date])
+}
+
+// Demande de devis faite par le client depuis le catalogue (Mon entreprise › Demande de devis)
+// statut : EN_ATTENTE → ENVOYE (proposition de l'admin) → ACCEPTE / REFUSE, ou ANNULE
+model Devis {
+  id             String     @id @default(cuid())
+  entrepriseId   String
+  entreprise     Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  lignes         Json
+  totalIndicatif Float      @default(0)
+  message        String?
+  auteur         String?
+  statut         String     @default("EN_ATTENTE")
+  montantPropose Float?
+  reponse        String?
+  reponduAt      DateTime?
+  decideAt       DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([entrepriseId, statut])
 }

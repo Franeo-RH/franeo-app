@@ -1,8 +1,9 @@
 // lib/facturation.ts
-// Calcul unique du montant mensuel d'un client : sert à la génération des factures,
-// à l'aperçu, aux estimations des dashboards. Une seule règle, partout.
+// Calcul unique du montant mensuel d'un client : sert à la génération des factures, à l'aperçu,
+// aux estimations des dashboards et à la page « Prestations supplémentaires ». Une seule règle, partout.
 
 import { prisma } from "@/lib/prisma";
+import { categorieRecrutement, LANCEMENT_RECRUTEMENT } from "@/lib/recrutement";
 
 type FormuleRH = { nom: string; prixMensuel: number; salariesInclus: number; prixSalarieSupp: number; ticketsRH: number; prixTicketSupp: number } | null;
 type FormulePaie = {
@@ -44,8 +45,35 @@ export async function ticketsDuMoisParEntreprise(mois: number, annee: number, en
 
 export type ResultatFacture = { montant: number; details: string[] };
 
-/** Montant d'un mois pour une entreprise : abonnement RH, formule paie, suppléments, arrivées/sorties, tickets */
-export async function calculerFacture(entrepriseId: string, mois: number, annee: number): Promise<ResultatFacture | null> {
+export type CategorieLigne = "ABONNEMENT" | "SALARIES" | "BULLETINS" | "ARRIVEES" | "SORTIES" | "ESPACE_SALARIE" | "PRESTATION" | "TICKETS" | "RECRUTEMENT";
+
+export type LigneFacture = {
+  categorie: CategorieLigne;
+  libelle: string;
+  quantite: number;
+  prixUnitaire: number;
+  total: number;
+  /** id de la commande de prestation (pour les boutons de suivi) */
+  refId?: string;
+  statut?: string;
+};
+
+export const LIBELLES_CATEGORIE: Record<CategorieLigne, string> = {
+  ABONNEMENT: "Abonnement",
+  SALARIES: "Salariés supplémentaires",
+  BULLETINS: "Bulletins supplémentaires",
+  ARRIVEES: "Arrivées",
+  SORTIES: "Sorties",
+  ESPACE_SALARIE: "Espace salarié",
+  PRESTATION: "Prestation complémentaire",
+  TICKETS: "Tickets RH supplémentaires",
+  RECRUTEMENT: "Recrutement",
+};
+
+const arrondi = (n: number) => Math.round(n * 100) / 100;
+
+/** Toutes les lignes du mois : abonnements puis suppléments */
+export async function lignesFacture(entrepriseId: string, mois: number, annee: number): Promise<LigneFacture[] | null> {
   const entreprise = await prisma.entreprise.findUnique({
     where: { id: entrepriseId },
     include: { abonnement: true, abonnementPaie: true },
@@ -53,17 +81,12 @@ export async function calculerFacture(entrepriseId: string, mois: number, annee:
   if (!entreprise) return null;
   const abo = entreprise.abonnement;
   const paie = entreprise.abonnementPaie;
-  if (!abo && !paie) return { montant: 0, details: [] };
 
   const { debut, fin } = bornesMois(mois, annee);
-  const [nbSalaries, nbTickets, nbEntrees, nbSorties] = await Promise.all([
+  const avecEspace = (entreprise.permissions || []).includes("espace-salaries") && !paie?.espaceSalarieInclus;
+  const [nbSalaries, nbTickets, nbEntrees, nbSorties, nbComptes, prestations, recrutements] = await Promise.all([
     prisma.salarie.count({
-      where: {
-        entrepriseId,
-        statut: "Actif",
-        dateDebut: { lte: fin },
-        OR: [{ dateFin: null }, { dateFin: { gte: debut } }],
-      },
+      where: { entrepriseId, statut: "Actif", dateDebut: { lte: fin }, OR: [{ dateFin: null }, { dateFin: { gte: debut } }] },
     }),
     ticketsDuMois(entrepriseId, mois, annee),
     paie && !paie.entreesSortiesIncluses
@@ -72,63 +95,95 @@ export async function calculerFacture(entrepriseId: string, mois: number, annee:
     paie && !paie.entreesSortiesIncluses
       ? prisma.salarie.count({ where: { entrepriseId, dateFin: { gte: debut, lte: fin } } })
       : Promise.resolve(0),
+    avecEspace
+      ? prisma.utilisateur.count({
+          where: { role: "SALARIE", actif: true, salarie: { entrepriseId, dateDebut: { lte: fin }, OR: [{ dateFin: null }, { dateFin: { gte: debut } }] } },
+        })
+      : Promise.resolve(0),
+    prisma.commandePrestation.findMany({
+      where: { entrepriseId, mois, annee, statut: { not: "ANNULEE" }, total: { gt: 0 } },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.demandeRecrutement.findMany({
+      where: {
+        entrepriseId,
+        facturationAuto: true,
+        OR: [
+          { createdAt: { gte: debut, lte: fin } },
+          { signatureAt: { gte: debut, lte: fin } },
+          { finEssaiAt: { gte: debut, lte: fin } },
+        ],
+      },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
 
-  let montant = 0;
-  const details: string[] = [];
-  const ajouter = (libelle: string, cout: number) => {
-    montant += cout;
-    details.push(`${libelle} : ${Math.round(cout * 100) / 100} €`);
+  const lignes: LigneFacture[] = [];
+  const ajouter = (l: Omit<LigneFacture, "total"> & { total?: number }) => {
+    const total = arrondi(l.total ?? l.quantite * l.prixUnitaire);
+    if (total > 0) lignes.push({ ...l, total });
   };
 
-  // ── Abonnement RH ──
+  // ── Abonnements ──
   if (abo) {
-    ajouter(abo.nom, abo.prixMensuel);
+    ajouter({ categorie: "ABONNEMENT", libelle: abo.nom, quantite: 1, prixUnitaire: abo.prixMensuel });
     const supp = Math.max(nbSalaries - abo.salariesInclus, 0);
-    if (supp > 0 && abo.prixSalarieSupp > 0) {
-      ajouter(`${nbSalaries} salariés dont ${supp} supp. (${abo.prixSalarieSupp} €)`, supp * abo.prixSalarieSupp);
-    }
+    if (supp > 0) ajouter({ categorie: "SALARIES", libelle: `${nbSalaries} salariés dont ${supp} supp.`, quantite: supp, prixUnitaire: abo.prixSalarieSupp });
   }
-
-  // ── Formule paie ──
   if (paie) {
-    ajouter(`Paie ${paie.nom}`, paie.prixMensuel);
+    ajouter({ categorie: "ABONNEMENT", libelle: `Paie ${paie.nom}`, quantite: 1, prixUnitaire: paie.prixMensuel });
     const supp = Math.max(nbSalaries - paie.bulletinsInclus, 0);
-    if (supp > 0 && paie.prixBulletinSupp > 0) {
-      ajouter(`${nbSalaries} bulletins dont ${supp} supp. (${paie.prixBulletinSupp} €)`, supp * paie.prixBulletinSupp);
-    }
-    if (nbEntrees > 0 && paie.prixEntree > 0) ajouter(`${nbEntrees} arrivée(s) (${paie.prixEntree} €)`, nbEntrees * paie.prixEntree);
-    if (nbSorties > 0 && paie.prixSortie > 0) ajouter(`${nbSorties} sortie(s) / solde de tout compte (${paie.prixSortie} €)`, nbSorties * paie.prixSortie);
+    if (supp > 0) ajouter({ categorie: "BULLETINS", libelle: `${nbSalaries} bulletins dont ${supp} supp.`, quantite: supp, prixUnitaire: paie.prixBulletinSupp });
+    if (nbEntrees > 0) ajouter({ categorie: "ARRIVEES", libelle: `${nbEntrees} arrivée(s)`, quantite: nbEntrees, prixUnitaire: paie.prixEntree });
+    if (nbSorties > 0) ajouter({ categorie: "SORTIES", libelle: `${nbSorties} sortie(s) / solde de tout compte`, quantite: nbSorties, prixUnitaire: paie.prixSortie });
   }
 
   // ── Option Espace salarié : 1 €/salarié avec un compte actif (incluse en Premium et Entreprise) ──
-  if ((entreprise.permissions || []).includes("espace-salaries") && !paie?.espaceSalarieInclus) {
+  if (avecEspace && nbComptes > 0) {
     const prix = paie?.prixEspaceSalarie ?? 1;
-    const nbComptes = await prisma.utilisateur.count({
-      where: {
-        role: "SALARIE",
-        actif: true,
-        salarie: { entrepriseId, dateDebut: { lte: fin }, OR: [{ dateFin: null }, { dateFin: { gte: debut } }] },
-      },
-    });
-    if (nbComptes > 0 && prix > 0) ajouter(`Espace salarié : ${nbComptes} salarié(s) × ${prix} €`, nbComptes * prix);
+    ajouter({ categorie: "ESPACE_SALARIE", libelle: `Espace salarié : ${nbComptes} salarié(s)`, quantite: nbComptes, prixUnitaire: prix });
   }
 
   // ── Prestations commandées dans le mois (non annulées) ──
-  const prestations = await prisma.commandePrestation.findMany({
-    where: { entrepriseId, mois, annee, statut: { not: "ANNULEE" }, total: { gt: 0 } },
-    orderBy: { createdAt: "asc" },
-  });
   for (const pr of prestations) {
-    ajouter(`Prestation : ${pr.libelle}${pr.quantite > 1 ? ` × ${pr.quantite}` : ""}${pr.salarie ? ` (${pr.salarie})` : ""}`, pr.total);
+    ajouter({
+      categorie: "PRESTATION",
+      libelle: `${pr.libelle}${pr.salarie ? ` (${pr.salarie})` : ""}`,
+      quantite: pr.quantite,
+      prixUnitaire: pr.prixUnitaire,
+      total: pr.total,
+      refId: pr.id,
+      statut: pr.statut,
+    });
   }
 
   // ── Tickets RH du mois au-delà des tickets inclus ──
-  const quota = quotaTickets(entreprise);
-  const ticketsSupp = Math.max(nbTickets - quota.inclus, 0);
-  if (ticketsSupp > 0 && quota.prixSupp > 0) {
-    ajouter(`${nbTickets} ticket(s) RH dont ${ticketsSupp} supp. (${quota.prixSupp} €)`, ticketsSupp * quota.prixSupp);
+  if (abo || paie) {
+    const quota = quotaTickets(entreprise);
+    const ticketsSupp = Math.max(nbTickets - quota.inclus, 0);
+    if (ticketsSupp > 0) ajouter({ categorie: "TICKETS", libelle: `${nbTickets} ticket(s) RH dont ${ticketsSupp} supp.`, quantite: ticketsSupp, prixUnitaire: quota.prixSupp });
   }
 
-  return { montant: Math.round(montant * 100) / 100, details };
+  // ── Recrutements : lancement le mois de la demande, primes le mois où elles sont déclenchées ──
+  const dansMois = (d: Date | null) => !!d && d >= debut && d <= fin;
+  for (const r of recrutements) {
+    const cat = categorieRecrutement(r.categorie);
+    if (dansMois(r.createdAt)) ajouter({ categorie: "RECRUTEMENT", libelle: `Recrutement ${r.poste} — lancement`, quantite: 1, prixUnitaire: LANCEMENT_RECRUTEMENT });
+    if (dansMois(r.signatureAt)) ajouter({ categorie: "RECRUTEMENT", libelle: `Recrutement ${r.poste} — prime signature du contrat`, quantite: 1, prixUnitaire: cat.signature });
+    if (dansMois(r.finEssaiAt)) ajouter({ categorie: "RECRUTEMENT", libelle: `Recrutement ${r.poste} — prime fin de période d'essai`, quantite: 1, prixUnitaire: cat.finEssai });
+  }
+
+  return lignes;
+}
+
+/** Montant d'un mois pour une entreprise, avec le détail ligne par ligne (texte de la facture) */
+export async function calculerFacture(entrepriseId: string, mois: number, annee: number): Promise<ResultatFacture | null> {
+  const lignes = await lignesFacture(entrepriseId, mois, annee);
+  if (!lignes) return null;
+  const details = lignes.map((l) =>
+    l.categorie === "ABONNEMENT"
+      ? `${l.libelle} : ${l.total} €`
+      : `${l.libelle}${l.quantite > 1 && l.categorie === "PRESTATION" ? ` × ${l.quantite}` : ""} (${l.quantite} × ${l.prixUnitaire} €) : ${l.total} €`
+  );
+  return { montant: arrondi(lignes.reduce((a, l) => a + l.total, 0)), details };
 }

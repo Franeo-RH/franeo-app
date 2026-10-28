@@ -102,6 +102,7 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
   await prisma.lectureCommunication.deleteMany({ where: { utilisateurId: utilisateur.id } });
   await prisma.demandeSalarie.deleteMany({ where: { entrepriseId } });
   await prisma.commandePrestation.deleteMany({ where: { entrepriseId } });
+  await prisma.devis.deleteMany({ where: { entrepriseId } });
 
   /* 2) Jeu de données */
   const mois = Number(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", month: "numeric" }).format(new Date()));

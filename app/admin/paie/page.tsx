@@ -56,6 +56,25 @@ export default async function AdminPaie({
     }),
   ]);
 
+  // Bulletins du mois : salariés présents dans le mois, pour les clients qui ont une formule paie
+  const debutM = new Date(anneeSelectionnee, moisSelectionne - 1, 1);
+  const finM = new Date(anneeSelectionnee, moisSelectionne, 0, 23, 59, 59);
+  const clientsPaie = entreprises.filter((e) => e.abonnementPaieId && e.actif !== false && (!entrepriseSelectionnee || e.id === entrepriseSelectionnee));
+  const [formules, comptes] = await Promise.all([
+    prisma.abonnementPaie.findMany({ select: { id: true, nom: true, bulletinsInclus: true } }),
+    prisma.salarie.groupBy({
+      by: ["entrepriseId"],
+      where: { entrepriseId: { in: clientsPaie.map((e) => e.id) }, statut: "Actif", dateDebut: { lte: finM }, OR: [{ dateFin: null }, { dateFin: { gte: debutM } }] },
+      _count: { _all: true },
+    }),
+  ]);
+  const bulletins = clientsPaie.map((e) => {
+    const f = formules.find((x) => x.id === e.abonnementPaieId);
+    const n = comptes.find((c) => c.entrepriseId === e.id)?._count._all ?? 0;
+    return { id: e.id, nom: e.nom, formule: f?.nom ?? "—", n, inclus: f?.bulletinsInclus ?? 0, supp: Math.max(n - (f?.bulletinsInclus ?? 0), 0) };
+  }).sort((a, b) => b.n - a.n);
+  const totalBulletins = bulletins.reduce((a, b) => a + b.n, 0);
+
   // Suivi global (salaires + absences + variables + charges) : une entreprise ou tous les clients
   const masse = await calculerMasseSalariale({
     mois: moisSelectionne,
@@ -111,6 +130,32 @@ export default async function AdminPaie({
                 </button>
               </div>
             </form>
+          </div>
+
+          {/* Bulletins du mois */}
+          <div className="bg-white rounded-xl shadow p-6 mb-6">
+            <div className="flex justify-between items-baseline flex-wrap gap-2 mb-3">
+              <h2 className="text-xl font-bold">🧾 Bulletins de {MOIS[moisSelectionne - 1].toLowerCase()} {anneeSelectionnee}</h2>
+              <p className="text-2xl font-bold text-orange-500">{totalBulletins} bulletin(s) · {bulletins.length} client(s) paie</p>
+            </div>
+            {bulletins.length === 0 ? <p className="text-gray-500 text-sm">Aucun client avec une formule paie sur ce filtre.</p> : (
+              <div style={{ overflowX: "auto" }}>
+                <table className="w-full text-sm text-left">
+                  <thead><tr className="border-b text-gray-500"><th className="py-2">Entreprise</th><th className="py-2">Formule</th><th className="py-2">Bulletins</th><th className="py-2">Inclus</th><th className="py-2">En plus</th></tr></thead>
+                  <tbody>
+                    {bulletins.map((b) => (
+                      <tr key={b.id} className="border-b">
+                        <td className="py-2 font-semibold">{b.nom}</td>
+                        <td className="py-2">{b.formule}</td>
+                        <td className="py-2 font-bold">{b.n}</td>
+                        <td className="py-2">{b.inclus}</td>
+                        <td className="py-2" style={{ color: b.supp > 0 ? "#c2410c" : undefined, fontWeight: b.supp > 0 ? 700 : 400 }}>{b.supp}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Actions */}

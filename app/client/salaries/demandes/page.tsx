@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import StatutDemande from "@/components/StatutDemande";
 import { LIBELLES_TYPE } from "@/lib/demandes-salaries";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -34,8 +35,13 @@ export default async function ClientDemandesSalaries({
         <Sidebar role={session.role} />
         <main className="flex-1 p-10">
           <div className="bg-white rounded-xl shadow p-8 mb-6">
-            <h1 className="text-3xl font-bold">📝 Mes demandes</h1>
-            <p className="text-gray-500 mt-1">Les ajouts et suppressions de salariés, ainsi que les changements de poste et de salaire, sont validés par votre gestionnaire paie avant d&apos;être appliqués. Les autres informations se modifient directement.</p>
+            <div className="flex justify-between items-center gap-4 flex-wrap">
+              <h1 className="text-3xl font-bold">📝 Mes demandes</h1>
+              <Link href="/client/salaries/nouveau" style={{ background: "#f97316", color: "#ffffff", padding: "10px 18px", borderRadius: "10px", fontWeight: 700, textDecoration: "none" }}>
+                ➕ Demander l&apos;ajout d&apos;un salarié
+              </Link>
+            </div>
+            <p className="text-gray-500 mt-1">Les ajouts et suppressions de salariés, ainsi que les changements de poste et de salaire, sont validés par FRANEO RH avant d&apos;être appliqués. Les autres informations se modifient directement.</p>
           </div>
 
           {envoyee && (

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
+import { aAccesPaie } from "@/lib/droits";
 
 export async function GET() {
   const session = await getSession();
@@ -9,5 +10,7 @@ export async function GET() {
     prenom: session.prenom,
     role: session.role,
     permissions: session.entreprise?.permissions || [],
+    aPaie: aAccesPaie(session.entreprise),
+    demo: !!session.entreprise?.demo,
   });
 }

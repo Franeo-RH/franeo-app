@@ -111,7 +111,8 @@ export default function NouveauSalarie() {
         <Sidebar role="CLIENT" />
         <main className="flex-1 p-10">
           <div className="bg-white rounded-xl shadow p-8 mb-6">
-            <h1 className="text-3xl font-bold">➕ Ajouter un salarié</h1>
+            <h1 className="text-3xl font-bold">{demo ? "➕ Ajouter un salarié" : "➕ Demander l'ajout d'un salarié"}</h1>
+            {!demo && <p className="text-gray-500 mt-1">Votre demande est validée par FRANEO RH. Une fois validée, le salarié est créé et la facturation se met à jour automatiquement.</p>}
             {demo && (
               <p className="text-sm text-blue-600 mt-2">
                 🧪 Version démo : seuls le prénom, le poste, les dates de début et de fin et le salaire sont modifiables. Maximum 30 salariés.

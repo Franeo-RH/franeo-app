@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import BoutonExport from "@/components/BoutonExport";
-import { aDroit, passeParValidation } from "@/lib/droits";
+import { aDroit, ajoutParValidation } from "@/lib/droits";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +66,7 @@ export default async function ClientSalaries({
   const peutImporter = aDroit(perms, "salaries.importer");
   const peutModifier = demo || aDroit(perms, "salaries.modifier");
   const peutExporter = aDroit(perms, "global.exports");
-  const validation = passeParValidation(session.entreprise);
+  const validation = ajoutParValidation(session.entreprise);
 
   function classeOnglet(o: string) {
     return `px-5 py-2 rounded-lg font-semibold transition ${

@@ -12,6 +12,7 @@ import { EncartMasseSalariale } from "@/components/SuiviMasseSalariale";
 import { calculerMasseSalariale } from "@/lib/masse-salariale";
 import { calculerFacture, quotaTickets, ticketsDuMois } from "@/lib/facturation";
 import type { Echeance } from "@/lib/rappels";
+import { aAccesPaie } from "@/lib/droits";
 
 export const dynamic = "force-dynamic";
 
@@ -53,9 +54,11 @@ export default async function ClientDashboard() {
   const debutMois = new Date(anneeActuelle, moisActuel - 1, 1);
   const finMois = new Date(anneeActuelle, moisActuel, 0);
   const avecSalaries = permissions.includes("salaries");
-  const avecPaie = permissions.includes("paie");
+  // Paie : seulement si une formule paie est souscrite (sinon tableau de bord « module RH »)
+  const avecPaie = aAccesPaie(session.entreprise);
+  const avecAbsences = permissions.includes("absences") || permissions.includes("salaries");
   const avecTickets = permissions.includes("tickets");
-  const masseP = avecPaie || avecSalaries ? calculerMasseSalariale({ mois: moisActuel, annee: anneeActuelle, entrepriseId }) : null;
+  const masseP = avecPaie ? calculerMasseSalariale({ mois: moisActuel, annee: anneeActuelle, entrepriseId }) : null;
 
   // Toutes les requêtes partent en même temps (au lieu de 10 à la suite)
   const [
@@ -76,7 +79,7 @@ export default async function ClientDashboard() {
           select: { type: true, valeur: true, statut: true, salarie: { select: { salaireMensuel: true, heuresHebdomadaires: true } } },
         })
       : Promise.resolve([] as { type: string; valeur: number; statut: string; salarie: { salaireMensuel: number | null; heuresHebdomadaires: number | null } }[]),
-    avecPaie ? prisma.absence.count({ where: { entrepriseId, statut: "En attente" } }) : Promise.resolve(0),
+    avecAbsences ? prisma.absence.count({ where: { entrepriseId, statut: { not: "Refusé" }, dateDebut: { lte: finMois }, dateFin: { gte: debutMois } } }) : Promise.resolve(0),
     avecTickets ? prisma.ticket.count({ where: { entrepriseId, statut: { not: "Clôturé" } } }) : Promise.resolve(0),
     prisma.ticketSupport.count({ where: { entrepriseId, statut: { not: "Clôturé" } } }),
     prisma.entreprise.findUnique({
@@ -97,7 +100,7 @@ export default async function ClientDashboard() {
       },
     }),
     // Échéances des salariés (visites médicales, titres de séjour, avenants...)
-    avecSalaries ? chargerEcheances({ entrepriseId }) : Promise.resolve([] as Echeance[]),
+    avecSalaries || avecAbsences ? chargerEcheances({ entrepriseId }) : Promise.resolve([] as Echeance[]),
   ]);
 
   const masse = masseP ? await masseP : null;
@@ -126,11 +129,12 @@ export default async function ClientDashboard() {
 
   const tuiles = [
     permissions.includes("salaries") && { href: "/client/salaries", icone: "👥", label: "Salariés", n: nbSalaries, couleur: "text-gray-800" },
-    permissions.includes("paie") && { href: "/client/paie", icone: "💰", label: "Paie ce mois", n: `${Math.round(coutPaie).toLocaleString("fr-FR")} €`, couleur: "text-red-500" },
-    permissions.includes("paie") && { href: "/client/paie/absences", icone: "📅", label: "Absences", n: nbAbsences, couleur: "text-orange-500" },
+    avecPaie && { href: "/client/paie", icone: "🧾", label: "Bulletins ce mois", n: nbSalariesMois, couleur: "text-gray-800" },
+    avecPaie && { href: "/client/paie", icone: "💰", label: "Variables ce mois", n: `${Math.round(coutPaie).toLocaleString("fr-FR")} €`, couleur: "text-red-500" },
+    avecAbsences && { href: "/client/salaries/absences", icone: "📅", label: "Absences ce mois", n: nbAbsences, couleur: "text-orange-500" },
     permissions.includes("tickets") && { href: "/client/tickets", icone: "🎫", label: "Tickets RH", n: nbTickets, couleur: "text-gray-800" },
     { href: "/client/helpdesk", icone: "🆘", label: "Helpdesk", n: nbTicketsSupport, couleur: "text-red-500" },
-    permissions.includes("salaries") && { href: "/client/salaries", icone: "⏰", label: "Échéances", n: echeances.length, couleur: "text-orange-500" },
+    (avecSalaries || avecAbsences) && { href: "/client/salaries/echeances", icone: "⏰", label: "Échéances", n: echeances.length, couleur: "text-orange-500" },
   ].filter(Boolean) as { href: string; icone: string; label: string; n: number | string; couleur: string }[];
 
   const lienFacture = permissions.includes("entreprise") ? "/client/entreprise/facturation" : "#";
@@ -158,6 +162,26 @@ export default async function ClientDashboard() {
         </div>
 
         <BandeauCommunications communications={communications} />
+
+        {/* Actions rapides */}
+        <div className="flex gap-2 flex-wrap">
+          {[
+            permissions.includes("tickets") && { href: "/client/tickets/nouveau", label: "🎫 Demander un ticket RH" },
+            avecSalaries && { href: "/client/salaries/nouveau", label: "➕ Ajouter un salarié" },
+            avecAbsences && { href: "/client/salaries/absences", label: "🏖️ Saisir une absence" },
+            avecPaie && { href: "/client/paie/saisie", label: "✏️ Saisir des variables" },
+            !avecPaie && permissions.includes("entreprise") && { href: "/client/abonnement-paie", label: "💼 Demander une prise en charge de la paie" },
+            permissions.includes("tickets") && { href: "/client/tickets/recrutement", label: "🎯 Lancer un recrutement" },
+            permissions.includes("entreprise") && { href: "/client/entreprise/devis", label: "🧾 Demander un devis" },
+          ].filter(Boolean).map((a) => {
+            const x = a as { href: string; label: string };
+            return (
+              <Link key={x.href} href={x.href} style={{ background: "#ffffff", border: "1px solid #fed7aa", color: "#c2410c", borderRadius: "999px", padding: "8px 14px", fontSize: "13px", fontWeight: 700, textDecoration: "none" }}>
+                {x.label}
+              </Link>
+            );
+          })}
+        </div>
 
         {/* Toutes les tuiles sur une seule ligne */}
         <div className="fr-grille-tuiles" style={{ display: "grid", gridTemplateColumns: `repeat(${tuiles.length}, minmax(0, 1fr))`, gap: "0.75rem" }}>
@@ -215,7 +239,7 @@ export default async function ClientDashboard() {
               </p>
             </div>
 
-            <div className="rounded-xl bg-gradient-to-r from-gray-800 to-gray-700 text-white px-4 py-3">
+            <div className="rounded-xl bg-gradient-to-r from-gray-800 to-gray-700 text-white px-4 py-3" style={{ display: paie ? undefined : "none" }}>
               <p className="text-gray-300 text-[11px] font-semibold uppercase">Paie</p>
               <div className="flex justify-between items-baseline">
                 <p className="text-xl font-bold">{paie?.nom || "—"}</p>
@@ -233,7 +257,7 @@ export default async function ClientDashboard() {
           </Link>
         </div>
 
-        {permissions.includes("salaries") && (
+        {(avecSalaries || avecAbsences) && (
           <div className="max-h-[170px] flex flex-col">
             <BlocEcheances echeances={echeances} role="CLIENT" max={6} />
           </div>

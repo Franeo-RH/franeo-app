@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import { CATEGORIES_RECRUTEMENT, LANCEMENT_RECRUTEMENT } from "@/lib/recrutement";
 
 const ONGLETS = ["Le poste", "Rémunération", "Missions & Profil", "Validation"];
 
@@ -27,6 +28,7 @@ export default function DemandeRecrutement() {
     experience: "",
     formation: "",
     commentaire: "",
+    categorie: "NON_QUALIFIE",
   });
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
@@ -34,7 +36,7 @@ export default function DemandeRecrutement() {
   }
 
   async function handleSubmit() {
-    if (!cgv) { setErreur("Vous devez accepter les conditions de surfacturation."); return; }
+    if (!cgv) { setErreur("Vous devez accepter les conditions financières."); return; }
     if (!form.poste || !form.typeContrat || !form.missions || !form.profil) {
       setErreur("Veuillez remplir tous les champs obligatoires.");
       return;
@@ -98,6 +100,14 @@ export default function DemandeRecrutement() {
                 <div>
                   <label className="block text-sm font-semibold mb-1">Intitulé du poste *</label>
                   <input type="text" name="poste" value={form.poste} onChange={handleChange} className="w-full border rounded-lg px-4 py-3" placeholder="Ex: Développeur React Senior" />
+                </div>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label className="block text-sm font-semibold mb-1">Catégorie du poste *</label>
+                  <select name="categorie" value={form.categorie} onChange={handleChange} className="w-full border rounded-lg px-4 py-3">
+                    {CATEGORIES_RECRUTEMENT.map((c) => (
+                      <option key={c.code} value={c.code}>{c.label} — {LANCEMENT_RECRUTEMENT + c.signature + c.finEssai} € au total</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-1">Type de contrat *</label>
@@ -179,12 +189,15 @@ export default function DemandeRecrutement() {
 
                 <div className="bg-red-50 border border-red-200 rounded-xl p-6">
                   <h2 className="text-lg font-bold text-red-600 mb-3">💶 Conditions financières</h2>
-                  <p className="text-sm text-gray-600 mb-4">
-                    En validant cette demande de recrutement, vous acceptez une <strong>surfacturation de 400 €</strong> sur votre prochaine facture mensuelle, correspondant aux frais de mise en relation et de traitement de votre dossier de recrutement.
+                  <p className="text-sm text-gray-600 mb-3">
+                    En validant cette demande, vous acceptez les frais suivants pour un poste « {(CATEGORIES_RECRUTEMENT.find((c) => c.code === form.categorie) ?? CATEGORIES_RECRUTEMENT[0]).label} » :
                   </p>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Des <strong>primes de succès</strong> peuvent être applicables en cas de recrutement abouti, conformément à nos CGV disponibles sur <strong>franeo-rh.com</strong>.
-                  </p>
+                  <ul className="text-sm text-gray-700 mb-4" style={{ listStyle: "disc", paddingLeft: "20px" }}>
+                    <li><strong>{LANCEMENT_RECRUTEMENT} €</strong> de lancement, sur la facture de ce mois (cadrage, annonce, recherche) ;</li>
+                    <li><strong>{(CATEGORIES_RECRUTEMENT.find((c) => c.code === form.categorie) ?? CATEGORIES_RECRUTEMENT[0]).signature} €</strong> à la signature du contrat avec le candidat retenu ;</li>
+                    <li><strong>{(CATEGORIES_RECRUTEMENT.find((c) => c.code === form.categorie) ?? CATEGORIES_RECRUTEMENT[0]).finEssai} €</strong> si la période d&apos;essai est validée.</li>
+                  </ul>
+                  <p className="text-sm text-gray-600 mb-4">Les primes ne sont dues que si le recrutement aboutit. Conditions complètes sur <strong>franeo-rh.com</strong>.</p>
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -193,7 +206,7 @@ export default function DemandeRecrutement() {
                       className="mt-1 w-5 h-5 accent-orange-500"
                     />
                     <span className="text-sm font-semibold">
-                      J'accepte la surfacturation de 400 € et j'ai pris connaissance des conditions relatives aux primes de succès (CGV Franeo RH).
+                      J'accepte les frais de lancement et les primes de succès ci-dessus (CGV FRANEO RH).
                     </span>
                   </label>
                 </div>

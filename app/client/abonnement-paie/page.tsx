@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import BoutonDemandeEvolutionPaie from "@/components/BoutonDemandeEvolutionPaie";
 import MentionsFacturation from "@/components/MentionsFacturation";
+import OngletsAbonnements from "@/components/OngletsAbonnements";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,7 @@ export default async function ClientAbonnementPaie() {
       <div className="flex">
         <Sidebar role={session.role} />
         <main className="flex-1 p-10">
+          <OngletsAbonnements espace="client" actif="paie" />
 
           <div className="bg-white rounded-xl shadow p-8 mb-6">
             <h1 className="text-3xl font-bold">📦 Abonnement Paie</h1>

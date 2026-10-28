@@ -9,7 +9,7 @@ export const PAGE = {
   mouvements: "/client/salaries/mouvements",
   paie: "/client/paie",
   saisie: "/client/paie/saisie",
-  absences: "/client/paie/absences",
+  absences: "/client/salaries/absences",
   historiquePaie: "/client/paie/historique",
   tickets: "/client/tickets",
   ticketNouveau: "/client/tickets/nouveau",

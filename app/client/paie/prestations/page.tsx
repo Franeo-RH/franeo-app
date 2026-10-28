@@ -7,7 +7,7 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import CommanderPrestation from "@/components/CommanderPrestation";
 import MentionsFacturation from "@/components/MentionsFacturation";
-import { NOMS_FORMULES, PRESTATIONS, STATUTS_PRESTATION, formuleQuiInclut, prixPrestation, type CodeFormule } from "@/lib/prestations";
+import { NOMS_FORMULES, PRESTATIONS_CLIENT, STATUTS_PRESTATION, formuleQuiInclut, prixPrestation, type CodeFormule } from "@/lib/prestations";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,7 @@ export default async function ClientPrestations() {
 
   const formule = entreprise?.abonnementPaie?.code || null;
   const offres = formule
-    ? PRESTATIONS.flatMap((p) => {
+    ? PRESTATIONS_CLIENT.flatMap((p) => {
         const prix = prixPrestation(p.code, formule);
         if (prix === null) return [];
         const incl = formuleQuiInclut(p.code);
@@ -44,7 +44,7 @@ export default async function ClientPrestations() {
         <Sidebar role={session.role} />
         <main className="flex-1 p-10">
           <div className="bg-white rounded-xl shadow p-8 mb-6">
-            <h1 className="text-3xl font-bold">🛒 Prestations</h1>
+            <h1 className="text-3xl font-bold">🛒 Prestations complémentaires</h1>
             <p className="text-gray-500 mt-1">
               {entreprise?.abonnementPaie
                 ? <>Votre formule : <strong className="text-orange-500">{entreprise.abonnementPaie.nom}</strong>. Les arrivées et sorties de salariés sont facturées automatiquement d&apos;après leurs dates.</>

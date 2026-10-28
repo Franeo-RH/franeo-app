@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import BoutonAbonnementPaie from "@/components/BoutonAbonnementPaie";
+import OngletsAbonnements from "@/components/OngletsAbonnements";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,7 @@ export default async function AdminAbonnementPaie() {
       <div className="flex">
         <Sidebar role="ADMIN" />
         <main className="flex-1 p-10">
+          <OngletsAbonnements espace="admin" actif="paie" />
 
           <div className="bg-white rounded-xl shadow p-8 mb-8">
             <h1 className="text-3xl font-bold">📦 Abonnements Paie</h1>

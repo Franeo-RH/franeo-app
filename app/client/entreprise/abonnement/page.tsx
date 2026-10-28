@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import BoutonDemandeEvolution from "@/components/BoutonDemandeEvolution";
 import MentionsFacturation from "@/components/MentionsFacturation";
+import OngletsAbonnements from "@/components/OngletsAbonnements";
 
 export default async function AbonnementClient() {
   await connection();
@@ -38,6 +39,7 @@ export default async function AbonnementClient() {
       <div className="flex">
         <Sidebar role={session.role} />
         <main className="flex-1 p-10">
+          <OngletsAbonnements espace="client" actif="rh" />
 
           <div className="bg-white rounded-xl shadow p-8 mb-6">
             <h1 className="text-3xl font-bold">💳 Abonnement</h1>
