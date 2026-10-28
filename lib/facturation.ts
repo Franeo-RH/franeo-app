@@ -101,6 +101,19 @@ export async function calculerFacture(entrepriseId: string, mois: number, annee:
     if (nbSorties > 0 && paie.prixSortie > 0) ajouter(`${nbSorties} sortie(s) / solde de tout compte (${paie.prixSortie} €)`, nbSorties * paie.prixSortie);
   }
 
+  // ── Option Espace salarié : 1 €/salarié avec un compte actif (incluse en Premium et Entreprise) ──
+  if ((entreprise.permissions || []).includes("espace-salaries") && !paie?.espaceSalarieInclus) {
+    const prix = paie?.prixEspaceSalarie ?? 1;
+    const nbComptes = await prisma.utilisateur.count({
+      where: {
+        role: "SALARIE",
+        actif: true,
+        salarie: { entrepriseId, dateDebut: { lte: fin }, OR: [{ dateFin: null }, { dateFin: { gte: debut } }] },
+      },
+    });
+    if (nbComptes > 0 && prix > 0) ajouter(`Espace salarié : ${nbComptes} salarié(s) × ${prix} €`, nbComptes * prix);
+  }
+
   // ── Prestations commandées dans le mois (non annulées) ──
   const prestations = await prisma.commandePrestation.findMany({
     where: { entrepriseId, mois, annee, statut: { not: "ANNULEE" }, total: { gt: 0 } },

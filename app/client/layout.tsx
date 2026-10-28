@@ -1,10 +1,14 @@
 import BuddyChat from "@/components/BuddyChat";
 import BandeauDemo from "@/components/BandeauDemo";
 import { getSessionBrute } from "@/lib/session";
+import { redirect } from "next/navigation";
 import { estSessionDemo } from "@/lib/demo";
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
   const session = await getSessionBrute();
+
+  // Un compte salarié a son propre espace
+  if (session?.role === "SALARIE") redirect("/salarie");
 
   // Entreprise suspendue : aucun contenu, seulement un message
   if (session && session.role === "CLIENT" && session.entreprise && session.entreprise.actif === false) {

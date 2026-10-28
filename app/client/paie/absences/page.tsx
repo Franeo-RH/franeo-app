@@ -35,6 +35,8 @@ type Absence = {
   dateFin: string;
   commentaire: string | null;
   statut: string;
+  declareeParSalarie?: boolean;
+  motifRefus?: string | null;
   salarie: { nom: string; prenom: string };
 };
 
@@ -94,6 +96,25 @@ export default function AbsencesClient() {
     setAfficherFormulaire(false);
     fetch("/api/absences").then(r => r.json()).then(setAbsences);
     setChargement(false);
+  }
+
+  async function decider(id: string, statut: "Validé" | "Refusé") {
+    let motifRefus: string | null = null;
+    if (statut === "Refusé") {
+      motifRefus = prompt("Motif du refus (visible par le salarié) :");
+      if (motifRefus === null) return;
+    }
+    const res = await fetch(`/api/absences/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ statut, motif: motifRefus }),
+    });
+    if (res.ok) {
+      setAbsences(absences.map(a => a.id === id ? { ...a, statut, motifRefus } : a));
+    } else {
+      const d = await res.json().catch(() => ({}));
+      alert(d.erreur || "Erreur lors de la mise à jour");
+    }
   }
 
   async function handleSupprimer(id: string) {
@@ -223,8 +244,16 @@ export default function AbsencesClient() {
                           }`}>
                             {a.statut}
                           </span>
+                          {a.declareeParSalarie && <div className="text-xs text-gray-500 mt-1">📱 déclarée par le salarié</div>}
+                          {a.statut === "Refusé" && a.motifRefus && <div className="text-xs text-red-600 mt-1">Motif : {a.motifRefus}</div>}
                         </td>
-                        <td className="py-3">
+                        <td className="py-3 whitespace-nowrap">
+                          {a.declareeParSalarie && a.statut === "En attente" && (
+                            <>
+                              <button onClick={() => decider(a.id, "Validé")} style={{ background: "#16a34a", color: "#ffffff", borderRadius: "6px", padding: "4px 8px", fontSize: "13px", fontWeight: 600, marginRight: "6px" }}>Valider</button>
+                              <button onClick={() => decider(a.id, "Refusé")} style={{ background: "#dc2626", color: "#ffffff", borderRadius: "6px", padding: "4px 8px", fontSize: "13px", fontWeight: 600, marginRight: "6px" }}>Refuser</button>
+                            </>
+                          )}
                           <button onClick={() => handleSupprimer(a.id)} className="text-red-500 hover:text-red-700 font-semibold text-sm">
                             🗑️
                           </button>

@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [erreur, setErreur] = useState("");
   const [chargement, setChargement] = useState(false);
   const [chargementDemo, setChargementDemo] = useState(false);
+  const [profilDemo, setProfilDemo] = useState<"client" | "salarie">("client");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -34,7 +35,10 @@ export default function LoginPage() {
       return;
     }
 
-    if (data.role === "ADMIN") {
+    if (data.role === "SALARIE") {
+      await viderCacheHorsLigne();
+      router.push("/salarie");
+    } else if (data.role === "ADMIN") {
       await viderCacheHorsLigne(); // nouvelle session : on repart d'un cache vide
       router.push("/admin/dashboard");
     } else {
@@ -47,7 +51,7 @@ export default function LoginPage() {
     setChargementDemo(true);
     setErreur("");
     try {
-      const res = await fetch("/api/demo", { method: "POST" });
+      const res = await fetch("/api/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ profil: profilDemo }) });
       const data = await res.json();
       if (!res.ok) {
         setErreur(data.erreur || "La démo est indisponible pour le moment.");
@@ -55,7 +59,7 @@ export default function LoginPage() {
         return;
       }
       await viderCacheHorsLigne(); // nouvelle session : on repart d'un cache vide
-      router.push("/client/dashboard");
+      router.push(profilDemo === "salarie" ? "/salarie" : "/client/dashboard");
     } catch {
       setErreur("Problème de connexion, réessayez.");
       setChargementDemo(false);
@@ -119,15 +123,30 @@ export default function LoginPage() {
           <div className="flex-1 border-t" />
         </div>
 
+        <div role="tablist" aria-label="Type de démo" style={{ display: "flex", background: "#f3f4f6", borderRadius: "10px", padding: "4px", marginBottom: "10px" }}>
+          {([["client", "🏢 Démo client"], ["salarie", "📱 Démo salarié"]] as const).map(([val, lib]) => (
+            <button
+              key={val}
+              type="button"
+              role="tab"
+              aria-selected={profilDemo === val}
+              onClick={() => setProfilDemo(val)}
+              style={{ flex: 1, border: "none", borderRadius: "8px", padding: "9px", fontSize: "14px", fontWeight: 600, cursor: "pointer", background: profilDemo === val ? "#ffffff" : "transparent", color: profilDemo === val ? "#ea580c" : "#6b7280", boxShadow: profilDemo === val ? "0 1px 2px rgba(0,0,0,0.1)" : "none" }}
+            >
+              {lib}
+            </button>
+          ))}
+        </div>
+
         <button
           type="button"
           onClick={testerLaDemo}
           disabled={chargementDemo}
           className="w-full border-2 border-orange-500 text-orange-600 rounded-lg py-3 font-semibold hover:bg-orange-50 transition disabled:opacity-60"
         >
-          {chargementDemo ? "Ouverture de la démo..." : "🧪 Tester la démo"}
+          {chargementDemo ? "Ouverture de la démo..." : profilDemo === "salarie" ? "🧪 Tester l'espace salarié" : "🧪 Tester la démo"}
         </button>
-        <p className="text-xs text-gray-400 text-center mt-2">Sans inscription, avec des données fictives.</p>
+        <p className="text-xs text-gray-400 text-center mt-2">{profilDemo === "salarie" ? "Vous êtes Sophie, salariée de l'entreprise démo : déclarez une absence et suivez sa validation." : "Sans inscription, avec des données fictives."}</p>
 
         <InstallerApp
           style={{ width: "100%", marginTop: "16px", background: "#111827", color: "#ffffff", border: "none", borderRadius: "8px", padding: "12px", fontWeight: 600, cursor: "pointer" }}

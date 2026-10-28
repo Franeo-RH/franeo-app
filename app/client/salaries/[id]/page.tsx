@@ -9,6 +9,7 @@ import BoutonSupprimer from "@/components/BoutonSupprimer";
 import RappelsSalarie, { type RappelLite } from "@/components/RappelsSalarie";
 import { versISO } from "@/lib/rappels";
 import { aDroit, passeParValidation } from "@/lib/droits";
+import EspaceSalarieFiche from "@/components/EspaceSalarieFiche";
 
 export default async function FicheSalarie({
   params,
@@ -25,7 +26,7 @@ export default async function FicheSalarie({
 
   const salarie = await prisma.salarie.findUnique({
     where: { id },
-    include: { rappels: { orderBy: { dateEcheance: "asc" } } },
+    include: { rappels: { orderBy: { dateEcheance: "asc" } }, compte: { select: { actif: true } } },
   });
 
   if (!salarie || salarie.entrepriseId !== session.entrepriseId) {
@@ -151,6 +152,16 @@ export default async function FicheSalarie({
 
           </div>
 
+          {permissions.includes("espace-salaries") && !session.entreprise?.demo && (
+            <div className="bg-white rounded-xl shadow p-6 mt-6">
+              <h2 className="text-lg font-bold mb-3">📱 Espace salarié</h2>
+              <EspaceSalarieFiche
+                salarieId={salarie.id}
+                email={salarie.email}
+                statut={!salarie.compte ? "aucun" : salarie.compte.actif ? "actif" : "coupe"}
+              />
+            </div>
+          )}
         </main>
       </div>
     </div>

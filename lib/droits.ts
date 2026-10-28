@@ -11,6 +11,7 @@ export const MODULES = [
   { id: "tickets", label: "🎫 Tickets RH" },
   { id: "helpdesk", label: "🆘 Helpdesk" },
   { id: "entreprise", label: "🏢 Mon entreprise (infos, abonnements, factures)" },
+  { id: "espace-salaries", label: "📱 Espace salarié (option : 1 €/salarié/mois, inclus en Premium et Entreprise)" },
 ] as const;
 
 export const ACTIONS = [

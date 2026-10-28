@@ -19,6 +19,7 @@ const FORMULES_DETAIL: Record<string, string[]> = {
     "Saisies sur salaire incluses",
     "Exports Excel & tableau de bord simple",
     "1 ticket RH par mois",
+    "€ Espace salarié (absences en ligne) 1 €/salarié/mois",
     "€ Arrivée 45 € · Sortie / solde de tout compte 60 €",
     "€ Bulletin rectificatif 15 € · Attestation maladie 15 €",
     "€ Rupture conventionnelle 120 € · Contrôle URSSAF 150 €",
@@ -30,6 +31,7 @@ const FORMULES_DETAIL: Record<string, string[]> = {
     "Attestations maladie & suivi des IJSS inclus",
     "Veille paie & réglementaire",
     "3 tickets RH par mois",
+    "€ Espace salarié (absences en ligne) 1 €/salarié/mois",
     "€ Arrivée 45 € · Sortie / solde de tout compte 60 €",
     "€ Bulletin rectificatif 15 €",
     "€ Rupture conventionnelle 120 € · Contrôle URSSAF 150 €",
@@ -43,6 +45,7 @@ const FORMULES_DETAIL: Record<string, string[]> = {
     "Rendez-vous paie trimestriel",
     "Reprise de dossier offerte",
     "6 tickets RH par mois",
+    "Espace salarié inclus (absences en ligne)",
     "€ Rupture conventionnelle 90 € · Relance IJSS 20 €/dossier",
     "€ Contrôle URSSAF 150 €",
   ],
@@ -54,6 +57,7 @@ const FORMULES_DETAIL: Record<string, string[]> = {
     "Rendez-vous paie mensuel",
     "Paramétrage mutuelle / prévoyance offert",
     "10 tickets RH par mois",
+    "Espace salarié inclus (absences en ligne)",
   ],
 };
 

@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 const FEATURES: { key: string; label: string }[] = [
   { key: "accesWebApp", label: "Application Franeo (web + téléphone)" },
   { key: "entreesSortiesIncluses", label: "Arrivées & STC inclus" },
+  { key: "espaceSalarieInclus", label: "Espace salarié inclus" },
   { key: "relancesVariables", label: "Relances variables paie" },
   { key: "relancesSalaries", label: "Relances directes salariés" },
   { key: "modificationsIncluses", label: "Modifications incluses" },

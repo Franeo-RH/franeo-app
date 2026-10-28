@@ -46,3 +46,46 @@ export async function notifierAdmin(options: {
     console.error("Mail admin non envoyé :", e);
   }
 }
+
+
+/** Mail générique (invitation, notification client…) ; ne bloque jamais l'action en cours */
+export async function envoyerMail(options: {
+  a: string | string[];
+  sujet: string;
+  titre: string;
+  lignes: string[];
+  lien?: string; // chemin dans l'app ou adresse complète
+  bouton?: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const destinataires = (Array.isArray(options.a) ? options.a : [options.a]).filter(Boolean);
+  if (destinataires.length === 0) return;
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const url = options.lien ? (options.lien.startsWith("http") ? options.lien : `${APP_URL}${options.lien}`) : APP_URL;
+    await resend.emails.send({
+      from: EXPEDITEUR,
+      to: destinataires,
+      subject: options.sujet,
+      html: `
+        <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;color:#111827">
+          <h2 style="color:#f97316;margin:0 0 12px">${echapper(options.titre)}</h2>
+          ${options.lignes.map((l) => `<p style="margin:6px 0;font-size:14px">${echapper(l)}</p>`).join("")}
+          <p style="margin:20px 0 0">
+            <a href="${url}" style="background:#f97316;color:#ffffff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold">${echapper(options.bouton || "Ouvrir Franeo")}</a>
+          </p>
+        </div>`,
+    });
+  } catch (e) {
+    console.error("Mail non envoyé :", e);
+  }
+}
+
+/** Prévient les comptes clients (employeur) d'une entreprise */
+export async function notifierClients(entrepriseId: string, options: { sujet: string; titre: string; lignes: string[]; lien?: string }) {
+  const clients = await prisma.utilisateur.findMany({
+    where: { entrepriseId, role: "CLIENT", entreprise: { demo: false } },
+    select: { email: true },
+  });
+  await envoyerMail({ a: clients.map((u) => u.email), ...options });
+}

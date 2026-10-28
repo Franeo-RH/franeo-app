@@ -5,6 +5,7 @@ import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 
 export const EMAIL_DEMO = "demo@franeo-rh.com";
+export const EMAIL_DEMO_SALARIE = "demo-salarie@franeo-rh.com";
 export const NOM_DEMO = "Entreprise Démo";
 export const LIMITE_SALARIES_DEMO = 30;
 export const NOM_FAMILLE_DEMO = "Démo";
@@ -73,6 +74,11 @@ async function assurerEntrepriseEtUtilisateur() {
     utilisateur = await prisma.utilisateur.update({ where: { id: utilisateur.id }, data: { entrepriseId: entreprise.id, role: "CLIENT" } });
   }
 
+  // L'option Espace salarié est toujours active sur la démo
+  if (!entreprise.permissions.includes("espace-salaries")) {
+    entreprise = await prisma.entreprise.update({ where: { id: entreprise.id }, data: { permissions: { push: "espace-salaries" } } });
+  }
+
   return { entreprise, utilisateur };
 }
 
@@ -84,6 +90,7 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
   /* 1) Nettoyage — uniquement l'entreprise démo */
   await prisma.variablePaie.deleteMany({ where: { entrepriseId } });
   await prisma.absence.deleteMany({ where: { entrepriseId } });
+  await prisma.utilisateur.deleteMany({ where: { OR: [{ email: EMAIL_DEMO_SALARIE }, { role: "SALARIE", entrepriseId }] } });
   await prisma.salarie.deleteMany({ where: { entrepriseId } }); // supprime aussi échéances et documents
   await prisma.ticket.deleteMany({ where: { entrepriseId } }); // supprime aussi les messages
   await prisma.ticketSupport.deleteMany({ where: { entrepriseId, NOT: { categorie: "SUGGESTION" } } }); // on garde les suggestions des visiteurs
@@ -126,6 +133,14 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
   await prisma.absence.create({ data: { salarieId: lucas.id, entrepriseId, type: "RTT", dateDebut: jour(3), dateFin: jour(3) } });
   await prisma.absence.create({ data: { salarieId: chloe.id, entrepriseId, type: "MALADIE", dateDebut: jour(-2), dateFin: jour(0) } });
 
+  // Compte démo de l'espace salarié (Sophie Martin) + ses demandes
+  await prisma.utilisateur.create({
+    data: { email: EMAIL_DEMO_SALARIE, motDePasse: `!${randomBytes(24).toString("hex")}`, prenom: "Sophie", role: "SALARIE", entrepriseId, salarieId: sophie.id, actif: true } as any,
+  });
+  await prisma.absence.create({ data: { salarieId: sophie.id, entrepriseId, type: "RTT", dateDebut: jour(21), dateFin: jour(21), declareeParSalarie: true, commentaire: "Rendez-vous personnel" } });
+  await prisma.absence.create({ data: { salarieId: sophie.id, entrepriseId, type: "CONGE_SANS_SOLDE", dateDebut: jour(-20), dateFin: jour(-19), declareeParSalarie: true, statut: "Refusé", motifRefus: "Période de clôture, merci de décaler." } });
+  await prisma.absence.create({ data: { salarieId: sophie.id, entrepriseId, type: "CONGE_PAYE", dateDebut: jour(-40), dateFin: jour(-36), declareeParSalarie: true, statut: "Validé" } });
+
   // Variables de paie du mois
   await prisma.variablePaie.create({ data: { salarieId: lucas.id, entrepriseId, type: "PRIME", valeur: 300, mois, annee } });
   await prisma.variablePaie.create({ data: { salarieId: thomas.id, entrepriseId, type: "HEURE_SUPPLEMENTAIRE", valeur: 6, mois, annee } });
@@ -161,6 +176,16 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
   });
 
   return { entrepriseId, userId: utilisateur.id };
+}
+
+/** Prépare la démo côté salarié : renvoie l'id du compte démo salarié (recrée la démo s'il manque). */
+export async function preparerDemoSalarie(): Promise<string> {
+  const compte = await prisma.utilisateur.findUnique({ where: { email: EMAIL_DEMO_SALARIE }, select: { id: true } });
+  if (compte) return compte.id;
+  await reinitialiserDemo();
+  const cree = await prisma.utilisateur.findUnique({ where: { email: EMAIL_DEMO_SALARIE }, select: { id: true } });
+  if (!cree) throw new Error("Compte démo salarié introuvable");
+  return cree.id;
 }
 
 /** Prépare la démo pour un visiteur : crée tout si c'est la toute première fois. */
