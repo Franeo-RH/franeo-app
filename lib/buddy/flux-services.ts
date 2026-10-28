@@ -21,6 +21,8 @@ import { puces, rep } from "./moteur";
 import { PAGE } from "./pages";
 import { elementChoisi, slotChoix, slotCible, slotDate, slotTexte, type Element } from "./slots";
 import type { Data, Env, Flow, Slot } from "./types";
+import { quotaTickets } from "@/lib/facturation";
+import { notifierAdmin } from "@/lib/notifications";
 
 /**
  * Le compteur « tickets utilisés » (Entreprise.ticketsUtilises) sert à facturer les tickets au-delà du forfait.
@@ -70,16 +72,17 @@ export function texteSupport(m: Msg): string | null {
 }
 
 function noteQuota(env: Env): string {
-  const ab = env.entreprise.abonnement;
-  if (!ab) return "";
+  // Tickets inclus = abonnement RH + formule paie, comptés sur le mois en cours
+  const q = quotaTickets(env.entreprise);
+  if (q.inclus === 0 && q.prixSupp === 0) return "";
   const utilises = env.entreprise.ticketsUtilises;
-  if (utilises >= ab.ticketsRH) {
-    return ab.prixTicketSupp > 0
-      ? `\n\n💳 Vos ${ab.ticketsRH} tickets inclus sont déjà utilisés : ce ticket sera facturé ${eur(ab.prixTicketSupp)}. En confirmant, vous acceptez ce supplément.\n💡 Une formule avec plus de tickets peut revenir moins cher : page « Mon entreprise › Abonnement RH ».`
-      : `\n\nℹ️ Vos ${ab.ticketsRH} tickets inclus sont déjà utilisés.`;
+  if (utilises >= q.inclus) {
+    return q.prixSupp > 0
+      ? `\n\n💳 Vos ${q.inclus} tickets inclus ce mois-ci sont déjà utilisés : ce ticket sera facturé ${eur(q.prixSupp)}. En confirmant, vous acceptez ce supplément.\n💡 Une formule avec plus de tickets peut revenir moins cher.`
+      : `\n\nℹ️ Vos ${q.inclus} tickets inclus ce mois-ci sont déjà utilisés.`;
   }
-  const restants = ab.ticketsRH - utilises;
-  return `\n\nℹ️ Il vous restera ${restants - 1} ticket(s) inclus après celui-ci (${utilises + 1}/${ab.ticketsRH}).`;
+  const restants = q.inclus - utilises;
+  return `\n\nℹ️ Il vous restera ${restants - 1} ticket(s) inclus ce mois-ci après celui-ci (${utilises + 1}/${q.inclus}).`;
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -112,8 +115,15 @@ export const ticketCreation: Flow = {
     if (INCREMENTER_TICKETS_UTILISES) {
       operations.push(prisma.entreprise.update({ where: { id: env.entreprise.id }, data: { ticketsUtilises: { increment: 1 } } }));
     }
-    await prisma.$transaction(operations);
+    const [ticketCree] = await prisma.$transaction(operations);
     env.entreprise.ticketsUtilises += INCREMENTER_TICKETS_UTILISES ? 1 : 0;
+    await notifierAdmin({
+      sujet: `Nouveau ticket RH (Buddy) — ${env.entreprise.nom}`,
+      titre: "🎫 Nouveau ticket RH (via Buddy)",
+      lignes: [`Entreprise : ${env.entreprise.nom}`, `De : ${env.session.prenom}`, `Objet : ${titre}`, d.description],
+      lien: ticketCree?.id ? `/admin/tickets/${ticketCree.id}` : "/admin/tickets",
+      entrepriseId: env.entreprise.id,
+    });
     return rep(`✅ Ticket RH créé : « ${titre} ».\nNotre équipe vous répond dès que possible.`, {
       humeur: "content",
       liens: [{ label: "Voir mes tickets", href: PAGE.tickets }],
@@ -154,8 +164,15 @@ export const supportCreation: Flow = {
   },
   async executer(d, env) {
     const titre = titreDepuis(d.description);
-    await prisma.ticketSupport.create({
+    const support = await prisma.ticketSupport.create({
       data: { titre, description: d.description, categorie: d.categorie, entrepriseId: env.entreprise.id },
+    });
+    await notifierAdmin({
+      sujet: `Nouveau ticket helpdesk (Buddy) — ${env.entreprise.nom}`,
+      titre: "🆘 Nouveau ticket helpdesk (via Buddy)",
+      lignes: [`Entreprise : ${env.entreprise.nom}`, `De : ${env.session.prenom}`, `Catégorie : ${LABELS_SUPPORT[d.categorie]}`, `Objet : ${titre}`, d.description],
+      lien: `/admin/helpdesk/${support.id}`,
+      entrepriseId: env.entreprise.id,
     });
     return rep(`✅ Ticket helpdesk créé : « ${titre} ».\nL'équipe technique reviendra vers vous.`, {
       humeur: "content",

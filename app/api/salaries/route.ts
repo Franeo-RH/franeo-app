@@ -5,6 +5,8 @@ import { matriculeDejaPris, nettoyerMatricule } from "@/lib/matricule";
 import { lireRappel } from "@/lib/rappels";
 import { estSessionDemo, LIMITE_SALARIES_DEMO, NOM_FAMILLE_DEMO } from "@/lib/demo";
 import { evaluerSurcout, STATUT_ACCORD_REQUIS } from "@/lib/surcout";
+import { aDroit, passeParValidation } from "@/lib/droits";
+import { creerDemande } from "@/lib/demandes-salaries";
 
 export async function GET() {
   const session = await getSession();
@@ -45,6 +47,10 @@ export async function POST(request: NextRequest) {
   const brut = await request.json();
 
   const demo = estSessionDemo(session);
+
+  if (session.role === "CLIENT" && !demo && !aDroit(session.entreprise?.permissions, "salaries.creer")) {
+    return NextResponse.json({ erreur: "Vous n'avez pas le droit d'ajouter des salariés. Contactez votre gestionnaire." }, { status: 403 });
+  }
 
   const data = demo
     ? {
@@ -130,6 +136,15 @@ export async function POST(request: NextRequest) {
     if (surcout) {
       return NextResponse.json({ surcoutRequis: true, surcout }, { status: STATUT_ACCORD_REQUIS });
     }
+  }
+
+  // Client « paie » : l'ajout devient une demande, validée par le gestionnaire
+  if (session.role === "CLIENT" && passeParValidation(session.entreprise)) {
+    await creerDemande({ entrepriseId, type: "AJOUT", donnees: brut, auteur: `${session.prenom} (${session.email})` });
+    return NextResponse.json(
+      { demande: true, message: "Votre demande d'ajout a été envoyée. Le salarié apparaîtra dès sa validation par votre gestionnaire." },
+      { status: 202 }
+    );
   }
 
   const rappels: {

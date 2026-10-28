@@ -77,77 +77,18 @@ export default function AdminFacturation() {
   async function calculerApercu(entrepriseId: string, mois: number, annee: number) {
     if (!entrepriseId || entrepriseId === "tous") { setApercuGeneration(null); return; }
 
-    const entreprise = await fetch(`/api/entreprises/${entrepriseId}`).then(r => r.json());
-
-    if (!entreprise.abonnementId && !entreprise.abonnementPaieId) {
-      setApercuGeneration({ erreur: "Cette entreprise n'a aucun abonnement (RH ou paie)." });
+    // Même calcul que la génération réelle (fait par le serveur, rien n'est enregistré)
+    const res = await fetch("/api/facturation/generer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entrepriseId, mois, annee, apercu: true }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setApercuGeneration({ erreur: data.erreur || "Aperçu impossible pour cette entreprise." });
       return;
     }
-
-    const salaries = await fetch("/api/salaries").then(r => r.json());
-    const salariesEntreprise = (Array.isArray(salaries) ? salaries : []).filter(
-      (s: any) => s.entrepriseId === entrepriseId
-    );
-
-    // Salariés actifs sur le mois choisi
-    const debutMois = new Date(annee, mois - 1, 1);
-    const finMois = new Date(annee, mois, 0);
-    const nbSalariesMois = salariesEntreprise.filter((s: any) => {
-      if (s.statut !== "Actif" || !s.dateDebut) return false;
-      if (new Date(s.dateDebut) > finMois) return false;
-      if (s.dateFin && new Date(s.dateFin) < debutMois) return false;
-      return true;
-    }).length;
-
-    let montant = 0;
-    const details: string[] = [];
-
-    // ── Abonnement RH ──
-    if (entreprise.abonnementId) {
-      const abonnements = await fetch("/api/abonnements").then(r => r.json());
-      const abo = abonnements.find((a: any) => a.id === entreprise.abonnementId);
-
-      if (abo) {
-        montant += abo.prixMensuel;
-        details.push(`${abo.nom} : ${abo.prixMensuel} €`);
-
-        const salariesSupp = Math.max(nbSalariesMois - abo.salariesInclus, 0);
-        if (salariesSupp > 0 && abo.prixSalarieSupp > 0) {
-          const cout = salariesSupp * abo.prixSalarieSupp;
-          montant += cout;
-          details.push(`${nbSalariesMois} salariés dont ${salariesSupp} supp. (${abo.prixSalarieSupp} €) : ${cout} €`);
-        }
-
-        const ticketsSupp = Math.max((entreprise.ticketsUtilises || 0) - abo.ticketsRH, 0);
-        if (ticketsSupp > 0 && abo.prixTicketSupp > 0) {
-          const cout = ticketsSupp * abo.prixTicketSupp;
-          montant += cout;
-          details.push(`${ticketsSupp} ticket(s) supp. × ${abo.prixTicketSupp} € : ${cout} €`);
-        }
-      }
-    }
-
-    // ── Abonnement Paie ──
-    if (entreprise.abonnementPaieId) {
-      const formules = await fetch("/api/abonnement-paie").then(r => r.json());
-      const paie = (Array.isArray(formules) ? formules : []).find(
-        (f: any) => f.id === entreprise.abonnementPaieId
-      );
-
-      if (paie) {
-        montant += paie.prixMensuel;
-        details.push(`Paie ${paie.nom} : ${paie.prixMensuel} €`);
-
-        const bulletinsSupp = Math.max(nbSalariesMois - paie.bulletinsInclus, 0);
-        if (bulletinsSupp > 0 && paie.prixBulletinSupp > 0) {
-          const cout = bulletinsSupp * paie.prixBulletinSupp;
-          montant += cout;
-          details.push(`${nbSalariesMois} bulletins dont ${bulletinsSupp} supp. (${paie.prixBulletinSupp} €) : ${cout} €`);
-        }
-      }
-    }
-
-    setApercuGeneration({ montant: Math.round(montant * 100) / 100, details });
+    setApercuGeneration({ montant: data.montant, details: data.details || [] });
   }
 
   async function handleGenerer(e: React.FormEvent) {

@@ -92,6 +92,8 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
   await prisma.demandeEvolution.deleteMany({ where: { entrepriseId } });
   await prisma.demandeEvolutionPaie.deleteMany({ where: { entrepriseId } });
   await prisma.buddyContexte.deleteMany({ where: { userId: utilisateur.id } });
+  await prisma.demandeSalarie.deleteMany({ where: { entrepriseId } });
+  await prisma.commandePrestation.deleteMany({ where: { entrepriseId } });
 
   /* 2) Jeu de données */
   const mois = Number(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", month: "numeric" }).format(new Date()));
@@ -134,6 +136,29 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
     data: { entrepriseId, titre: "Question sur un avenant de contrat", description: "Pouvez-vous m'indiquer les mentions obligatoires d'un avenant pour un changement d'horaires ?" },
   });
   await prisma.messageTicket.create({ data: { ticketId: ticket.id, contenu: "Bonjour, voici la marche à suivre : l'avenant doit préciser la nouvelle répartition des horaires et être signé par les deux parties.", auteur: "Équipe Franeo", role: "ADMIN" } });
+
+  // Exemples de demandes de validation (vues côté client dans « Mes demandes »)
+  await prisma.demandeSalarie.create({
+    data: {
+      entrepriseId, type: "AJOUT", statut: "EN_ATTENTE", auteur: "Démo",
+      resume: "Inès Garnier — Chargée de recrutement, CDI, entrée le " + jour(14).toLocaleDateString("fr-FR") + ", 2 600 € brut/mois",
+      donnees: { prenom: "Inès", nom: "Garnier", poste: "Chargée de recrutement", typeContrat: "CDI", dateDebut: jour(14).toISOString(), salaireMensuel: 2600 },
+    },
+  });
+  await prisma.demandeSalarie.create({
+    data: {
+      entrepriseId, type: "MODIFICATION", statut: "VALIDEE", auteur: "Démo", salarieId: karim.id, traiteAt: jour(-3),
+      resume: "Modifier Karim Benali : salaire mensuel : 2800 → 2900",
+    },
+  });
+
+  // Exemples de prestations commandées (Paie › Prestations)
+  await prisma.commandePrestation.create({
+    data: { entrepriseId, code: "RECTIFICATIF", libelle: "Bulletin rectificatif", quantite: 1, prixUnitaire: 15, total: 15, statut: "FAITE", salarie: "Thomas Girard", commentaire: "Heures supplémentaires transmises après la clôture.", auteur: "Démo", mois, annee, faiteAt: jour(-1) },
+  });
+  await prisma.commandePrestation.create({
+    data: { entrepriseId, code: "ATTESTATION_MALADIE", libelle: "Attestation de salaire maladie / maternité", quantite: 1, prixUnitaire: 0, total: 0, statut: "A_FAIRE", salarie: "Chloé Petit", auteur: "Démo", mois, annee },
+  });
 
   return { entrepriseId, userId: utilisateur.id };
 }

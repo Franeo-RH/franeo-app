@@ -3,6 +3,7 @@
 // Si oui, on renvoie le détail du surcoût et les formules supérieures qui pourraient revenir moins cher.
 
 import { prisma } from "@/lib/prisma";
+import { quotaTickets, ticketsDuMois } from "@/lib/facturation";
 
 export type LigneSurcout = { libelle: string; quantite: number; prixUnitaire: number; total: number };
 
@@ -11,7 +12,7 @@ export type PropositionFormule = {
   id: string;
   nom: string;
   prixMensuel: number;
-  inclus: string; // ex. « 20 salariés, 10 tickets »
+  inclus: string; // ex. « 20 bulletins, 3 tickets RH / mois »
   coutMensuel: number; // coût mensuel total estimé avec cette formule (après l'ajout)
   difference: number; // par rapport au coût avec surcoût (négatif = économie)
   lien: string;
@@ -31,6 +32,21 @@ const depasse = (n: number, inclus: number) => Math.max(n - inclus, 0);
 /** Statut HTTP utilisé quand l'accord du client est requis */
 export const STATUT_ACCORD_REQUIS = 402;
 
+type RH = { id: string; nom: string; prixMensuel: number; salariesInclus: number; prixSalarieSupp: number; ticketsRH: number; prixTicketSupp: number };
+type Paie = {
+  id: string; nom: string; prixMensuel: number; bulletinsInclus: number; prixBulletinSupp: number;
+  ticketsRHInclus: number; prixTicketSupp: number; entreesSortiesIncluses: boolean; prixEntree: number; prixSortie: number;
+};
+
+const coutRH = (f: RH | null, sal: number) => (f ? f.prixMensuel + depasse(sal, f.salariesInclus) * f.prixSalarieSupp : 0);
+const coutPaie = (f: Paie | null, sal: number) => (f ? f.prixMensuel + depasse(sal, f.bulletinsInclus) * f.prixBulletinSupp : 0);
+const coutTickets = (rh: RH | null, paie: Paie | null, tic: number) => {
+  const q = quotaTickets({ abonnement: rh, abonnementPaie: paie });
+  return depasse(tic, q.inclus) * q.prixSupp;
+};
+const coutTotal = (rh: RH | null, paie: Paie | null, sal: number, tic: number) =>
+  coutRH(rh, sal) + coutPaie(paie, sal) + coutTickets(rh, paie, tic);
+
 export async function evaluerSurcout(
   entrepriseId: string,
   ajout: { salaries?: number; tickets?: number }
@@ -40,7 +56,7 @@ export async function evaluerSurcout(
   if (plusSalaries === 0 && plusTickets === 0) return null;
 
   const maintenant = new Date();
-  const [entreprise, nbSalaries, formulesRH, formulesPaie] = await Promise.all([
+  const [entreprise, nbSalaries, tickets, formulesRH, formulesPaie] = await Promise.all([
     prisma.entreprise.findUnique({
       where: { id: entrepriseId },
       include: { abonnement: true, abonnementPaie: true },
@@ -48,6 +64,7 @@ export async function evaluerSurcout(
     prisma.salarie.count({
       where: { entrepriseId, statut: "Actif", OR: [{ dateFin: null }, { dateFin: { gte: maintenant } }] },
     }),
+    ticketsDuMois(entrepriseId, maintenant.getMonth() + 1, maintenant.getFullYear()),
     prisma.abonnement.findMany({ orderBy: { prixMensuel: "asc" } }),
     prisma.abonnementPaie.findMany({ orderBy: { prixMensuel: "asc" } }),
   ]);
@@ -55,15 +72,8 @@ export async function evaluerSurcout(
 
   const abo = entreprise.abonnement;
   const paie = entreprise.abonnementPaie;
-  const tickets = entreprise.ticketsUtilises || 0;
   const salariesApres = nbSalaries + plusSalaries;
   const ticketsApres = tickets + plusTickets;
-
-  // Coût d'une formule RH / paie pour un nombre de salariés et de tickets donné
-  const coutRH = (f: { prixMensuel: number; salariesInclus: number; prixSalarieSupp: number; ticketsRH: number; prixTicketSupp: number } | null, sal: number, tic: number) =>
-    f ? f.prixMensuel + depasse(sal, f.salariesInclus) * f.prixSalarieSupp + depasse(tic, f.ticketsRH) * f.prixTicketSupp : 0;
-  const coutPaie = (f: { prixMensuel: number; bulletinsInclus: number; prixBulletinSupp: number } | null, sal: number) =>
-    f ? f.prixMensuel + depasse(sal, f.bulletinsInclus) * f.prixBulletinSupp : 0;
 
   const lignes: LigneSurcout[] = [];
   if (abo && plusSalaries > 0) {
@@ -72,34 +82,34 @@ export async function evaluerSurcout(
       lignes.push({ libelle: `Salarié(s) au-delà des ${abo.salariesInclus} inclus (formule ${abo.nom})`, quantite: n, prixUnitaire: abo.prixSalarieSupp, total: r2(n * abo.prixSalarieSupp) });
     }
   }
-  if (abo && plusTickets > 0) {
-    const n = depasse(ticketsApres, abo.ticketsRH) - depasse(tickets, abo.ticketsRH);
-    if (n > 0 && abo.prixTicketSupp > 0) {
-      lignes.push({ libelle: `Ticket(s) RH au-delà des ${abo.ticketsRH} inclus (formule ${abo.nom})`, quantite: n, prixUnitaire: abo.prixTicketSupp, total: r2(n * abo.prixTicketSupp) });
-    }
-  }
   if (paie && plusSalaries > 0) {
     const n = depasse(salariesApres, paie.bulletinsInclus) - depasse(nbSalaries, paie.bulletinsInclus);
     if (n > 0 && paie.prixBulletinSupp > 0) {
       lignes.push({ libelle: `Bulletin(s) de paie au-delà des ${paie.bulletinsInclus} inclus (formule ${paie.nom})`, quantite: n, prixUnitaire: paie.prixBulletinSupp, total: r2(n * paie.prixBulletinSupp) });
     }
   }
+  if (plusTickets > 0) {
+    const q = quotaTickets(entreprise);
+    const n = depasse(ticketsApres, q.inclus) - depasse(tickets, q.inclus);
+    if (n > 0 && q.prixSupp > 0) {
+      lignes.push({ libelle: `Ticket(s) RH au-delà des ${q.inclus} inclus ce mois-ci`, quantite: n, prixUnitaire: q.prixSupp, total: r2(n * q.prixSupp) });
+    }
+  }
   if (lignes.length === 0) return null;
 
-  const coutActuel = coutRH(abo, nbSalaries, tickets) + coutPaie(paie, nbSalaries);
-  const coutAvecSurcout = coutRH(abo, salariesApres, ticketsApres) + coutPaie(paie, salariesApres);
-  const partPaieApres = coutPaie(paie, salariesApres);
-  const partRHApres = coutRH(abo, salariesApres, ticketsApres);
+  const coutActuel = coutTotal(abo, paie, nbSalaries, tickets);
+  const coutAvecSurcout = coutTotal(abo, paie, salariesApres, ticketsApres);
 
   const propositions: PropositionFormule[] = [];
-  const surcoutRH = lignes.some((l) => l.libelle.includes("Salarié") || l.libelle.includes("Ticket"));
-  const surcoutPaie = lignes.some((l) => l.libelle.includes("Bulletin"));
+  const surcoutSalaries = lignes.some((l) => l.libelle.startsWith("Salarié"));
+  const surcoutBulletins = lignes.some((l) => l.libelle.startsWith("Bulletin"));
+  const surcoutTickets = lignes.some((l) => l.libelle.startsWith("Ticket"));
 
-  if (surcoutRH && abo) {
+  if (abo && (surcoutSalaries || (surcoutTickets && !paie))) {
     for (const f of formulesRH) {
       if (f.id === abo.id) continue;
       if (f.salariesInclus <= abo.salariesInclus && f.ticketsRH <= abo.ticketsRH) continue; // pas une formule supérieure
-      const cout = coutRH(f, salariesApres, ticketsApres) + partPaieApres;
+      const cout = coutTotal(f, paie, salariesApres, ticketsApres);
       propositions.push({
         type: "RH", id: f.id, nom: f.nom, prixMensuel: f.prixMensuel,
         inclus: `${f.salariesInclus} salariés, ${f.ticketsRH} tickets RH / mois`,
@@ -108,13 +118,14 @@ export async function evaluerSurcout(
       });
     }
   }
-  if (surcoutPaie && paie) {
+  if (paie && (surcoutBulletins || surcoutTickets)) {
     for (const f of formulesPaie) {
-      if (f.id === paie.id || f.bulletinsInclus <= paie.bulletinsInclus) continue;
-      const cout = partRHApres + coutPaie(f, salariesApres);
+      if (f.id === paie.id) continue;
+      if (f.bulletinsInclus <= paie.bulletinsInclus && f.ticketsRHInclus <= paie.ticketsRHInclus) continue;
+      const cout = coutTotal(abo, f, salariesApres, ticketsApres);
       propositions.push({
         type: "PAIE", id: f.id, nom: f.nom, prixMensuel: f.prixMensuel,
-        inclus: `${f.bulletinsInclus} bulletins / mois`,
+        inclus: `${f.bulletinsInclus} bulletins, ${f.ticketsRHInclus} tickets RH / mois${f.entreesSortiesIncluses ? ", arrivées et sorties incluses" : ""}`,
         coutMensuel: r2(cout), difference: r2(cout - coutAvecSurcout),
         lien: "/client/abonnement-paie",
       });

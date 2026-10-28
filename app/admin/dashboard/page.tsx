@@ -10,6 +10,7 @@ import { chargerEcheances } from "@/lib/rappels-serveur";
 import { EncartMasseSalariale } from "@/components/SuiviMasseSalariale";
 import { calculerMasseSalariale } from "@/lib/masse-salariale";
 import BoutonResetDemo from "@/components/BoutonResetDemo";
+import { calculerFacture } from "@/lib/facturation";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,7 @@ export default async function AdminDashboard() {
     nbAbsences,
     nbVariables,
     nbDemandes,
+    nbDemandesSalaries,
     echeances,
     facturationsAnnee,
   ] = await Promise.all([
@@ -72,6 +74,7 @@ export default async function AdminDashboard() {
     prisma.absence.count({ where: { statut: "En attente", entreprise: filtreClients } }),
     prisma.variablePaie.count({ where: { statut: "En attente", mois: moisActuel, annee: anneeActuelle, entreprise: filtreClients } }),
     prisma.demandeEvolution.count({ where: { statut: "En attente", entreprise: filtreClients } }),
+    prisma.demandeSalarie.count({ where: { statut: "EN_ATTENTE", entreprise: filtreClients } }),
     // Échéances des salariés (tous clients) : retards + 60 prochains jours
     chargerEcheances({ sansDemo: true }),
     // Facturation de l'année (le mois en cours en est extrait)
@@ -81,34 +84,13 @@ export default async function AdminDashboard() {
     }),
   ]);
 
-  // Salariés actifs sur le mois, par entreprise (base des suppléments salariés / bulletins)
-  const debutMoisCA = new Date(anneeActuelle, moisActuel - 1, 1);
-  const finMoisCA = new Date(anneeActuelle, moisActuel, 0);
-  const actifsParEntreprise = await prisma.salarie.groupBy({
-    by: ["entrepriseId"],
-    where: {
-      entreprise: filtreClients,
-      statut: "Actif",
-      OR: [{ dateDebut: null }, { dateDebut: { lte: finMoisCA } }],
-      AND: [{ OR: [{ dateFin: null }, { dateFin: { gte: debutMoisCA } }] }],
-    },
-    _count: { _all: true },
-  });
-  const nbActifs = new Map(actifsParEntreprise.map((g) => [g.entrepriseId, g._count._all]));
-
-  // Estimation mensuelle par client = abonnement RH + formule paie + suppléments (même calcul que la facturation)
-  const estimationClient = (e: (typeof entreprises)[number]) => {
-    const nb = nbActifs.get(e.id) || 0;
-    const abo = e.abonnement;
-    const paie = e.abonnementPaie;
-    const rh = abo
-      ? abo.prixMensuel +
-        Math.max(nb - abo.salariesInclus, 0) * abo.prixSalarieSupp +
-        Math.max((e.ticketsUtilises || 0) - abo.ticketsRH, 0) * abo.prixTicketSupp
-      : 0;
-    const p = paie ? paie.prixMensuel + Math.max(nb - paie.bulletinsInclus, 0) * paie.prixBulletinSupp : 0;
-    return rh + p;
-  };
+  // Estimation mensuelle par client : même calcul que la facturation (lib/facturation.ts)
+  const estimations = new Map(
+    await Promise.all(
+      entreprises.map(async (e) => [e.id, (await calculerFacture(e.id, moisActuel, anneeActuelle))?.montant || 0] as const)
+    )
+  );
+  const estimationClient = (e: (typeof entreprises)[number]) => estimations.get(e.id) || 0;
 
   const masse = await masseP;
   const totalEntreprises = entreprises.length;
@@ -151,6 +133,7 @@ export default async function AdminDashboard() {
     { href: "/admin/paie/absences", icone: "📅", label: "Absences", n: nbAbsences, couleur: "text-orange-500" },
     { href: "/admin/paie/variables", icone: "💰", label: "Variables", n: nbVariables, couleur: "text-orange-500" },
     { href: "/admin/entreprises/demandes", icone: "📩", label: "Évolutions", n: nbDemandes, couleur: "text-orange-500" },
+    { href: "/admin/salaries/demandes", icone: "📝", label: "Demandes salariés", n: nbDemandesSalaries, couleur: "text-orange-500" },
     { href: "/admin/salaries", icone: "⏰", label: "Échéances", n: echeances.length, couleur: "text-red-500" },
   ];
   const caMois = Math.round(caMoisMixte);
@@ -176,7 +159,7 @@ export default async function AdminDashboard() {
           </div>
         </div>
 
-        <div className="fr-grille-tuiles" style={{ display: "grid", gridTemplateColumns: "repeat(8, minmax(0, 1fr))", gap: "0.75rem" }}>
+        <div className="fr-grille-tuiles" style={{ display: "grid", gridTemplateColumns: "repeat(9, minmax(0, 1fr))", gap: "0.75rem" }}>
           {tuiles.map((t) => (
             <Link key={t.label} href={t.href} className="bg-white rounded-2xl shadow p-3 text-center hover:shadow-md transition">
               <p className="text-2xl">{t.icone}</p>

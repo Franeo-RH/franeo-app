@@ -90,6 +90,11 @@ export default function ModifierSalarie() {
       return;
     }
 
+    const retour = await res.json().catch(() => ({}));
+    if (retour.demande) {
+      router.push("/client/salaries/demandes?envoyee=1");
+      return;
+    }
     router.push(`/client/salaries/${id}`);
   }
 

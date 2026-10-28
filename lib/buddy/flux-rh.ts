@@ -45,6 +45,15 @@ import {
   type Element,
 } from "./slots";
 import type { Data, Env, Flow, SalarieLite, Slot } from "./types";
+import { passeParValidation } from "@/lib/droits";
+import { creerDemande } from "@/lib/demandes-salaries";
+
+/** Client « paie » : les changements sur les salariés passent par une demande validée par le gestionnaire */
+async function viaDemande(env: Env): Promise<boolean> {
+  const ent = await prisma.entreprise.findUnique({ where: { id: env.entreprise.id }, select: { demo: true, abonnementPaieId: true } });
+  return passeParValidation(ent);
+}
+const MSG_DEMANDE = "\nVotre gestionnaire va la valider ; vous suivez son avancement dans « Salariés › Demandes ».";
 
 /* ════════════════════════════════════════════════════════════════
    Outils communs
@@ -612,6 +621,18 @@ export const salarieAjout: Flow = {
       const nb = await prisma.salarie.count({ where: { entrepriseId: env.entreprise.id } });
       if (nb >= 30) return rep("La démo est limitée à 30 salariés (remise à zéro chaque nuit). Je n'ai rien ajouté.", { humeur: "triste" });
     }
+    if (await viaDemande(env)) {
+      await creerDemande({
+        entrepriseId: env.entreprise.id,
+        type: "AJOUT",
+        auteur: `${env.session.prenom} (via Buddy)`,
+        donnees: {
+          prenom: d.prenom, nom: d.nom, poste: d.poste, typeContrat: d.typeContrat, dateDebut: d.dateDebut,
+          ...(typeof d.salaireMensuel === "number" ? { salaireMensuel: d.salaireMensuel, salaireAnnuel: arrondi(d.salaireMensuel * 12) } : {}),
+        },
+      });
+      return rep(`📨 Demande d'ajout de ${d.prenom} ${d.nom} envoyée.${MSG_DEMANDE}`, { humeur: "content", liens: [{ label: "Mes demandes", href: "/client/salaries/demandes" }] });
+    }
     const cree = await prisma.salarie.create({
       data: {
         entrepriseId: env.entreprise.id,
@@ -790,6 +811,18 @@ export const salarieModif: Flow = {
     if (d.champ === "dateFin" || d.champ === "dateDebut") data[d.champ] = versDate(d.valeur);
     else data[d.champ] = d.valeur;
     if (d.champ === "salaireMensuel" && s.salaireAnnuel !== null) data.salaireAnnuel = arrondi(d.valeur * 12);
+    if (await viaDemande(env)) {
+      const actuel = await prisma.salarie.findFirst({ where: { id, entrepriseId: env.entreprise.id } });
+      if (!actuel) return rep("Je ne retrouve plus ce salarié, rien n'a été demandé.", { humeur: "triste" });
+      await creerDemande({
+        entrepriseId: env.entreprise.id,
+        type: "MODIFICATION",
+        salarieId: id,
+        auteur: `${env.session.prenom} (via Buddy)`,
+        donnees: { ...(actuel as unknown as Record<string, unknown>), ...data },
+      });
+      return rep(`📨 Demande de modification de ${nomComplet(s)} envoyée.${MSG_DEMANDE}`, { humeur: "content", liens: [{ label: "Mes demandes", href: "/client/salaries/demandes" }] });
+    }
     const r = await prisma.salarie.updateMany({ where: { id, entrepriseId: env.entreprise.id }, data });
     if (r.count === 0) return rep("Je ne retrouve plus ce salarié, rien n'a été modifié.", { humeur: "triste" });
     return rep(`✅ Fiche de ${nomComplet(s)} mise à jour — ${CHAMPS[d.champ].label.replace(/^(?:le |la |l'|les )/, "")} : ${valeurAffichee(d.champ, d.valeur)}.`, {
@@ -814,6 +847,10 @@ export const salarieSuppr: Flow = {
   async executer(d, env) {
     const id = d.salarieIds[0] as string;
     const s = env.salaries.find((x) => x.id === id);
+    if (s && (await viaDemande(env))) {
+      await creerDemande({ entrepriseId: env.entreprise.id, type: "SUPPRESSION", salarieId: id, auteur: `${env.session.prenom} (via Buddy)` });
+      return rep(`📨 Demande de suppression de ${nomComplet(s)} envoyée.${MSG_DEMANDE}`, { humeur: "content", liens: [{ label: "Mes demandes", href: "/client/salaries/demandes" }] });
+    }
     const r = await prisma.salarie.deleteMany({ where: { id, entrepriseId: env.entreprise.id } });
     if (r.count === 0 || !s) return rep("Je ne retrouve plus ce salarié, rien n'a été supprimé.", { humeur: "triste" });
     env.salaries = env.salaries.filter((x) => x.id !== id);

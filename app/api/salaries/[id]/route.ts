@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { matriculeDejaPris, nettoyerMatricule } from "@/lib/matricule";
 import { estSessionDemo } from "@/lib/demo";
+import { aDroit, passeParValidation } from "@/lib/droits";
+import { creerDemande } from "@/lib/demandes-salaries";
 
 export async function GET(
   request: NextRequest,
@@ -42,6 +44,20 @@ export async function PUT(
 
   if (session.role === "CLIENT" && salarie.entrepriseId !== session.entrepriseId) {
     return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
+  }
+
+  if (session.role === "CLIENT" && !estSessionDemo(session)) {
+    if (!aDroit(session.entreprise?.permissions, "salaries.modifier")) {
+      return NextResponse.json({ erreur: "Vous n'avez pas le droit de modifier les salariés. Contactez votre gestionnaire." }, { status: 403 });
+    }
+    // Client « paie » : la modification devient une demande, validée par le gestionnaire
+    if (passeParValidation(session.entreprise)) {
+      await creerDemande({ entrepriseId: salarie.entrepriseId, type: "MODIFICATION", salarieId: id, donnees: data, auteur: `${session.prenom} (${session.email})` });
+      return NextResponse.json(
+        { demande: true, message: "Votre demande de modification a été envoyée. Elle sera appliquée dès sa validation par votre gestionnaire." },
+        { status: 202 }
+      );
+    }
   }
 
   // Démo : seuls prénom, poste et salaire sont modifiables
@@ -130,6 +146,19 @@ export async function DELETE(
 
   if (session.role === "CLIENT" && salarie.entrepriseId !== session.entrepriseId) {
     return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
+  }
+
+  if (session.role === "CLIENT" && !estSessionDemo(session)) {
+    if (!aDroit(session.entreprise?.permissions, "salaries.supprimer")) {
+      return NextResponse.json({ erreur: "Vous n'avez pas le droit de supprimer des salariés. Contactez votre gestionnaire." }, { status: 403 });
+    }
+    if (passeParValidation(session.entreprise)) {
+      await creerDemande({ entrepriseId: salarie.entrepriseId, type: "SUPPRESSION", salarieId: id, auteur: `${session.prenom} (${session.email})` });
+      return NextResponse.json(
+        { demande: true, message: "Votre demande de suppression a été envoyée à votre gestionnaire." },
+        { status: 202 }
+      );
+    }
   }
 
   await prisma.salarie.delete({ where: { id } });

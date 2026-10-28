@@ -27,6 +27,7 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
           <SidebarLink href="/client/salaries/mouvements" label="🔄 Mouvements" active={pathname === "/client/salaries/mouvements"} />
         )}
         <SidebarLink href={`${base}/salaries/echeances`} label="⏰ Échéances" active={pathname === `${base}/salaries/echeances`} />
+        <SidebarLink href={`${base}/salaries/demandes`} label={role === "ADMIN" ? "📝 Demandes clients" : "📝 Mes demandes"} active={pathname === `${base}/salaries/demandes`} />
       </aside>
     );
   }
@@ -105,6 +106,7 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
         <SidebarLink href="/admin/entreprises/nouveau" label="➕ Ajouter une entreprise" active={pathname === "/admin/entreprises/nouveau"} />
         <SidebarLink href="/admin/entreprises/demandes" label="📩 Modifs abonnement" active={pathname === "/admin/entreprises/demandes"} badge={demandesEnAttente} />
         <SidebarLink href="/admin/entreprises/facturation" label="🧾 Facturation" active={pathname === "/admin/entreprises/facturation"} />
+        <SidebarLink href="/admin/entreprises/prestations" label="🛒 Prestations commandées" active={pathname === "/admin/entreprises/prestations"} />
         <SidebarLink href="/admin/abonnement-paie" label="📦 Abonnements paie" active={pathname === "/admin/abonnement-paie"} />
       </aside>
     );
@@ -119,6 +121,7 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
         <SidebarLink href="/client/paie/saisie" label="✏️ Saisir des variables" active={pathname === "/client/paie/saisie"} />
         <SidebarLink href="/client/paie/absences" label="🏖️ Absences" active={pathname === "/client/paie/absences"} />
         <SidebarLink href="/client/paie/historique" label="📋 Historique" active={pathname === "/client/paie/historique"} />
+        <SidebarLink href="/client/paie/prestations" label="🛒 Prestations" active={pathname === "/client/paie/prestations"} />
       </aside>
     );
   }

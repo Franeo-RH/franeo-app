@@ -9,6 +9,8 @@ import BoutonAbonnementPaie from "@/components/BoutonAbonnementPaie";
 export const dynamic = "force-dynamic";
 
 const FEATURES: { key: string; label: string }[] = [
+  { key: "accesWebApp", label: "Application Franeo (web + téléphone)" },
+  { key: "entreesSortiesIncluses", label: "Arrivées & STC inclus" },
   { key: "relancesVariables", label: "Relances variables paie" },
   { key: "relancesSalaries", label: "Relances directes salariés" },
   { key: "modificationsIncluses", label: "Modifications incluses" },
@@ -30,12 +32,14 @@ const COULEURS: Record<string, string> = {
   ESSENTIELLE: "border-blue-300 bg-blue-50",
   SERENITE: "border-purple-300 bg-purple-50",
   PREMIUM: "border-amber-300 bg-amber-50",
+  ENTREPRISE: "border-gray-400 bg-gray-50",
 };
 
 const BADGES: Record<string, string> = {
   ESSENTIELLE: "bg-blue-100 text-blue-800 border-blue-300",
   SERENITE: "bg-purple-100 text-purple-800 border-purple-300",
   PREMIUM: "bg-amber-100 text-amber-800 border-amber-300",
+  ENTREPRISE: "bg-gray-900 text-white border-gray-900",
 };
 
 export default async function AdminAbonnementPaie() {

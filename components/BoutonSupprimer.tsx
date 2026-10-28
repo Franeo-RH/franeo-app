@@ -21,8 +21,17 @@ export default function BoutonSupprimer({
       method: "DELETE",
     });
 
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.demande) {
+      // Client « paie » : la suppression attend la validation du gestionnaire
+      alert(data.message || "Votre demande de suppression a été envoyée.");
+      router.push("/client/salaries/demandes?envoyee=1");
+      return;
+    }
     if (res.ok) {
       router.push(redirectUrl);
+    } else {
+      alert(data.erreur || "Suppression impossible.");
     }
   }
 

@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { evaluerSurcout, STATUT_ACCORD_REQUIS } from "@/lib/surcout";
+import { aDroit, passeParValidation } from "@/lib/droits";
+import { creerDemande } from "@/lib/demandes-salaries";
 import { analyserTableau, type LigneErreur } from "@/lib/import-salaries";
 import { fabriquerFichierErreurs, lireFichierExcel } from "@/lib/import-salaries-xlsx";
 
@@ -20,9 +22,13 @@ export async function POST(req: NextRequest) {
   }
   const entrepriseId = session.entrepriseId;
 
-  const entreprise = await prisma.entreprise.findUnique({ where: { id: entrepriseId }, select: { permissions: true, demo: true } });
+  const entreprise = await prisma.entreprise.findUnique({ where: { id: entrepriseId }, select: { permissions: true, demo: true, abonnementPaieId: true } });
   if (!entreprise || !entreprise.permissions.includes("salaries")) {
     return NextResponse.json({ erreur: "Le module Salariés n'est pas activé sur votre espace." }, { status: 403 });
+  }
+
+  if (!aDroit(entreprise.permissions, "salaries.importer")) {
+    return NextResponse.json({ erreur: "Vous n'avez pas le droit d'importer des salariés. Contactez votre gestionnaire." }, { status: 403 });
   }
 
   if (entreprise.demo) {
@@ -72,6 +78,21 @@ export async function POST(req: NextRequest) {
     if (surcout) {
       return NextResponse.json({ surcoutRequis: true, surcout }, { status: STATUT_ACCORD_REQUIS });
     }
+  }
+
+  // Client « paie » : chaque ligne valide devient une demande d'ajout, validée par le gestionnaire
+  if (passeParValidation(entreprise)) {
+    for (const v of analyse.valides) {
+      await creerDemande({ entrepriseId, type: "AJOUT", donnees: v.donnees as unknown as Record<string, unknown>, auteur: `${session.prenom} (${session.email}) — import Excel` });
+    }
+    let fichierErreursD: string | null = null;
+    if (erreurs.length > 0) fichierErreursD = (await fabriquerFichierErreurs(erreurs)).toString("base64");
+    return NextResponse.json({
+      crees: 0,
+      demandes: analyse.valides.length,
+      erreurs: erreurs.map((e) => ({ ligne: e.ligne, raisons: e.raisons })),
+      fichierErreurs: fichierErreursD,
+    });
   }
 
   let crees = 0;

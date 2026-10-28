@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import * as XLSX from "xlsx";
+import { quotaTickets, ticketsDuMois, ticketsDuMoisParEntreprise } from "@/lib/facturation";
+import { aDroit } from "@/lib/droits";
 
 function calculerCout(type: string, valeur: number, salarie: {
   salaireMensuel: number | null;
@@ -303,15 +305,18 @@ export async function GET(request: NextRequest) {
     } else if (type === "tickets-facturation" && session.role === "ADMIN") {
   const entreprises = await prisma.entreprise.findMany({
     where: { demo: false },
-    include: { abonnement: true },
+    include: { abonnement: true, abonnementPaie: true },
     orderBy: { nom: "asc" },
   });
+  const maintenantT = new Date();
+  const ticketsMois = await ticketsDuMoisParEntreprise(maintenantT.getMonth() + 1, maintenantT.getFullYear());
 
   data = entreprises.map((e) => {
-    const ticketsInclus = e.abonnement?.ticketsRH || 0;
-    const ticketsUtilises = e.ticketsUtilises || 0;
+    const quota = quotaTickets(e);
+    const ticketsInclus = quota.inclus;
+    const ticketsUtilises = ticketsMois.get(e.id) || 0;
     const ticketsSupp = Math.max(ticketsUtilises - ticketsInclus, 0);
-    const prixTicketSupp = e.abonnement?.prixTicketSupp || 0;
+    const prixTicketSupp = quota.prixSupp;
     const montantAFacturer = ticketsSupp * prixTicketSupp;
 
     return {
@@ -360,7 +365,9 @@ export async function GET(request: NextRequest) {
       },
     });
     const salariesSupp = abo ? Math.max(nbSalaries - abo.salariesInclus, 0) : 0;
-    const ticketsSupp = abo ? Math.max(f.entreprise.ticketsUtilises - abo.ticketsRH, 0) : 0;
+    const quotaT = quotaTickets(f.entreprise);
+    const ticketsMoisF = await ticketsDuMois(f.entrepriseId, mois, annee);
+    const ticketsSupp = Math.max(ticketsMoisF - quotaT.inclus, 0);
     const bulletinsSupp = paie ? Math.max(nbSalaries - paie.bulletinsInclus, 0) : 0;
     const recrutement = f.commentaire?.includes("Recrutement") ? 400 : 0;
 
@@ -374,11 +381,11 @@ export async function GET(request: NextRequest) {
       "Salariés supp.": salariesSupp,
       "Prix salarié supp. (€)": abo?.prixSalarieSupp || 0,
       "Coût salariés supp. (€)": salariesSupp * (abo?.prixSalarieSupp || 0),
-      "Tickets inclus": abo?.ticketsRH || 0,
-      "Tickets utilisés": f.entreprise.ticketsUtilises,
+      "Tickets inclus": quotaT.inclus,
+      "Tickets utilisés": ticketsMoisF,
       "Tickets supp.": ticketsSupp,
-      "Prix ticket supp. (€)": abo?.prixTicketSupp || 0,
-      "Coût tickets supp. (€)": ticketsSupp * (abo?.prixTicketSupp || 0),
+      "Prix ticket supp. (€)": quotaT.prixSupp,
+      "Coût tickets supp. (€)": ticketsSupp * quotaT.prixSupp,
       "Formule paie": paie?.nom || "—",
       "Prix formule paie (€)": paie?.prixMensuel || 0,
       "Bulletins (salariés actifs)": paie ? nbSalaries : 0,
@@ -399,6 +406,9 @@ export async function GET(request: NextRequest) {
     // ===== Exports côté client : uniquement les données de son entreprise =====
     const entrepriseId = session.entrepriseId!;
     const permissions = session.entreprise?.permissions || [];
+    if (!aDroit(permissions, "global.exports")) {
+      return NextResponse.json({ erreur: "Les exports Excel ne sont pas activés sur votre espace." }, { status: 403 });
+    }
     const fr = (d: Date | null | undefined) => (d ? new Date(d).toLocaleDateString("fr-FR") : "");
     const MOIS_NOMS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 

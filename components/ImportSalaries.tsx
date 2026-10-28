@@ -5,7 +5,7 @@ import Link from "next/link";
 import ModaleSurcout from "@/components/ModaleSurcout";
 import type { Surcout } from "@/lib/surcout";
 
-type Resultat = { crees: number; erreurs: { ligne: number; raisons: string[] }[]; fichierErreurs: string | null };
+type Resultat = { crees: number; demandes?: number; erreurs: { ligne: number; raisons: string[] }[]; fichierErreurs: string | null };
 
 function telecharger(base64: string, nom: string) {
   const octets = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
@@ -98,7 +98,13 @@ export default function ImportSalaries() {
 
       {resultat && (
         <div className="bg-white border rounded-2xl p-5 space-y-3">
-          <p className="font-semibold text-green-700">✅ {resultat.crees} salarié(s) importé(s).</p>
+          {resultat.demandes ? (
+            <p className="font-semibold text-green-700">
+              📨 {resultat.demandes} demande(s) d&apos;ajout envoyée(s) à votre gestionnaire. Les salariés apparaîtront après validation (suivi dans « Mes demandes »).
+            </p>
+          ) : (
+            <p className="font-semibold text-green-700">✅ {resultat.crees} salarié(s) importé(s).</p>
+          )}
           {resultat.erreurs.length > 0 && (
             <>
               <p className="font-semibold text-red-600">

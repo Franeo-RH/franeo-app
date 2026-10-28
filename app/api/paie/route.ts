@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { aDroit } from "@/lib/droits";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -33,6 +34,10 @@ export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session || session.role !== "CLIENT") {
     return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
+  }
+
+  if (!aDroit(session.entreprise?.permissions, "paie.variables")) {
+    return NextResponse.json({ erreur: "Vous n'avez pas le droit de saisir des variables. Contactez votre gestionnaire." }, { status: 403 });
   }
 
   const { salarieId, type, valeur, commentaire, mois, annee } = await request.json();

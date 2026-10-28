@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import BoutonExport from "@/components/BoutonExport";
+import { aDroit, passeParValidation } from "@/lib/droits";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,15 @@ export default async function ClientSalaries({
     }),
   ]);
 
+  // Droits réglés par le gestionnaire ; clients « paie » : ajouts et modifications sur demande
+  const perms = session.entreprise?.permissions || [];
+  const demo = !!session.entreprise?.demo;
+  const peutCreer = demo || aDroit(perms, "salaries.creer");
+  const peutImporter = aDroit(perms, "salaries.importer");
+  const peutModifier = demo || aDroit(perms, "salaries.modifier");
+  const peutExporter = aDroit(perms, "global.exports");
+  const validation = passeParValidation(session.entreprise);
+
   function classeOnglet(o: string) {
     return `px-5 py-2 rounded-lg font-semibold transition ${
       onglet === o ? "bg-orange-500 text-white" : "bg-white text-gray-500 hover:bg-gray-100"
@@ -77,10 +87,12 @@ export default async function ClientSalaries({
               <p className="text-gray-500 mt-2">{session.entreprise?.nom}</p>
             </div>
             <div className="flex gap-3">
-              <Link href="/client/salaries/nouveau" className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition">
-                ➕ Ajouter
-              </Link>
-              {session.entreprise?.demo ? (
+              {peutCreer && (
+                <Link href="/client/salaries/nouveau" className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition">
+                  ➕ {validation ? "Demander un ajout" : "Ajouter"}
+                </Link>
+              )}
+              {!peutImporter && !demo ? null : session.entreprise?.demo ? (
                 <span className="bg-gray-200 text-gray-400 px-5 py-2 rounded-lg font-semibold cursor-not-allowed select-none" title="Non disponible dans la version démo">
                   📤 Importer Excel (non dispo en démo)
                 </span>
@@ -89,7 +101,7 @@ export default async function ClientSalaries({
                   📤 Importer Excel
                 </Link>
               )}
-              <BoutonExport type="client-salaries" label="📊 Exporter Excel" />
+              {peutExporter && <BoutonExport type="client-salaries" label="📊 Exporter Excel" />}
             </div>
           </div>
 
@@ -134,7 +146,7 @@ export default async function ClientSalaries({
                         <td className="py-3"><span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{s.typeContrat || "—"}</span></td>
                         <td className="py-3 text-sm text-gray-500">{s.dateDebut ? new Date(s.dateDebut).toLocaleDateString("fr-FR") : "—"}</td>
                         <td className="py-3">
-                          <div style={{ display: "flex", gap: "8px" }}><Link href={`/client/salaries/${s.id}`} className="bg-orange-500 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-orange-600 transition">Voir</Link><Link href={`/client/salaries/${s.id}/modifier`} style={{ backgroundColor: "#4b5563", color: "#ffffff" }} className="px-3 py-1 rounded-lg text-sm font-semibold hover:opacity-90 transition">Modifier</Link></div>
+                          <div style={{ display: "flex", gap: "8px" }}><Link href={`/client/salaries/${s.id}`} className="bg-orange-500 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-orange-600 transition">Voir</Link>{peutModifier && <Link href={`/client/salaries/${s.id}/modifier`} style={{ backgroundColor: "#4b5563", color: "#ffffff" }} className="px-3 py-1 rounded-lg text-sm font-semibold hover:opacity-90 transition">Modifier</Link>}</div>
                         </td>
                       </tr>
                     ))}
@@ -172,7 +184,7 @@ export default async function ClientSalaries({
                         <td className="py-3"><span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{s.typeContrat || "—"}</span></td>
                         <td className="py-3 text-sm text-blue-600 font-semibold">{s.dateDebut ? new Date(s.dateDebut).toLocaleDateString("fr-FR") : "—"}</td>
                         <td className="py-3">
-                          <div style={{ display: "flex", gap: "8px" }}><Link href={`/client/salaries/${s.id}`} className="bg-orange-500 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-orange-600 transition">Voir</Link><Link href={`/client/salaries/${s.id}/modifier`} style={{ backgroundColor: "#4b5563", color: "#ffffff" }} className="px-3 py-1 rounded-lg text-sm font-semibold hover:opacity-90 transition">Modifier</Link></div>
+                          <div style={{ display: "flex", gap: "8px" }}><Link href={`/client/salaries/${s.id}`} className="bg-orange-500 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-orange-600 transition">Voir</Link>{peutModifier && <Link href={`/client/salaries/${s.id}/modifier`} style={{ backgroundColor: "#4b5563", color: "#ffffff" }} className="px-3 py-1 rounded-lg text-sm font-semibold hover:opacity-90 transition">Modifier</Link>}</div>
                         </td>
                       </tr>
                     ))}
@@ -210,7 +222,7 @@ export default async function ClientSalaries({
                         <td className="py-3"><span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{s.typeContrat || "—"}</span></td>
                         <td className="py-3 text-sm text-red-500 font-semibold">{s.dateFin ? new Date(s.dateFin).toLocaleDateString("fr-FR") : "—"}</td>
                         <td className="py-3">
-                          <div style={{ display: "flex", gap: "8px" }}><Link href={`/client/salaries/${s.id}`} className="bg-gray-600 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-gray-700 transition">Voir</Link><Link href={`/client/salaries/${s.id}/modifier`} style={{ backgroundColor: "#4b5563", color: "#ffffff" }} className="px-3 py-1 rounded-lg text-sm font-semibold hover:opacity-90 transition">Modifier</Link></div>
+                          <div style={{ display: "flex", gap: "8px" }}><Link href={`/client/salaries/${s.id}`} className="bg-gray-600 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-gray-700 transition">Voir</Link>{peutModifier && <Link href={`/client/salaries/${s.id}/modifier`} style={{ backgroundColor: "#4b5563", color: "#ffffff" }} className="px-3 py-1 rounded-lg text-sm font-semibold hover:opacity-90 transition">Modifier</Link>}</div>
                         </td>
                       </tr>
                     ))}

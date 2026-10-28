@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { aDroit } from "@/lib/droits";
 
 export async function GET() {
   const session = await getSession();
@@ -23,6 +24,10 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
+
+  if (session.role === "CLIENT" && !aDroit(session.entreprise?.permissions, "paie.absences")) {
+    return NextResponse.json({ erreur: "Vous n'avez pas le droit de déclarer des absences. Contactez votre gestionnaire." }, { status: 403 });
+  }
 
   const { salarieId, type, dateDebut, dateFin, commentaire } = await request.json();
 

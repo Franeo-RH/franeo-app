@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { notifierAdmin } from "@/lib/notifications";
 
 export async function GET() {
   const session = await getSession();
@@ -39,6 +40,14 @@ export async function POST(request: NextRequest) {
       categorie,
       entrepriseId: session.entrepriseId!,
     },
+  });
+
+  await notifierAdmin({
+    sujet: `Nouveau ticket helpdesk — ${session.entreprise?.nom || ""}`,
+    titre: "🆘 Nouveau ticket helpdesk",
+    lignes: [`Entreprise : ${session.entreprise?.nom || "—"}`, `De : ${session.prenom} (${session.email})`, `Catégorie : ${categorie}`, `Objet : ${titre}`, description],
+    lien: `/admin/helpdesk/${ticket.id}`,
+    entrepriseId: session.entrepriseId!,
   });
 
   return NextResponse.json({ succes: true, ticket });

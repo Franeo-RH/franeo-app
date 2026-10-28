@@ -48,6 +48,7 @@ import {
   salut,
 } from "@/lib/buddy/lectures";
 import { nomComplet } from "@/lib/buddy/slots";
+import { ticketsDuMois } from "@/lib/facturation";
 import type { Ctx, Env, Flow, ReponseBuddy } from "@/lib/buddy/types";
 
 export const dynamic = "force-dynamic";
@@ -91,7 +92,7 @@ async function chargerEnv(session: { id: string; prenom: string; entrepriseId: s
       id: entreprise.id,
       nom: entreprise.nom,
       permissions: entreprise.permissions,
-      ticketsUtilises: entreprise.ticketsUtilises,
+      ticketsUtilises: await ticketsDuMois(entreprise.id, new Date().getMonth() + 1, new Date().getFullYear()), // tickets du mois en cours
       bulletinsUtilises: entreprise.bulletinsUtilises,
       abonnementId: entreprise.abonnementId,
       abonnementPaieId: entreprise.abonnementPaieId,

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import BoutonExport from "@/components/BoutonExport";
+import MentionsFacturation from "@/components/MentionsFacturation";
 
 const MOIS = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -172,6 +173,7 @@ export default async function ClientFacturation() {
             )}
           </div>
 
+          <MentionsFacturation />
         </main>
       </div>
     </div>

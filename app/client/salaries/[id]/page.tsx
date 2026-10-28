@@ -8,6 +8,7 @@ import Link from "next/link";
 import BoutonSupprimer from "@/components/BoutonSupprimer";
 import RappelsSalarie, { type RappelLite } from "@/components/RappelsSalarie";
 import { versISO } from "@/lib/rappels";
+import { aDroit, passeParValidation } from "@/lib/droits";
 
 export default async function FicheSalarie({
   params,
@@ -31,6 +32,13 @@ export default async function FicheSalarie({
     redirect("/client/salaries");
   }
 
+  // Droits du client et demandes en attente sur ce salarié
+  const permissions = session.entreprise?.permissions || [];
+  const peutModifier = aDroit(permissions, "salaries.modifier");
+  const peutSupprimer = aDroit(permissions, "salaries.supprimer");
+  const validation = passeParValidation(session.entreprise);
+  const demandesEnCours = await prisma.demandeSalarie.count({ where: { salarieId: salarie.id, statut: "EN_ATTENTE" } });
+
   const rappels: RappelLite[] = salarie.rappels.map((r) => ({
     id: r.id,
     type: r.type,
@@ -47,6 +55,12 @@ export default async function FicheSalarie({
         <Sidebar role={session.role} />
         <main className="flex-1 p-10">
 
+          {demandesEnCours > 0 && (
+            <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", color: "#9a3412", borderRadius: "12px", padding: "12px 16px", marginBottom: "16px", fontWeight: 600 }}>
+              ⏳ {demandesEnCours} demande(s) en attente de validation sur ce salarié. <Link href="/client/salaries/demandes" style={{ textDecoration: "underline" }}>Voir mes demandes</Link>
+            </div>
+          )}
+
           <div className="bg-white rounded-xl shadow p-8 mb-6 flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold">
@@ -60,13 +74,15 @@ export default async function FicheSalarie({
               )}
             </div>
             <div className="flex gap-3">
-              <Link
-                href={`/client/salaries/${salarie.id}/modifier`}
-                className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition"
-              >
-                ✏️ Modifier
-              </Link>
-              <BoutonSupprimer id={salarie.id} redirectUrl="/client/salaries" />
+              {peutModifier && (
+                <Link
+                  href={`/client/salaries/${salarie.id}/modifier`}
+                  className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition"
+                >
+                  ✏️ {validation ? "Demander une modification" : "Modifier"}
+                </Link>
+              )}
+              {peutSupprimer && <BoutonSupprimer id={salarie.id} redirectUrl="/client/salaries" />}
               <Link
                 href="/client/salaries"
                 className="bg-white border px-5 py-2 rounded-lg font-semibold hover:bg-gray-100 transition"

@@ -39,6 +39,7 @@ import { fmtValeur } from "./flux-rh";
 import { nomComplet } from "./slots";
 import { THEMATIQUES } from "@/lib/buddy/thematiques";
 import type { Ctx, Env, ModuleBuddy, ReponseBuddy, SalarieLite } from "./types";
+import { quotaTickets } from "@/lib/facturation";
 
 /* ════════════════════════════════════════════════════════════════
    Permissions
@@ -403,6 +404,8 @@ export async function lireFacturation(m: Msg, env: Env): Promise<ReponseBuddy> {
    ════════════════════════════════════════════════════════════════ */
 
 const FEATURES_PAIE: [string, string][] = [
+  ["accesWebApp", "Application Franeo"],
+  ["entreesSortiesIncluses", "Arrivées et soldes de tout compte inclus"],
   ["relancesVariables", "Relances des variables"],
   ["relancesSalaries", "Relances des salariés"],
   ["modificationsIncluses", "Modifications incluses"],
@@ -439,7 +442,7 @@ export async function lireAbonnements(env: Env, canal: "rh" | "paie" | null): Pr
       const n = nbFacturables(env, y, m);
       const lignes = [
         `Salariés : ${n} comptés ce mois-ci (${ab.salariesInclus} inclus, puis ${eur(ab.prixSalarieSupp)} par salarié)`,
-        `Tickets RH : ${e.ticketsUtilises} utilisé(s) sur ${ab.ticketsRH} inclus (puis ${eur(ab.prixTicketSupp)} par ticket)`,
+        `Tickets RH ce mois-ci : ${e.ticketsUtilises} utilisé(s) sur ${quotaTickets(e).inclus} inclus (puis ${eur(quotaTickets(e).prixSupp)} par ticket)`,
       ];
       if (ab.features.length > 0) lignes.push(`Inclus : ${ab.features.slice(0, 5).join(", ")}${ab.features.length > 5 ? "…" : ""}`);
       blocs.push(`📋 Abonnement RH : ${ab.nom} — ${eur(ab.prixMensuel)}/mois\n${puces(lignes)}`);
@@ -539,7 +542,7 @@ export async function lireTickets(env: Env, ctx: Ctx, canal: "rh" | "support"): 
   const lignes = tickets.map((t) => `${t.titre} — ${t.statut} (${fmtDateCreation(t.createdAt)})${!rh && t.categorie ? ` · ${LABELS_SUPPORT[t.categorie] ?? t.categorie}` : ""}`);
   let texte = `🎫 ${rh ? "Tickets RH" : "Tickets helpdesk"} — ${ouverts} ouvert(s) :\n${liste(lignes)}`;
   const ab = env.entreprise.abonnement;
-  if (rh && ab) texte += `\n\nQuota : ${env.entreprise.ticketsUtilises} ticket(s) utilisé(s) sur ${ab.ticketsRH} inclus.`;
+  if (rh && ab) texte += `\n\nQuota du mois : ${env.entreprise.ticketsUtilises} ticket(s) utilisé(s) sur ${quotaTickets(env.entreprise).inclus} inclus.`;
   texte += `\n\nDites « détail du ${tickets.length > 1 ? 2 : 1} » ou « réponds au 1 » pour continuer.`;
   return rep(texte, {
     humeur: "neutre",

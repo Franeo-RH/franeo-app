@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { evaluerSurcout, STATUT_ACCORD_REQUIS } from "@/lib/surcout";
+import { notifierAdmin } from "@/lib/notifications";
 
 export async function GET() {
   const session = await getSession();
@@ -53,6 +54,14 @@ export async function POST(request: NextRequest) {
   await prisma.entreprise.update({
     where: { id: session.entrepriseId! },
     data: { ticketsUtilises: { increment: 1 } },
+  });
+
+  await notifierAdmin({
+    sujet: `Nouveau ticket RH — ${session.entreprise?.nom || ""}`,
+    titre: "🎫 Nouveau ticket RH",
+    lignes: [`Entreprise : ${session.entreprise?.nom || "—"}`, `De : ${session.prenom} (${session.email})`, `Objet : ${titre}`, description, ...(accepteSurcout ? ["💳 Ticket facturé en supplément (accord du client donné)"] : [])],
+    lien: `/admin/tickets/${ticket.id}`,
+    entrepriseId: session.entrepriseId!,
   });
 
   return NextResponse.json({ succes: true, ticket });

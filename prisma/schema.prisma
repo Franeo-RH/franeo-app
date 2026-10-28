@@ -64,6 +64,8 @@ model Entreprise {
   abonnementPaie    AbonnementPaie? @relation(fields: [abonnementPaieId], references: [id])
   bulletinsUtilises Int             @default(0)
   demandesEvolutionPaie DemandeEvolutionPaie[]
+  demandesSalaries  DemandeSalarie[]
+  prestations       CommandePrestation[]
 }
 
 model Facturation {
@@ -379,6 +381,12 @@ model AbonnementPaie {
   recommandationsPaie   Boolean    @default(false)
   traitementPrioritaire Boolean    @default(false)
   assistanceURSSAF      Boolean    @default(false)
+  accesWebApp           Boolean    @default(true)  // application Franeo (web + téléphone)
+  entreesSortiesIncluses Boolean   @default(false) // arrivées et soldes de tout compte inclus
+  prixEntree            Float      @default(45)    // si non inclus : prix d'une arrivée
+  prixSortie            Float      @default(60)    // si non inclus : prix d'une sortie (STC)
+  ticketsRHInclus       Int        @default(0)     // tickets RH offerts chaque mois avec la formule paie
+  prixTicketSupp        Float      @default(0)     // prix d'un ticket RH au-delà des tickets inclus
   createdAt             DateTime   @default(now())
   entreprises           Entreprise[]
   demandesAncienne DemandeEvolutionPaie[] @relation("AncienneFormulePaie")
@@ -431,4 +439,47 @@ model RappelSalarie {
 
   // index ajouté pour accélérer les recherches
   @@index([salarieId])
+}
+// Demande de validation d'un client « paie » : ajout, modification ou suppression d'un salarié
+model DemandeSalarie {
+  id           String     @id @default(cuid())
+  type         String     // "AJOUT" | "MODIFICATION" | "SUPPRESSION"
+  statut       String     @default("EN_ATTENTE") // "EN_ATTENTE" | "VALIDEE" | "REFUSEE"
+  resume       String
+  donnees      Json?
+  motifRefus   String?
+  auteur       String?
+  createdAt    DateTime   @default(now())
+  traiteAt     DateTime?
+
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  salarieId    String?
+
+  @@index([entrepriseId, statut])
+  @@index([statut])
+}
+
+// Prestation commandée par un client depuis l'application (facturée sur le mois de la commande)
+model CommandePrestation {
+  id           String     @id @default(cuid())
+  code         String     // ex. "RECTIFICATIF", "RUPTURE_CONV"
+  libelle      String
+  quantite     Int        @default(1)
+  prixUnitaire Float      // 0 = inclus dans la formule
+  total        Float
+  statut       String     @default("A_FAIRE") // "A_FAIRE" | "FAITE" | "ANNULEE"
+  commentaire  String?
+  salarie      String?    // nom du salarié concerné (texte, pour garder la trace)
+  auteur       String?
+  mois         Int
+  annee        Int
+  createdAt    DateTime   @default(now())
+  faiteAt      DateTime?
+
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+
+  @@index([entrepriseId, annee, mois])
+  @@index([statut])
 }

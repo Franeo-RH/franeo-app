@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import BoutonDemandeEvolution from "@/components/BoutonDemandeEvolution";
+import MentionsFacturation from "@/components/MentionsFacturation";
 
 export default async function AbonnementClient() {
   await connection();
@@ -100,6 +101,7 @@ export default async function AbonnementClient() {
             ))}
           </div>
 
+          <MentionsFacturation />
         </main>
       </div>
     </div>

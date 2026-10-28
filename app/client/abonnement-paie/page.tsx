@@ -5,44 +5,55 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import BoutonDemandeEvolutionPaie from "@/components/BoutonDemandeEvolutionPaie";
+import MentionsFacturation from "@/components/MentionsFacturation";
 
 export const dynamic = "force-dynamic";
 
 const FORMULES_DETAIL: Record<string, string[]> = {
   ESSENTIELLE: [
-    "Production des bulletins de paie",
-    "Calcul des cotisations & DSN",
-    "Gestion des absences & congés",
-    "Heures supplémentaires & primes",
-    "Entrées & sorties de salariés",
-    "Solde de tout compte + documents de fin de contrat",
-    "Corrections d'erreurs FRANEO",
-    "Questions paie courantes",
-    "Assistance fins de contrat",
-    "Application FRANEO + espace documentaire",
+    "Application Franeo (ordinateur + téléphone) et assistant Buddy",
+    "Bulletins de paie, cotisations & DSN",
+    "Absences, congés, heures supplémentaires, primes",
+    "Régularisations & rappels de salaire inclus",
+    "Simulations de coût d'embauche incluses",
+    "Saisies sur salaire incluses",
+    "Exports Excel & tableau de bord simple",
+    "1 ticket RH par mois",
+    "€ Arrivée 45 € · Sortie / solde de tout compte 60 €",
+    "€ Bulletin rectificatif 15 € · Attestation maladie 15 €",
+    "€ Rupture conventionnelle 120 € · Contrôle URSSAF 150 €",
   ],
   SERENITE: [
     "✦ Tout le Pack Essentielle, plus :",
-    "Relances variables de paie auprès du client",
-    "Relances directement auprès des salariés",
-    "Modifications après premier envoi incluses",
-    "Régularisations courantes incluses",
-    "Veille paie & évolutions réglementaires",
-    "Suivi RH : périodes d'essai, CDD, absences, maladie, visites médicales",
-    "Suivi complet des IJSS",
-    "Tableau de bord paie simplifié",
-    "Traitement prioritaire de vos demandes",
+    "Relance des variables auprès de vous et des salariés",
+    "Suivi des échéances : périodes d'essai, CDD, visites médicales",
+    "Attestations maladie & suivi des IJSS inclus",
+    "Veille paie & réglementaire",
+    "3 tickets RH par mois",
+    "€ Arrivée 45 € · Sortie / solde de tout compte 60 €",
+    "€ Bulletin rectificatif 15 €",
+    "€ Rupture conventionnelle 120 € · Contrôle URSSAF 150 €",
   ],
   PREMIUM: [
     "✦ Tout le Pack Sérénité, plus :",
-    "Demandes complexes incluses",
+    "Arrivées & soldes de tout compte INCLUS",
+    "Bulletins rectificatifs inclus",
     "Conseil paie ponctuel",
-    "Relances & recouvrement des IJSS",
-    "Contrôle des IJSS perçues & suivi des écarts",
-    "Tableau de bord paie complet",
-    "Point paie périodique",
-    "Recommandations paie personnalisées",
-    "Assistance lors d'un contrôle URSSAF",
+    "Tableau de bord masse salariale complet",
+    "Rendez-vous paie trimestriel",
+    "Reprise de dossier offerte",
+    "6 tickets RH par mois",
+    "€ Rupture conventionnelle 90 € · Relance IJSS 20 €/dossier",
+    "€ Contrôle URSSAF 150 €",
+  ],
+  ENTREPRISE: [
+    "✦ Tout le Pack Premium, plus :",
+    "Ruptures conventionnelles incluses",
+    "Relance & recouvrement des IJSS inclus",
+    "Assistance en cas de contrôle URSSAF incluse",
+    "Rendez-vous paie mensuel",
+    "Paramétrage mutuelle / prévoyance offert",
+    "10 tickets RH par mois",
   ],
 };
 
@@ -94,7 +105,7 @@ export default async function ClientAbonnementPaie() {
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
             {formules.map((f) => {
               const estActuelle = f.id === entreprise.abonnementPaieId;
               const estDemandee = f.id === demandeEnAttente?.nouvelleFormuleId;
@@ -115,6 +126,8 @@ export default async function ClientAbonnementPaie() {
                     </p>
                     <p className="text-gray-500 text-sm mt-1">
                       {f.bulletinsInclus} bulletins inclus · {f.prixBulletinSupp} €/bulletin supp.
+                      <br />
+                      {f.ticketsRHInclus} ticket(s) RH/mois · {f.prixTicketSupp} €/ticket supp.
                     </p>
                   </div>
 
@@ -128,10 +141,12 @@ export default async function ClientAbonnementPaie() {
                             : "text-gray-600"
                         }`}
                       >
-                        {!feat.startsWith("✦") && (
+                        {feat.startsWith("€ ") ? (
+                          <span style={{ color: "#6b7280" }} className="mt-0.5">€</span>
+                        ) : !feat.startsWith("✦") ? (
                           <span className="text-orange-500 mt-0.5">✓</span>
-                        )}
-                        {feat}
+                        ) : null}
+                        {feat.startsWith("€ ") ? <span style={{ color: "#6b7280" }}>{feat.slice(2)}</span> : feat}
                       </li>
                     ))}
                   </ul>
@@ -162,6 +177,7 @@ export default async function ClientAbonnementPaie() {
             Votre gestionnaire traitera votre demande sous 48h.
           </p>
 
+          <MentionsFacturation logiciel />
         </main>
       </div>
     </div>

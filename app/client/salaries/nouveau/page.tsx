@@ -89,6 +89,12 @@ export default function NouveauSalarie() {
       return;
     }
     setSurcout(null);
+    // Client « paie » : c'est une demande, envoyée au gestionnaire
+    const retour = await res.json().catch(() => ({}));
+    if (retour.demande) {
+      router.push("/client/salaries/demandes?envoyee=1");
+      return;
+    }
     router.push("/client/salaries");
   }
 

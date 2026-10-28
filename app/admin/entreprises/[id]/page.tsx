@@ -10,6 +10,7 @@ import BoutonsDecision from "@/components/BoutonsDecision";
 import BoutonsDecisionPaie from "@/components/BoutonsDecisionPaie";
 import SelectAbonnementPaieEntreprise from "@/components/SelectAbonnementPaieEntreprise";
 import ChampTauxCharges from "@/components/ChampTauxCharges";
+import GestionDroits from "@/components/GestionDroits";
 
 export const dynamic = "force-dynamic";
 
@@ -78,9 +79,9 @@ export default async function FicheEntrepriseAdmin({
               <Link href={`/admin/entreprises/${id}/acces`} className="bg-gray-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-gray-700 transition">
                 👤 Accès
               </Link>
-              <Link href={`/admin/entreprises/${id}/permissions`} className="bg-black text-white px-5 py-2 rounded-lg font-semibold hover:bg-gray-800 transition">
-                🔐 Permissions
-              </Link>
+              <a href="#acces-droits" className="bg-black text-white px-5 py-2 rounded-lg font-semibold hover:bg-gray-800 transition">
+                🔐 Accès & droits
+              </a>
               <Link href={`/admin/entreprises/${id}/modifier`} className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition">
                 ✏️ Modifier
               </Link>
@@ -157,15 +158,9 @@ export default async function FicheEntrepriseAdmin({
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow p-6 col-span-2">
-              <h2 className="text-lg font-bold mb-4">🔐 Permissions actives</h2>
-              <div className="flex flex-wrap gap-2">
-                {entreprise.permissions.map((p) => (
-                  <span key={p} className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-sm font-semibold">
-                    {p}
-                  </span>
-                ))}
-              </div>
+            <div id="acces-droits" className="bg-white rounded-xl shadow p-6 col-span-2">
+              <h2 className="text-lg font-bold mb-4">🔐 Accès & droits du client</h2>
+              <GestionDroits entrepriseId={id} permissions={entreprise.permissions} clientPaie={!!entreprise.abonnementPaieId && !entreprise.demo} />
             </div>
 
           </div>

@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { quotaTickets, ticketsDuMois } from "@/lib/facturation";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
@@ -24,7 +25,7 @@ export default async function ClientTickets() {
   const [entreprise, tickets] = await Promise.all([
     prisma.entreprise.findUnique({
       where: { id: session.entrepriseId! },
-      include: { abonnement: true },
+      include: { abonnement: true, abonnementPaie: true },
     }),
     prisma.ticket.findMany({
       where: { entrepriseId: session.entrepriseId! },
@@ -32,8 +33,10 @@ export default async function ClientTickets() {
     }),
   ]);
 
-  const ticketsInclus = entreprise?.abonnement?.ticketsRH || 0;
-  const ticketsUtilises = entreprise?.ticketsUtilises || 0;
+  // Tickets inclus = abonnement RH + formule paie ; comptés sur le mois en cours (non reportés)
+  const maintenant = new Date();
+  const ticketsInclus = entreprise ? quotaTickets(entreprise).inclus : 0;
+  const ticketsUtilises = await ticketsDuMois(session.entrepriseId!, maintenant.getMonth() + 1, maintenant.getFullYear());
   const ticketsRestants = Math.max(ticketsInclus - ticketsUtilises, 0);
 
   return (

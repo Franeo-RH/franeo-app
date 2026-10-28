@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 
 export async function POST() {
+  // Sécurité : route réservée à l'administrateur (elle n'était pas protégée)
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") {
+    return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
+  }
   const maintenant = new Date();
   const moisSuivant = maintenant.getMonth() + 2 > 12 ? 1 : maintenant.getMonth() + 2;
   const anneeSuivante = maintenant.getMonth() + 2 > 12 ? maintenant.getFullYear() + 1 : maintenant.getFullYear();

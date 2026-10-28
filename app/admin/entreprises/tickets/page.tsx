@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { quotaTickets, ticketsDuMoisParEntreprise } from "@/lib/facturation";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import BoutonExportTickets from "@/components/BoutonExportTickets";
@@ -17,15 +18,21 @@ export default async function AdminTicketsFacturation() {
     where: { demo: false },
     include: {
       abonnement: true,
+      abonnementPaie: true,
     },
     orderBy: { nom: "asc" },
   });
 
+  // Tickets du mois en cours (les tickets non utilisés ne sont pas reportés)
+  const maintenant = new Date();
+  const ticketsMois = await ticketsDuMoisParEntreprise(maintenant.getMonth() + 1, maintenant.getFullYear());
+
   const lignes = entreprises.map((e) => {
-    const ticketsInclus = e.abonnement?.ticketsRH || 0;
-    const ticketsUtilises = e.ticketsUtilises || 0;
+    const quota = quotaTickets(e);
+    const ticketsInclus = quota.inclus;
+    const ticketsUtilises = ticketsMois.get(e.id) || 0;
     const ticketsSupp = Math.max(ticketsUtilises - ticketsInclus, 0);
-    const prixTicketSupp = e.abonnement?.prixTicketSupp || 0;
+    const prixTicketSupp = quota.prixSupp;
     const montantAFacturer = ticketsSupp * prixTicketSupp;
 
     return {

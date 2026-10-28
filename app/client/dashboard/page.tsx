@@ -8,6 +8,7 @@ import BlocEcheances from "@/components/BlocEcheances";
 import { chargerEcheances } from "@/lib/rappels-serveur";
 import { EncartMasseSalariale } from "@/components/SuiviMasseSalariale";
 import { calculerMasseSalariale } from "@/lib/masse-salariale";
+import { calculerFacture, quotaTickets, ticketsDuMois } from "@/lib/facturation";
 import type { Echeance } from "@/lib/rappels";
 
 export const dynamic = "force-dynamic";
@@ -99,10 +100,13 @@ export default async function ClientDashboard() {
   const masse = masseP ? await masseP : null;
   const coutPaie = variables.reduce((acc, v) => acc + calculerCout(v.type, v.valeur, v.salarie), 0);
 
-  const ticketsRestants = Math.max(
-    (entreprise?.abonnement?.ticketsRH || 0) - (entreprise?.ticketsUtilises || 0),
-    0
-  );
+  // Tickets RH : inclus (abonnement RH + formule paie), comptés sur le mois en cours
+  const [ticketsMois, calculMois] = await Promise.all([
+    ticketsDuMois(entrepriseId, moisActuel, anneeActuelle),
+    calculerFacture(entrepriseId, moisActuel, anneeActuelle),
+  ]);
+  const quota = entreprise ? quotaTickets(entreprise) : { inclus: 0, prixSupp: 0 };
+  const ticketsRestants = Math.max(quota.inclus - ticketsMois, 0);
 
   // Facturation du mois
   const facturationMois = facturesAnnee.find((f) => f.mois === moisActuel) || null;
@@ -110,13 +114,8 @@ export default async function ClientDashboard() {
   const abo = entreprise?.abonnement;
   const paie = entreprise?.abonnementPaie;
 
-  const salariesSupp = abo ? Math.max(nbSalariesMois - abo.salariesInclus, 0) : 0;
-  const ticketsSupp = abo ? Math.max((entreprise?.ticketsUtilises || 0) - abo.ticketsRH, 0) : 0;
-  const bulletinsSupp = paie ? Math.max(nbSalariesMois - paie.bulletinsInclus, 0) : 0;
-
-  const estimation =
-    (abo ? abo.prixMensuel + salariesSupp * abo.prixSalarieSupp + ticketsSupp * abo.prixTicketSupp : 0) +
-    (paie ? paie.prixMensuel + bulletinsSupp * paie.prixBulletinSupp : 0);
+  // Estimation : même calcul que la facture (lib/facturation.ts)
+  const estimation = calculMois?.montant || 0;
 
   const montantMois = facturationMois ? facturationMois.montant : Math.round(estimation * 100) / 100;
 
@@ -205,7 +204,7 @@ export default async function ClientDashboard() {
                 <p className="text-sm font-semibold">{abo ? `${abo.prixMensuel.toLocaleString("fr-FR")} €/mois` : ""}</p>
               </div>
               <p className="text-orange-100 text-xs mt-1">
-                {abo ? `${nbSalariesMois}/${abo.salariesInclus} salariés · ${ticketsRestants}/${abo.ticketsRH} tickets restants` : "Non souscrit"}
+                {abo ? `${nbSalariesMois}/${abo.salariesInclus} salariés · ${ticketsRestants}/${quota.inclus} tickets restants ce mois` : "Non souscrit"}
               </p>
             </div>
 
@@ -216,7 +215,7 @@ export default async function ClientDashboard() {
                 <p className="text-sm font-semibold">{paie ? `${paie.prixMensuel.toLocaleString("fr-FR")} €/mois` : ""}</p>
               </div>
               <p className="text-gray-300 text-xs mt-1">
-                {paie ? `${nbSalariesMois}/${paie.bulletinsInclus} bulletins inclus` : "Non souscrit"}
+                {paie ? `${nbSalariesMois}/${paie.bulletinsInclus} bulletins inclus${paie.ticketsRHInclus > 0 ? ` · ${paie.ticketsRHInclus} ticket(s) RH/mois` : ""}` : "Non souscrit"}
               </p>
             </div>
 
