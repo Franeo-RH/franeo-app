@@ -49,7 +49,7 @@ export const PRESTATIONS: Prestation[] = [
     code: "REPRISE_DOSSIER", libelle: "Reprise du dossier paie",
     description: "Import des salariés, reprise des cumuls et paramétrage du logiciel de paie.",
     unite: "salarié",
-    prix: { ESSENTIELLE: 15, SERENITE: 15, PREMIUM: 0, ENTREPRISE: 0 },
+    prix: { ESSENTIELLE: 10, SERENITE: 5, PREMIUM: 0, ENTREPRISE: 0 },
   },
   {
     code: "MUTUELLE", libelle: "Paramétrage mutuelle / prévoyance",
