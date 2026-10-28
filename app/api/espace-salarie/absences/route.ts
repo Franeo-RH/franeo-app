@@ -19,6 +19,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ erreur: "Vérifiez les dates (la fin doit être après le début)." }, { status: 400 });
   }
 
+  // Pas deux absences sur les mêmes jours (hors demandes refusées)
+  const chevauche = await prisma.absence.findFirst({
+    where: { salarieId: s.salarie.id, statut: { not: "Refusé" }, dateDebut: { lte: fin }, dateFin: { gte: debut } },
+    orderBy: { dateDebut: "asc" },
+  });
+  if (chevauche) {
+    const fr = (d: Date) => new Date(d).toLocaleDateString("fr-FR");
+    return NextResponse.json(
+      {
+        erreur: `Vous avez déjà une absence sur ces dates : ${LIBELLES_ABSENCE[chevauche.type] || chevauche.type} du ${fr(chevauche.dateDebut)} au ${fr(chevauche.dateFin)} (${chevauche.statut.toLowerCase()}). Choisissez d'autres dates ou annulez d'abord la demande existante.`,
+      },
+      { status: 409 }
+    );
+  }
+
   const absence = await prisma.absence.create({
     data: {
       salarieId: s.salarie.id,

@@ -60,7 +60,7 @@ export function FormulaireAbsenceSalarie() {
         {envoi ? "Envoi…" : "Envoyer la demande"}
       </button>
       {message && <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: message.ok ? "#15803d" : "#b91c1c" }}>{message.texte}</p>}
-      <p style={{ margin: 0, fontSize: "12px", color: "#6b7280" }}>Arrêt maladie : prévenez directement votre employeur, qui l&apos;enregistre.</p>
+      <p style={{ margin: 0, fontSize: "12px", color: "#6b7280" }}>Arrêt maladie, congé exceptionnel ou absence non rémunérée : prévenez directement votre employeur, qui l&apos;enregistre.</p>
     </form>
   );
 }
