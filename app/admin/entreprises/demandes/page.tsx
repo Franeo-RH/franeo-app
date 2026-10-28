@@ -8,6 +8,7 @@ import BoutonsDecision from "@/components/BoutonsDecision";
 import BoutonsDecisionPaie from "@/components/BoutonsDecisionPaie";
 import Link from "next/link";
 import OngletsAbonnements from "@/components/OngletsAbonnements";
+import ForcerAbonnement from "@/components/ForcerAbonnement";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,10 @@ export default async function DemandesAbonnement() {
     }),
     prisma.abonnement.findMany(),
   ]);
+  const [entreprisesForcage, formulesPaie] = await Promise.all([
+    prisma.entreprise.findMany({ where: { demo: false }, select: { id: true, nom: true, abonnementId: true, abonnementPaieId: true }, orderBy: { nom: "asc" } }),
+    prisma.abonnementPaie.findMany({ select: { id: true, nom: true, prixMensuel: true }, orderBy: { prixMensuel: "asc" } }),
+  ]);
 
   const demandesEnAttente = demandes.filter(d => d.statut === "En attente").length;
   const demandesPaieEnAttente = demandesPaie.filter(d => d.statut === "EN_ATTENTE").length;
@@ -50,6 +55,11 @@ export default async function DemandesAbonnement() {
         <Sidebar role={session.role} demandesEnAttente={totalEnAttente} />
         <main className="flex-1 p-10">
           <OngletsAbonnements espace="admin" actif="rh" />
+          <ForcerAbonnement
+            entreprises={entreprisesForcage}
+            packsRH={[...abonnements].sort((a, b) => a.prixMensuel - b.prixMensuel).map((a) => ({ id: a.id, nom: a.nom, prixMensuel: a.prixMensuel }))}
+            formulesPaie={formulesPaie}
+          />
 
           <div className="bg-white rounded-xl shadow p-8 mb-6">
             <h1 className="text-3xl font-bold">📩 Demandes de modification d'abonnement</h1>
