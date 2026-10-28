@@ -67,10 +67,10 @@ export async function POST(request: NextRequest, { params }: Ctx) {
   await prisma.tokenReset.deleteMany({ where: { email } });
   const token = crypto.randomBytes(32).toString("hex");
   await prisma.tokenReset.create({ data: { token, email, expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000) } });
-  const base = (process.env.NEXT_PUBLIC_URL || process.env.APP_URL || "").replace(/\/$/, "");
+  const base = (process.env.NEXT_PUBLIC_URL || process.env.APP_URL || request.nextUrl.origin).replace(/\/$/, "");
   const lien = `${base}/reinitialiser-mot-de-passe?token=${token}`;
 
-  await envoyerMail({
+  const mailEnvoye = await envoyerMail({
     a: email,
     sujet: `${salarie.entreprise.nom} vous invite sur votre espace salarié Franeo`,
     titre: "Bienvenue sur votre espace salarié",
@@ -83,7 +83,8 @@ export async function POST(request: NextRequest, { params }: Ctx) {
     bouton: "Créer mon mot de passe",
   });
 
-  return NextResponse.json({ succes: true, email });
+  // Le lien est aussi renvoyé à l'employeur : il peut le transmettre par SMS si le mail n'arrive pas
+  return NextResponse.json({ succes: true, email, lien, mailEnvoye });
 }
 
 // Couper l'accès (le compte est gardé, l'historique aussi)

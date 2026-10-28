@@ -16,6 +16,7 @@ export default function EspaceSalarieFiche({
   const router = useRouter();
   const [chargement, setChargement] = useState(false);
   const [message, setMessage] = useState("");
+  const [lien, setLien] = useState("");
 
   async function appeler(methode: "POST" | "DELETE") {
     if (methode === "DELETE" && !confirm("Couper l'accès de ce salarié à son espace ?")) return;
@@ -28,7 +29,13 @@ export default function EspaceSalarieFiche({
       setMessage(`❌ ${data.erreur || "Erreur"}`);
       return;
     }
-    setMessage(methode === "POST" ? `✅ Invitation envoyée à ${data.email}` : "Accès coupé.");
+    if (methode === "POST") {
+      setLien(data.lien || "");
+      setMessage(data.mailEnvoye ? `✅ Invitation envoyée par mail à ${data.email}.` : `⚠️ Le mail n'a pas pu partir. Transmettez ce lien au salarié (SMS, WhatsApp…).`);
+    } else {
+      setLien("");
+      setMessage("Accès coupé.");
+    }
     router.refresh();
   }
 
@@ -57,6 +64,17 @@ export default function EspaceSalarieFiche({
         {statut === "coupe" && bouton("Rétablir l'accès", "POST", "#16a34a")}
       </div>
       {message && <p style={{ margin: 0, fontSize: "14px" }}>{message}</p>}
+      {lien && (
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+          <input readOnly value={lien} aria-label="Lien d'invitation" onFocus={(e) => e.target.select()} style={{ flex: "1 1 220px", minWidth: 0, border: "1px solid #d1d5db", borderRadius: "8px", padding: "8px", fontSize: "13px" }} />
+          <button type="button" onClick={() => { navigator.clipboard?.writeText(lien); setMessage("📋 Lien copié : envoyez-le au salarié. Il est valable 7 jours."); }} style={{ background: "#111827", color: "#ffffff", border: "none", borderRadius: "8px", padding: "8px 12px", fontWeight: 600, fontSize: "13px", cursor: "pointer" }}>
+            📋 Copier le lien
+          </button>
+        </div>
+      )}
+      <p style={{ margin: 0, fontSize: "12px", color: "#6b7280" }}>
+        Le salarié ouvre le lien, choisit son mot de passe, puis se connecte sur la page de connexion habituelle de Franeo avec son email.
+      </p>
     </div>
   );
 }

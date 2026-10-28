@@ -56,10 +56,10 @@ export async function envoyerMail(options: {
   lignes: string[];
   lien?: string; // chemin dans l'app ou adresse complète
   bouton?: string;
-}) {
-  if (!process.env.RESEND_API_KEY) return;
+}): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) return false;
   const destinataires = (Array.isArray(options.a) ? options.a : [options.a]).filter(Boolean);
-  if (destinataires.length === 0) return;
+  if (destinataires.length === 0) return false;
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const url = options.lien ? (options.lien.startsWith("http") ? options.lien : `${APP_URL}${options.lien}`) : APP_URL;
@@ -76,8 +76,10 @@ export async function envoyerMail(options: {
           </p>
         </div>`,
     });
+    return true;
   } catch (e) {
     console.error("Mail non envoyé :", e);
+    return false;
   }
 }
 

@@ -152,16 +152,24 @@ export default async function FicheSalarie({
 
           </div>
 
-          {permissions.includes("espace-salaries") && !session.entreprise?.demo && (
-            <div className="bg-white rounded-xl shadow p-6 mt-6">
-              <h2 className="text-lg font-bold mb-3">📱 Espace salarié</h2>
+          <div className="bg-white rounded-xl shadow p-6 mt-6">
+            <h2 className="text-lg font-bold mb-3">📱 Espace salarié</h2>
+            {session.entreprise?.demo ? (
+              <p className="text-sm text-gray-600">
+                Dans la démo, les invitations sont désactivées. Pour voir l&apos;espace côté salarié, déconnectez-vous et choisissez « 📱 Démo salarié » sur la page de connexion.
+              </p>
+            ) : permissions.includes("espace-salaries") ? (
               <EspaceSalarieFiche
                 salarieId={salarie.id}
                 email={salarie.email}
                 statut={!salarie.compte ? "aucun" : salarie.compte.actif ? "actif" : "coupe"}
               />
-            </div>
-          )}
+            ) : (
+              <p className="text-sm text-gray-600">
+                Vos salariés peuvent déclarer leurs absences et leurs heures depuis leur téléphone (option à 1 €/salarié/mois, incluse en Premium et Entreprise). Pour l&apos;activer, contactez FRANEO RH par ticket.
+              </p>
+            )}
+          </div>
         </main>
       </div>
     </div>
