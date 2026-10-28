@@ -10,7 +10,7 @@ import BlocEcheances from "@/components/BlocEcheances";
 import { chargerEcheances } from "@/lib/rappels-serveur";
 import { EncartMasseSalariale } from "@/components/SuiviMasseSalariale";
 import { calculerMasseSalariale } from "@/lib/masse-salariale";
-import { calculerFacture, quotaTickets, ticketsDuMois } from "@/lib/facturation";
+import { calculerFacture, PRIX_TICKET_SANS_ABONNEMENT, quotaTickets, ticketsDuMois } from "@/lib/facturation";
 import type { Echeance } from "@/lib/rappels";
 import { aAccesPaie } from "@/lib/droits";
 
@@ -228,7 +228,13 @@ export default async function ClientDashboard() {
               }`}>{facturationMois ? "Facture" : "Estimation"} · {statutFacture}</span>
             </div>
 
-            <div className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 text-white px-4 py-3">
+            {!abo && !paie && (
+              <div className="rounded-xl px-4 py-3" style={{ background: "#f3f4f6" }}>
+                <p className="text-xl font-bold">Accès de base · gratuit</p>
+                <p className="text-gray-600 text-xs mt-1">Sans abonnement : ticket RH à {PRIX_TICKET_SANS_ABONNEMENT} € l&apos;unité ({ticketsMois} ce mois-ci). Questions simples gratuites.</p>
+              </div>
+            )}
+            <div className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 text-white px-4 py-3" style={{ display: abo ? undefined : "none" }}>
               <p className="text-orange-100 text-[11px] font-semibold uppercase">RH</p>
               <div className="flex justify-between items-baseline">
                 <p className="text-xl font-bold">{abo?.nom || "—"}</p>

@@ -12,8 +12,12 @@ type FormulePaie = {
   ticketsRHInclus: number; prixTicketSupp: number;
 } | null;
 
+/** Accès de base gratuit (sans pack RH ni formule paie) : chaque ticket RH est facturé à l'unité */
+export const PRIX_TICKET_SANS_ABONNEMENT = 70;
+
 /** Tickets RH inclus chaque mois (abonnement RH + formule paie) et prix d'un ticket supplémentaire */
 export function quotaTickets(e: { abonnement: FormuleRH; abonnementPaie: FormulePaie }) {
+  if (!e.abonnement && !e.abonnementPaie) return { inclus: 0, prixSupp: PRIX_TICKET_SANS_ABONNEMENT };
   const inclus = (e.abonnement?.ticketsRH || 0) + (e.abonnementPaie?.ticketsRHInclus || 0);
   // Le prix de la formule paie prime (c'est elle qui fixe le prix des tickets supplémentaires)
   const prixSupp = e.abonnementPaie && e.abonnementPaie.prixTicketSupp > 0
@@ -158,10 +162,13 @@ export async function lignesFacture(entrepriseId: string, mois: number, annee: n
   }
 
   // ── Tickets RH du mois au-delà des tickets inclus ──
-  if (abo || paie) {
+  {
     const quota = quotaTickets(entreprise);
     const ticketsSupp = Math.max(nbTickets - quota.inclus, 0);
-    if (ticketsSupp > 0) ajouter({ categorie: "TICKETS", libelle: `${nbTickets} ticket(s) RH dont ${ticketsSupp} supp.`, quantite: ticketsSupp, prixUnitaire: quota.prixSupp });
+    if (ticketsSupp > 0) {
+      const libelle = !abo && !paie ? `${nbTickets} ticket(s) RH à l'unité (accès de base, sans abonnement)` : `${nbTickets} ticket(s) RH dont ${ticketsSupp} supp.`;
+      ajouter({ categorie: "TICKETS", libelle, quantite: ticketsSupp, prixUnitaire: quota.prixSupp });
+    }
   }
 
   // ── Recrutements : lancement le mois de la demande, primes le mois où elles sont déclenchées ──

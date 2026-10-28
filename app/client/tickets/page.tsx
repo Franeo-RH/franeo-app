@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { quotaTickets, ticketsDuMois } from "@/lib/facturation";
+import { PRIX_TICKET_SANS_ABONNEMENT, quotaTickets, ticketsDuMois } from "@/lib/facturation";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
@@ -38,6 +38,7 @@ export default async function ClientTickets() {
   const ticketsInclus = entreprise ? quotaTickets(entreprise).inclus : 0;
   const ticketsUtilises = await ticketsDuMois(session.entrepriseId!, maintenant.getMonth() + 1, maintenant.getFullYear());
   const ticketsRestants = Math.max(ticketsInclus - ticketsUtilises, 0);
+  const sansAbonnement = !!entreprise && !entreprise.abonnement && !entreprise.abonnementPaie;
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -55,7 +56,9 @@ export default async function ClientTickets() {
                 </div>
               </div>
               <p className="text-gray-500 mt-1">
-                {ticketsRestants} ticket(s) restant(s) sur {ticketsInclus} ce mois-ci
+                {sansAbonnement
+                  ? `Accès de base gratuit : chaque ticket RH est facturé ${PRIX_TICKET_SANS_ABONNEMENT} € (accord demandé avant l'envoi). Les questions simples restent gratuites dans « Demande RH ponctuelle ».`
+                  : `${ticketsRestants} ticket(s) restant(s) sur ${ticketsInclus} ce mois-ci`}
               </p>
             </div>
             <Link

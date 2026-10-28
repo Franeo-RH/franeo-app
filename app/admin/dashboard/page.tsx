@@ -1,27 +1,23 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
-import Link from "next/link";
-import DashboardOnglets from "@/components/DashboardOnglets";
 import BlocEcheances from "@/components/BlocEcheances";
-import { chargerEcheances } from "@/lib/rappels-serveur";
-import { EncartMasseSalariale } from "@/components/SuiviMasseSalariale";
-import { calculerMasseSalariale } from "@/lib/masse-salariale";
 import BoutonResetDemo from "@/components/BoutonResetDemo";
+import RafraichirAuto from "@/components/RafraichirAuto";
+import { chargerEcheances } from "@/lib/rappels-serveur";
 import { calculerFacture } from "@/lib/facturation";
 
 export const dynamic = "force-dynamic";
 
-const MOIS = [
-  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
-];
+const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+type Activite = { date: Date; icone: string; texte: string; client: string; href: string };
 
 export default async function AdminDashboard() {
   await connection();
-
   const session = await getSession();
   if (!session) redirect("/login");
   if (session.role !== "ADMIN") redirect("/client/dashboard");
@@ -29,197 +25,159 @@ export default async function AdminDashboard() {
   const maintenant = new Date();
   const moisActuel = maintenant.getMonth() + 1;
   const anneeActuelle = maintenant.getFullYear();
+  const client = { demo: false, actif: true };
+  const recent = { gte: new Date(Date.now() - 14 * 86400000) };
 
-  const filtreClients = { demo: false, actif: true };
-  const masseP = calculerMasseSalariale({ mois: moisActuel, annee: anneeActuelle, tousLesClients: true });
-
-  // Toutes les requêtes partent en même temps (au lieu de 13 à la suite)
   const [
     entreprises,
-    abonnements,
-    abonnementsPaie,
-    entreprisesPaie,
-    nbTicketsRH,
-    nbTicketsSupport,
-    nbAbsences,
-    nbVariables,
-    nbDemandes,
-    nbDemandesSalaries,
-    echeances,
-    facturationsAnnee,
+    nDemSal, nDemRH, nDemPaie, nDevis, nQuestions, nTickets, nHelpdesk, nPrest, nRecrut, nVariables, nAbsences, nReleves,
+    echeances, facturesMois,
+    actDemSal, actDevis, actQuestions, actTickets, actHelpdesk, actRecrut, actPrest, actAbs, actReleves,
   ] = await Promise.all([
-    prisma.entreprise.findMany({
-      where: filtreClients,
-      select: {
-        id: true,
-        ticketsUtilises: true,
-        abonnement: true,
-        abonnementPaie: true,
-        _count: { select: { salaries: true } },
-      },
-    }),
-    prisma.abonnement.findMany({
-      include: { _count: { select: { entreprises: { where: filtreClients } } } },
-      orderBy: { prixMensuel: "asc" },
-    }),
-    prisma.abonnementPaie.findMany({ orderBy: { prixMensuel: "asc" } }),
-    prisma.entreprise.findMany({
-      where: { ...filtreClients, abonnementPaieId: { not: null } },
-      select: { abonnementPaieId: true },
-    }),
-    prisma.ticket.count({ where: { statut: { not: "Clôturé" }, entreprise: filtreClients } }),
-    prisma.ticketSupport.count({
-      where: { statut: { not: "Clôturé" }, OR: [{ entreprise: filtreClients }, { categorie: "SUGGESTION" }] }, // la démo ne remonte que par ses suggestions
-    }),
-    prisma.absence.count({ where: { statut: "En attente", entreprise: filtreClients } }),
-    prisma.variablePaie.count({ where: { statut: "En attente", mois: moisActuel, annee: anneeActuelle, entreprise: filtreClients } }),
-    prisma.demandeEvolution.count({ where: { statut: "En attente", entreprise: filtreClients } }),
-    prisma.demandeSalarie.count({ where: { statut: "EN_ATTENTE", entreprise: filtreClients } }),
-    // Échéances des salariés (tous clients) : retards + 60 prochains jours
+    prisma.entreprise.findMany({ where: client, select: { id: true, nom: true, permissions: true, abonnementId: true, abonnementPaieId: true } }),
+    prisma.demandeSalarie.count({ where: { statut: "EN_ATTENTE", entreprise: client } }),
+    prisma.demandeEvolution.count({ where: { statut: "En attente", entreprise: client } }),
+    prisma.demandeEvolutionPaie.count({ where: { statut: "EN_ATTENTE", entreprise: client } }),
+    prisma.devis.count({ where: { statut: "EN_ATTENTE", entreprise: client } }),
+    prisma.questionRH.count({ where: { statut: "OUVERTE", entreprise: client } }),
+    prisma.ticket.count({ where: { statut: { not: "Clôturé" }, entreprise: client } }),
+    prisma.ticketSupport.count({ where: { statut: { not: "Clôturé" }, OR: [{ entreprise: client }, { categorie: "SUGGESTION" }] } }),
+    prisma.commandePrestation.count({ where: { statut: "A_FAIRE", entreprise: client } }),
+    prisma.demandeRecrutement.count({ where: { statut: "Reçue", entreprise: client } }),
+    prisma.variablePaie.count({ where: { statut: "En attente", mois: moisActuel, annee: anneeActuelle, entreprise: client } }),
+    prisma.absence.count({ where: { statut: "En attente", entreprise: client } }),
+    prisma.releveMois.count({ where: { statut: "Envoyé", entreprise: client } }),
     chargerEcheances({ sansDemo: true }),
-    // Facturation de l'année (le mois en cours en est extrait)
-    prisma.facturation.findMany({
-      where: { annee: anneeActuelle, entreprise: { demo: false } },
-      select: { mois: true, montant: true, statut: true, entrepriseId: true },
-    }),
+    prisma.facturation.findMany({ where: { mois: moisActuel, annee: anneeActuelle, entreprise: { demo: false } }, select: { entrepriseId: true, montant: true } }),
+    // Dernières activités (14 jours)
+    prisma.demandeSalarie.findMany({ where: { createdAt: recent, entreprise: client }, take: 8, orderBy: { createdAt: "desc" }, select: { createdAt: true, resume: true, entreprise: { select: { nom: true } } } }),
+    prisma.devis.findMany({ where: { createdAt: recent, entreprise: client }, take: 8, orderBy: { createdAt: "desc" }, select: { createdAt: true, totalIndicatif: true, entreprise: { select: { nom: true } } } }),
+    prisma.questionRH.findMany({ where: { updatedAt: recent, entreprise: client }, take: 8, orderBy: { updatedAt: "desc" }, select: { updatedAt: true, sujet: true, statut: true, entreprise: { select: { nom: true } } } }),
+    prisma.ticket.findMany({ where: { createdAt: recent, entreprise: client }, take: 8, orderBy: { createdAt: "desc" }, select: { id: true, createdAt: true, titre: true, entreprise: { select: { nom: true } } } }),
+    prisma.ticketSupport.findMany({ where: { createdAt: recent, entreprise: client }, take: 8, orderBy: { createdAt: "desc" }, select: { id: true, createdAt: true, titre: true, entreprise: { select: { nom: true } } } }),
+    prisma.demandeRecrutement.findMany({ where: { createdAt: recent, entreprise: client }, take: 8, orderBy: { createdAt: "desc" }, select: { createdAt: true, poste: true, entreprise: { select: { nom: true } } } }),
+    prisma.commandePrestation.findMany({ where: { createdAt: recent, entreprise: client }, take: 8, orderBy: { createdAt: "desc" }, select: { createdAt: true, libelle: true, entreprise: { select: { nom: true } } } }),
+    prisma.absence.findMany({ where: { createdAt: recent, declareeParSalarie: true, entreprise: client }, take: 8, orderBy: { createdAt: "desc" }, select: { createdAt: true, type: true, salarie: { select: { prenom: true, nom: true } }, entreprise: { select: { nom: true } } } }),
+    prisma.releveMois.findMany({ where: { envoyeAt: recent, entreprise: client }, take: 8, orderBy: { envoyeAt: "desc" }, select: { envoyeAt: true, mois: true, annee: true, salarie: { select: { prenom: true, nom: true } }, entreprise: { select: { nom: true } } } }),
   ]);
 
-  // Estimation mensuelle par client : même calcul que la facturation (lib/facturation.ts)
-  const estimations = new Map(
-    await Promise.all(
-      entreprises.map(async (e) => [e.id, (await calculerFacture(e.id, moisActuel, anneeActuelle))?.montant || 0] as const)
-    )
-  );
-  const estimationClient = (e: (typeof entreprises)[number]) => estimations.get(e.id) || 0;
+  // Ce qui existe chez les clients : le tableau de bord s'adapte aux modules réellement utilisés
+  const avec = (m: string) => entreprises.some((e) => e.permissions.includes(m));
+  const nbPaie = entreprises.filter((e) => e.abonnementPaieId).length;
+  const nbRH = entreprises.filter((e) => e.abonnementId).length;
+  const nbBase = entreprises.filter((e) => !e.abonnementId && !e.abonnementPaieId).length;
+  const nbEspace = entreprises.filter((e) => e.permissions.includes("espace-salaries")).length;
 
-  const masse = await masseP;
-  const totalEntreprises = entreprises.length;
-  const totalSalaries = entreprises.reduce((acc, e) => acc + e._count.salaries, 0);
-  const facturationsMois = facturationsAnnee.filter((f) => f.mois === moisActuel);
+  const aTraiter = [
+    { n: nDemSal, icone: "📝", label: "Demandes salariés", href: "/admin/salaries/demandes", visible: avec("salaries") },
+    { n: nDemRH + nDemPaie, icone: "📦", label: "Changements d'abonnement", href: "/admin/entreprises/demandes", visible: true },
+    { n: nDevis, icone: "🧾", label: "Devis à chiffrer", href: "/admin/entreprises/devis", visible: true },
+    { n: nQuestions, icone: "💬", label: "Questions RH en attente", href: "/admin/tickets/questions", visible: true },
+    { n: nTickets, icone: "🎫", label: "Tickets RH ouverts", href: "/admin/tickets", visible: avec("tickets") },
+    { n: nRecrut, icone: "🎯", label: "Recrutements à lancer", href: "/admin/recrutement", visible: avec("tickets") },
+    { n: nHelpdesk, icone: "🆘", label: "Helpdesk ouverts", href: "/admin/helpdesk", visible: true },
+    { n: nPrest, icone: "🛒", label: "Prestations à traiter", href: "/admin/entreprises/prestations", visible: nbPaie > 0 },
+    { n: nVariables, icone: "💰", label: `Variables ${MOIS[moisActuel - 1]} à valider`, href: "/admin/paie/variables", visible: nbPaie > 0 },
+    { n: nAbsences, icone: "🏖️", label: "Absences en attente", href: "/admin/salaries/absences", visible: avec("absences") || avec("salaries") },
+    { n: nReleves, icone: "⏱️", label: "Relevés d'heures envoyés", href: "/admin/paie/releves", visible: nbEspace > 0 },
+  ].filter((t) => t.visible);
+  const totalATraiter = aTraiter.reduce((a, t) => a + t.n, 0);
+  const enRetard = echeances.filter((e) => e.jours < 0).length;
 
-  // CA mensuel réel (factures générées ce mois)
-  const caMensuelReel = facturationsMois.reduce((acc, f) => acc + f.montant, 0);
-  // CA mensuel prévisionnel (abonnements de base)
-  const caMensuelPrev = entreprises.reduce((acc, e) => acc + estimationClient(e), 0);
-  // Mois en cours : facture réelle pour les clients déjà facturés, estimation pour les autres
-  const caMoisMixte = entreprises.reduce((acc, e) => {
-    const factures = facturationsMois.filter((f) => f.entrepriseId === e.id);
-    return acc + (factures.length > 0 ? factures.reduce((s, f) => s + f.montant, 0) : estimationClient(e));
-  }, 0);
+  const activites: Activite[] = [
+    ...actDemSal.map((a) => ({ date: a.createdAt, icone: "📝", texte: a.resume, client: a.entreprise.nom, href: "/admin/salaries/demandes" })),
+    ...actDevis.map((a) => ({ date: a.createdAt, icone: "🧾", texte: `Demande de devis (indicatif ${a.totalIndicatif} €)`, client: a.entreprise.nom, href: "/admin/entreprises/devis" })),
+    ...actQuestions.map((a) => ({ date: a.updatedAt, icone: "💬", texte: `Question RH : ${a.sujet}`, client: a.entreprise.nom, href: "/admin/tickets/questions" })),
+    ...actTickets.map((a) => ({ date: a.createdAt, icone: "🎫", texte: `Ticket RH : ${a.titre}`, client: a.entreprise.nom, href: `/admin/tickets/${a.id}` })),
+    ...actHelpdesk.map((a) => ({ date: a.createdAt, icone: "🆘", texte: `Helpdesk : ${a.titre}`, client: a.entreprise.nom, href: `/admin/helpdesk/${a.id}` })),
+    ...actRecrut.map((a) => ({ date: a.createdAt, icone: "🎯", texte: `Recrutement : ${a.poste}`, client: a.entreprise.nom, href: "/admin/recrutement" })),
+    ...actPrest.map((a) => ({ date: a.createdAt, icone: "🛒", texte: `Prestation : ${a.libelle}`, client: a.entreprise.nom, href: "/admin/entreprises/prestations" })),
+    ...actAbs.map((a) => ({ date: a.createdAt, icone: "📱", texte: `Absence demandée par ${a.salarie.prenom} ${a.salarie.nom}`, client: a.entreprise.nom, href: "/admin/salaries/absences" })),
+    ...actReleves.map((a) => ({ date: a.envoyeAt!, icone: "⏱️", texte: `Relevé ${MOIS[a.mois - 1]} envoyé par ${a.salarie.prenom} ${a.salarie.nom}`, client: a.entreprise.nom, href: "/admin/paie/releves" })),
+  ].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 15);
 
-  // CA annuel réel (somme des factures générées cette année)
-  const caAnnuelReel = facturationsAnnee.reduce((acc, f) => acc + f.montant, 0);
+  // Chiffre d'affaires du mois : facture si générée, sinon estimation (même calcul que la facturation)
+  const caMois = (await Promise.all(entreprises.map(async (e) => {
+    const f = facturesMois.filter((x) => x.entrepriseId === e.id);
+    return f.length ? f.reduce((a, x) => a + x.montant, 0) : (await calculerFacture(e.id, moisActuel, anneeActuelle))?.montant ?? 0;
+  }))).reduce((a, b) => a + b, 0);
 
-  // CA annuel prévisionnel = réel passé + abonnements de base pour mois restants
-  const moisRestants = 12 - moisActuel;
-  // = factures des mois passés + mois en cours (réel ou estimé) + estimation des mois restants
-  const caAnnuelPrev = (caAnnuelReel - caMensuelReel) + caMoisMixte + (caMensuelPrev * moisRestants);
-
-  // Grille 12 mois pour onglets
-  const grilleMois = MOIS.map((nomMois, i) => {
-    const moisNum = i + 1;
-    const facts = facturationsAnnee.filter(f => f.mois === moisNum);
-    const montantReel = facts.reduce((acc, f) => acc + f.montant, 0);
-    const montantPrev = caMensuelPrev;
-    const genere = facts.length > 0;
-    return { moisNum, nomMois, montantReel, montantPrev, genere, facts };
-  });
-
-  const tuiles = [
-    { href: "/admin/entreprises", icone: "🏢", label: "Entreprises", n: totalEntreprises, couleur: "text-gray-800" },
-    { href: "/admin/salaries", icone: "👥", label: "Salariés", n: totalSalaries, couleur: "text-gray-800" },
-    { href: "/admin/tickets", icone: "🎫", label: "Tickets RH", n: nbTicketsRH, couleur: "text-orange-500" },
-    { href: "/admin/helpdesk", icone: "🆘", label: "Helpdesk", n: nbTicketsSupport, couleur: "text-red-500" },
-    { href: "/admin/salaries/absences", icone: "📅", label: "Absences", n: nbAbsences, couleur: "text-orange-500" },
-    { href: "/admin/paie/variables", icone: "💰", label: "Variables", n: nbVariables, couleur: "text-orange-500" },
-    { href: "/admin/entreprises/demandes", icone: "📩", label: "Évolutions", n: nbDemandes, couleur: "text-orange-500" },
-    { href: "/admin/salaries/demandes", icone: "📝", label: "Demandes salariés", n: nbDemandesSalaries, couleur: "text-orange-500" },
-    { href: "/admin/salaries", icone: "⏰", label: "Échéances", n: echeances.length, couleur: "text-red-500" },
-  ];
-  const caMois = Math.round(caMoisMixte);
+  const depuis = (d: Date) => {
+    const min = Math.round((Date.now() - d.getTime()) / 60000);
+    if (min < 60) return `il y a ${Math.max(min, 1)} min`;
+    if (min < 1440) return `il y a ${Math.round(min / 60)} h`;
+    return d.toLocaleDateString("fr-FR");
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar role={session.role} prenom={session.prenom} />
+      <RafraichirAuto secondes={60} />
       <main className="px-6 py-4 flex flex-col gap-4">
-
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-          <h1 className="text-xl font-bold" style={{ margin: 0 }}>📊 Dashboard</h1>
+        <div className="flex justify-between items-center gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-bold">👋 Bonjour {session.prenom}</h1>
+            <p className="text-sm text-gray-500">
+              {totalATraiter > 0 ? `${totalATraiter} élément(s) à traiter` : "Tout est à jour 🎉"}{enRetard > 0 ? ` · ${enRetard} échéance(s) en retard` : ""}
+            </p>
+          </div>
           <BoutonResetDemo />
         </div>
 
-        <div className="fr-grille-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-          <div className="bg-gradient-to-r from-orange-500 to-orange-400 rounded-2xl shadow px-6 py-4 text-white">
-            <p className="text-orange-100 text-xs font-semibold uppercase">💰 CA {MOIS[moisActuel - 1]}</p>
-            <p className="text-4xl font-bold">{caMois.toLocaleString("fr-FR")} €</p>
-          </div>
-          <div className="bg-gradient-to-r from-gray-800 to-gray-700 rounded-2xl shadow px-6 py-4 text-white">
-            <p className="text-gray-300 text-xs font-semibold uppercase">📅 CA annuel {anneeActuelle}</p>
-            <p className="text-4xl font-bold">{Math.round(caAnnuelPrev).toLocaleString("fr-FR")} €</p>
-          </div>
-        </div>
-
-        <div className="fr-grille-tuiles" style={{ display: "grid", gridTemplateColumns: "repeat(9, minmax(0, 1fr))", gap: "0.75rem" }}>
-          {tuiles.map((t) => (
-            <Link key={t.label} href={t.href} className="bg-white rounded-2xl shadow p-3 text-center hover:shadow-md transition">
-              <p className="text-2xl">{t.icone}</p>
-              <p className={`text-3xl font-bold leading-tight ${t.couleur}`}>{t.n}</p>
-              <p className="text-gray-400 text-[11px] font-semibold uppercase">{t.label}</p>
-            </Link>
+        {/* Repères clients */}
+        <div className="flex gap-2 flex-wrap text-sm">
+          {[
+            { t: `🏢 ${entreprises.length} client(s)`, href: "/admin/entreprises" },
+            { t: `👥 ${nbRH} pack RH`, href: "/admin/entreprises" },
+            { t: `💼 ${nbPaie} paie`, href: "/admin/abonnement-paie" },
+            { t: `🆓 ${nbBase} accès de base`, href: "/admin/entreprises" },
+            ...(nbEspace > 0 ? [{ t: `📱 ${nbEspace} espace salarié`, href: "/admin/salaries/acces" }] : []),
+            { t: `💶 ${Math.round(caMois).toLocaleString("fr-FR")} € en ${MOIS[moisActuel - 1]}`, href: "/admin/entreprises/facturation" },
+          ].map((c) => (
+            <Link key={c.t} href={c.href} className="bg-white rounded-full shadow px-3 py-1 font-semibold hover:shadow-md">{c.t}</Link>
           ))}
         </div>
 
-        <EncartMasseSalariale data={masse} lien="/admin/paie" />
-
-        <div className="fr-grille-2" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
-          <DashboardOnglets grilleMois={grilleMois} annee={anneeActuelle} moisActuel={moisActuel} />
-          <div className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3">
-            <div>
-              <h2 className="text-sm font-bold mb-2">📋 Abonnements RH</h2>
-              <div className="flex flex-col gap-2">
-                {abonnements.map((a) => {
-                  const max = Math.max(...abonnements.map((x) => x._count.entreprises), 1);
-                  return (
-                    <div key={a.id}>
-                      <div className="flex justify-between text-xs mb-0.5">
-                        <span className="font-semibold">{a.nom}</span>
-                        <span className="text-gray-500">{a._count.entreprises} · {Math.round(a._count.entreprises * a.prixMensuel).toLocaleString("fr-FR")} €</span>
-                      </div>
-                      <div className="h-1.5 bg-gray-100 rounded-full">
-                        <div className="h-1.5 bg-orange-500 rounded-full" style={{ width: `${(a._count.entreprises / max) * 100}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
-              <h2 className="text-sm font-bold mb-2">💼 Abonnements Paie</h2>
-              <div className="flex flex-col gap-2">
-                {abonnementsPaie.map((a) => {
-                  const nb = entreprisesPaie.filter((e) => e.abonnementPaieId === a.id).length;
-                  const max = Math.max(...abonnementsPaie.map((x) => entreprisesPaie.filter((e) => e.abonnementPaieId === x.id).length), 1);
-                  return (
-                    <div key={a.id}>
-                      <div className="flex justify-between text-xs mb-0.5">
-                        <span className="font-semibold">{a.nom}</span>
-                        <span className="text-gray-500">{nb} · {Math.round(nb * a.prixMensuel).toLocaleString("fr-FR")} €</span>
-                      </div>
-                      <div className="h-1.5 bg-gray-100 rounded-full">
-                        <div className="h-1.5 bg-gray-800 rounded-full" style={{ width: `${(nb / max) * 100}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+        {/* À traiter */}
+        <section aria-labelledby="t-atraiter">
+          <h2 id="t-atraiter" className="text-sm font-bold uppercase text-gray-500 mb-2">🔔 À traiter</h2>
+          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))" }}>
+            {aTraiter.map((t) => (
+              <Link key={t.label} href={t.href} className="bg-white rounded-2xl shadow p-3 hover:shadow-md transition"
+                style={{ borderLeft: `5px solid ${t.n > 0 ? "#f97316" : "#e5e7eb"}`, opacity: t.n > 0 ? 1 : 0.6 }}>
+                <p className="text-xs font-semibold text-gray-500">{t.icone} {t.label}</p>
+                <p className="text-3xl font-bold" style={{ color: t.n > 0 ? "#ea580c" : "#9ca3af" }}>{t.n}</p>
+              </Link>
+            ))}
           </div>
-        </div>
+        </section>
 
-        <div className="max-h-[120px] flex flex-col">
-          <BlocEcheances echeances={echeances} role="ADMIN" max={4} />
-        </div>
+        <div className="fr-grille-2" style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: "1rem" }}>
+          {/* Fil d'activité */}
+          <section className="bg-white rounded-2xl shadow p-4" aria-labelledby="t-activite">
+            <h2 id="t-activite" className="text-sm font-bold mb-3">🕒 Dernières activités des clients</h2>
+            {activites.length === 0 ? <p className="text-sm text-gray-500">Rien de nouveau ces 14 derniers jours.</p> : (
+              <ul className="flex flex-col">
+                {activites.map((a, i) => (
+                  <li key={i} className="border-b last:border-0">
+                    <Link href={a.href} className="flex gap-3 py-2 hover:bg-gray-50 rounded-lg px-1">
+                      <span className="text-lg">{a.icone}</span>
+                      <span style={{ minWidth: 0, flex: 1 }}>
+                        <span className="block text-sm font-semibold truncate">{a.texte}</span>
+                        <span className="block text-xs text-gray-500">{a.client} · {depuis(a.date)}</span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
+          {/* Rappels */}
+          <section className="flex flex-col" aria-label="Échéances">
+            <BlocEcheances echeances={echeances} role="ADMIN" max={10} />
+          </section>
+        </div>
       </main>
     </div>
   );

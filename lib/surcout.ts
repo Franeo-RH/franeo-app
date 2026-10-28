@@ -92,7 +92,10 @@ export async function evaluerSurcout(
     const q = quotaTickets(entreprise);
     const n = depasse(ticketsApres, q.inclus) - depasse(tickets, q.inclus);
     if (n > 0 && q.prixSupp > 0) {
-      lignes.push({ libelle: `Ticket(s) RH au-delà des ${q.inclus} inclus ce mois-ci`, quantite: n, prixUnitaire: q.prixSupp, total: r2(n * q.prixSupp) });
+      lignes.push({
+        libelle: !abo && !paie ? "Ticket RH à l'unité (accès de base gratuit, sans abonnement)" : `Ticket(s) RH au-delà des ${q.inclus} inclus ce mois-ci`,
+        quantite: n, prixUnitaire: q.prixSupp, total: r2(n * q.prixSupp),
+      });
     }
   }
   if (lignes.length === 0) return null;
@@ -105,10 +108,11 @@ export async function evaluerSurcout(
   const surcoutBulletins = lignes.some((l) => l.libelle.startsWith("Bulletin"));
   const surcoutTickets = lignes.some((l) => l.libelle.startsWith("Ticket"));
 
-  if (abo && (surcoutSalaries || (surcoutTickets && !paie))) {
+  if ((abo && (surcoutSalaries || (surcoutTickets && !paie))) || (!abo && !paie && surcoutTickets)) {
     for (const f of formulesRH) {
-      if (f.id === abo.id) continue;
-      if (f.salariesInclus <= abo.salariesInclus && f.ticketsRH <= abo.ticketsRH) continue; // pas une formule supérieure
+      if (abo && f.id === abo.id) continue;
+      if (abo && f.salariesInclus <= abo.salariesInclus && f.ticketsRH <= abo.ticketsRH) continue; // pas une formule supérieure
+      if (!abo && f.ticketsRH === 0) continue; // sans abonnement : on propose les packs avec tickets inclus
       const cout = coutTotal(f, paie, salariesApres, ticketsApres);
       propositions.push({
         type: "RH", id: f.id, nom: f.nom, prixMensuel: f.prixMensuel,

@@ -38,10 +38,6 @@ export async function POST(request: NextRequest) {
   const abonnement = entreprise.abonnement;
   const abonnementPaie = entreprise.abonnementPaie;
 
-  if (!abonnement && !abonnementPaie) {
-    return NextResponse.json({ erreur: "Aucun abonnement (RH ou paie) pour cette entreprise" }, { status: 404 });
-  }
-
   const moisInt = parseInt(mois);
   const anneeInt = parseInt(annee);
 
@@ -51,6 +47,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ erreur: "Entreprise introuvable" }, { status: 404 });
   }
   const montant = calcul.montant;
+  // Accès de base gratuit : rien à facturer si aucun ticket ni supplément ce mois-ci
+  if (!abonnement && !abonnementPaie && montant === 0 && !apercu) {
+    return NextResponse.json({ erreur: "Accès de base gratuit : rien à facturer ce mois-ci." }, { status: 400 });
+  }
   const details = calcul.details;
 
   // Aperçu : on renvoie le calcul sans rien enregistrer
@@ -69,7 +69,8 @@ export async function POST(request: NextRequest) {
     const deja = existante.commentaire || "";
     const dejaGenere =
       (abonnement && deja.includes(`${abonnement.nom} : ${abonnement.prixMensuel} €`)) ||
-      (abonnementPaie && deja.includes(`Paie ${abonnementPaie.nom} : ${abonnementPaie.prixMensuel} €`));
+      (abonnementPaie && deja.includes(`Paie ${abonnementPaie.nom} : ${abonnementPaie.prixMensuel} €`)) ||
+      (!abonnement && !abonnementPaie && deja.includes("accès de base"));
     if (dejaGenere) {
       return NextResponse.json(
         { erreur: "Ce mois a déjà été généré pour cette entreprise. Utilisez « Supprimer la génération du mois » pour le refaire." },

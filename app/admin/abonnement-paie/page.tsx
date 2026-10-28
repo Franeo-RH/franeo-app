@@ -1,152 +1,181 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import BoutonAbonnementPaie from "@/components/BoutonAbonnementPaie";
 import OngletsAbonnements from "@/components/OngletsAbonnements";
+import ExportCSV from "@/components/ExportCSV";
 
 export const dynamic = "force-dynamic";
 
-const FEATURES: { key: string; label: string }[] = [
-  { key: "accesWebApp", label: "Application Franeo (web + téléphone)" },
-  { key: "entreesSortiesIncluses", label: "Arrivées & STC inclus" },
+// Services comparés entre les formules (lignes du tableau)
+const SERVICES: { key: string; label: string }[] = [
+  { key: "entreesSortiesIncluses", label: "Arrivées & sorties incluses" },
   { key: "espaceSalarieInclus", label: "Espace salarié inclus" },
-  { key: "relancesVariables", label: "Relances variables paie" },
-  { key: "relancesSalaries", label: "Relances directes salariés" },
-  { key: "modificationsIncluses", label: "Modifications incluses" },
-  { key: "regularisationsInclus", label: "Régularisations incluses" },
-  { key: "demandesComplexes", label: "Demandes complexes" },
-  { key: "veillePaie", label: "Veille paie & réglementaire" },
-  { key: "conseilPaie", label: "Conseil paie ponctuel" },
-  { key: "suiviRH", label: "Suivi RH complet" },
+  { key: "relancesVariables", label: "Relance des variables" },
+  { key: "suiviRH", label: "Suivi des échéances" },
+  { key: "veillePaie", label: "Veille paie" },
   { key: "suiviIJSS", label: "Suivi IJSS" },
-  { key: "relancesIJSS", label: "Relances IJSS" },
+  { key: "conseilPaie", label: "Conseil paie" },
+  { key: "pointPaie", label: "Rendez-vous paie" },
   { key: "recouvrementIJSS", label: "Recouvrement IJSS" },
-  { key: "pointPaie", label: "Point paie périodique" },
-  { key: "recommandationsPaie", label: "Recommandations paie" },
-  { key: "traitementPrioritaire", label: "Traitement prioritaire" },
-  { key: "assistanceURSSAF", label: "Assistance URSSAF" },
+  { key: "assistanceURSSAF", label: "Assistance contrôle URSSAF" },
 ];
 
-const COULEURS: Record<string, string> = {
-  ESSENTIELLE: "border-blue-300 bg-blue-50",
-  SERENITE: "border-purple-300 bg-purple-50",
-  PREMIUM: "border-amber-300 bg-amber-50",
-  ENTREPRISE: "border-gray-400 bg-gray-50",
-};
+const TEINTE: Record<string, string> = { ESSENTIELLE: "#3b82f6", SERENITE: "#8b5cf6", PREMIUM: "#f59e0b", ENTREPRISE: "#111827" };
+const eur = (n: number) => `${Math.round(n * 100) / 100} €`.replace(".", ",");
 
-const BADGES: Record<string, string> = {
-  ESSENTIELLE: "bg-blue-100 text-blue-800 border-blue-300",
-  SERENITE: "bg-purple-100 text-purple-800 border-purple-300",
-  PREMIUM: "bg-amber-100 text-amber-800 border-amber-300",
-  ENTREPRISE: "bg-gray-900 text-white border-gray-900",
-};
-
-export default async function AdminAbonnementPaie() {
+export default async function AdminAbonnementPaie({ searchParams }: { searchParams: Promise<{ formule?: string; tous?: string }> }) {
   await connection();
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/login");
+  const sp = await searchParams;
 
-  const [formules, entreprises] = await Promise.all([
+  const maintenant = new Date();
+  const debut = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1);
+  const fin = new Date(maintenant.getFullYear(), maintenant.getMonth() + 1, 0, 23, 59, 59);
+
+  const [formules, entreprises, comptes] = await Promise.all([
     prisma.abonnementPaie.findMany({ orderBy: { prixMensuel: "asc" } }),
-    prisma.entreprise.findMany({
-      where: { demo: false },
-      include: { abonnementPaie: true },
-      orderBy: { nom: "asc" },
+    prisma.entreprise.findMany({ where: { demo: false }, select: { id: true, nom: true, actif: true, abonnementPaieId: true }, orderBy: { nom: "asc" } }),
+    prisma.salarie.groupBy({
+      by: ["entrepriseId"],
+      where: { statut: "Actif", dateDebut: { lte: fin }, OR: [{ dateFin: null }, { dateFin: { gte: debut } }], entreprise: { demo: false } },
+      _count: { _all: true },
     }),
   ]);
+
+  const lignes = entreprises.map((e) => {
+    const f = formules.find((x) => x.id === e.abonnementPaieId) ?? null;
+    const bulletins = comptes.find((c) => c.entrepriseId === e.id)?._count._all ?? 0;
+    const supp = f ? Math.max(bulletins - f.bulletinsInclus, 0) : 0;
+    const montant = f ? f.prixMensuel + supp * f.prixBulletinSupp : 0;
+    // Formule plus avantageuse si le client dépasse beaucoup son forfait
+    const mieux = f ? formules.find((x) => x.prixMensuel > f.prixMensuel && x.prixMensuel + Math.max(bulletins - x.bulletinsInclus, 0) * x.prixBulletinSupp < montant) : undefined;
+    return { e, f, bulletins, supp, montant, mieux };
+  });
+  const filtrees = lignes.filter((l) => (sp.formule ? l.f?.id === sp.formule : sp.tous ? true : !!l.f));
+  const parFormule = (id: string) => lignes.filter((l) => l.f?.id === id);
+  const caPaie = lignes.reduce((a, l) => a + (l.e.actif !== false ? l.montant : 0), 0);
+
+  const lienFiltre = (q: string) => `/admin/abonnement-paie${q}`;
+  const puce = (actif: boolean) => `px-3 py-1 rounded-full text-sm font-semibold ${actif ? "bg-orange-500 text-white" : "bg-white text-gray-600 border"}`;
 
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar role="ADMIN" prenom={session.prenom} />
       <div className="flex">
         <Sidebar role="ADMIN" />
-        <main className="flex-1 p-10">
+        <main className="flex-1 p-6 md:p-10" style={{ minWidth: 0 }}>
           <OngletsAbonnements espace="admin" actif="paie" />
 
-          <div className="bg-white rounded-xl shadow p-8 mb-8">
-            <h1 className="text-3xl font-bold">📦 Abonnements Paie</h1>
-            <p className="text-gray-500 mt-1">Gérez les formules paie de vos clients</p>
+          <div className="grid gap-3 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
+            <div className="bg-white rounded-xl shadow p-4" style={{ borderTop: "4px solid #f97316" }}>
+              <p className="text-xs font-bold text-gray-500 uppercase">Clients paie</p>
+              <p className="text-2xl font-bold">{lignes.filter((l) => l.f).length}</p>
+            </div>
+            <div className="bg-white rounded-xl shadow p-4">
+              <p className="text-xs font-bold text-gray-500 uppercase">Bulletins ce mois</p>
+              <p className="text-2xl font-bold">{lignes.filter((l) => l.f).reduce((a, l) => a + l.bulletins, 0)}</p>
+            </div>
+            <div className="bg-white rounded-xl shadow p-4">
+              <p className="text-xs font-bold text-gray-500 uppercase">CA paie du mois (hors options)</p>
+              <p className="text-2xl font-bold">{eur(caPaie)}</p>
+            </div>
           </div>
 
-          {/* Les 3 formules */}
-          <div className="grid grid-cols-3 gap-6 mb-10">
-            {formules.map((f) => (
-              <div key={f.id} className={`bg-white rounded-xl shadow border-2 p-6 ${COULEURS[f.code] || "border-gray-200"}`}>
-                <div className="text-center mb-4">
-                  <h2 className="text-xl font-bold">{f.nom}</h2>
-                  <p className="text-3xl font-black mt-2">
-                    {f.prixMensuel} €
-                    <span className="text-base font-normal text-gray-500">/mois</span>
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">{f.bulletinsInclus} bulletins inclus</p>
-                  <p className="text-xs text-gray-400">{f.prixBulletinSupp} €/bulletin supplémentaire</p>
-                </div>
-                <hr className="my-4" />
-                <ul className="space-y-1 text-sm">
-                  {FEATURES.map(({ key, label }) => {
-                    const val = (f as Record<string, unknown>)[key];
-                    return (
-                      <li key={key} className="flex gap-2 items-center">
-                        <span className={val ? "text-green-500" : "text-gray-300"}>
-                          {val ? "✓" : "—"}
-                        </span>
-                        <span className={val ? "text-gray-700" : "text-gray-400"}>{label}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <p className="text-center text-xs text-gray-400 mt-4">
-                  {entreprises.filter(e => e.abonnementPaieId === f.id).length} client(s)
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* Attribution par entreprise */}
-          <div className="bg-white rounded-xl shadow p-8">
-            <h2 className="text-xl font-bold mb-6">🏢 Attribution par entreprise</h2>
-            <table className="w-full text-left">
+          {/* Comparatif des formules */}
+          <div className="bg-white rounded-xl shadow p-6 mb-6" style={{ overflowX: "auto" }}>
+            <h1 className="text-2xl font-bold mb-4">📦 Formules paie</h1>
+            <table className="w-full text-sm" style={{ minWidth: "640px" }}>
               <thead>
-                <tr className="border-b">
-                  <th className="pb-3">Entreprise</th>
-                  <th className="pb-3">Formule actuelle</th>
-                  <th className="pb-3">Bulletins utilisés</th>
-                  <th className="pb-3">Changer</th>
+                <tr>
+                  <th className="text-left py-2"></th>
+                  {formules.map((f) => (
+                    <th key={f.id} className="py-2 px-2 text-center" style={{ borderTop: `4px solid ${TEINTE[f.code] || "#9ca3af"}` }}>
+                      <span className="block text-base font-bold">{f.nom.replace(/^Paie /, "")}</span>
+                      <span className="block text-2xl font-black">{f.prixMensuel} €</span>
+                      <span className="block text-xs text-gray-500 font-normal">{parFormule(f.id).length} client(s)</span>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {entreprises.map((e) => (
-                  <tr key={e.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 font-semibold">{e.nom}</td>
-                    <td className="py-3">
-                      {e.abonnementPaie ? (
-                        <span className={`px-2 py-1 rounded-full text-xs font-bold border ${BADGES[e.abonnementPaie.code] || ""}`}>
-                          {e.abonnementPaie.nom}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 text-sm">Aucune</span>
-                      )}
-                    </td>
-                    <td className="py-3 text-sm text-gray-500">
-                      {e.bulletinsUtilises || 0}
-                      {e.abonnementPaie ? ` / ${e.abonnementPaie.bulletinsInclus}` : ""}
-                    </td>
-                    <td className="py-3">
-                      <BoutonAbonnementPaie
-                        entrepriseId={e.id}
-                        abonnementPaieId={e.abonnementPaieId || ""}
-                        formules={formules}
-                      />
-                    </td>
+                {[
+                  { label: "Bulletins inclus", v: (f: (typeof formules)[number]) => String(f.bulletinsInclus) },
+                  { label: "Bulletin en plus", v: (f: (typeof formules)[number]) => eur(f.prixBulletinSupp) },
+                  { label: "Tickets RH inclus / mois", v: (f: (typeof formules)[number]) => String(f.ticketsRHInclus) },
+                  { label: "Ticket RH en plus", v: (f: (typeof formules)[number]) => eur(f.prixTicketSupp) },
+                  { label: "Arrivée / sortie", v: (f: (typeof formules)[number]) => (f.entreesSortiesIncluses ? "incluses" : `${eur(f.prixEntree)} / ${eur(f.prixSortie)}`) },
+                  { label: "Espace salarié", v: (f: (typeof formules)[number]) => (f.espaceSalarieInclus ? "inclus" : `${eur(f.prixEspaceSalarie)}/salarié`) },
+                ].map((r) => (
+                  <tr key={r.label} className="border-t">
+                    <td className="py-2 font-semibold text-gray-600">{r.label}</td>
+                    {formules.map((f) => <td key={f.id} className="py-2 text-center font-semibold">{r.v(f)}</td>)}
+                  </tr>
+                ))}
+                {SERVICES.map((s) => (
+                  <tr key={s.key} className="border-t">
+                    <td className="py-2 text-gray-600">{s.label}</td>
+                    {formules.map((f) => {
+                      const ok = (f as unknown as Record<string, unknown>)[s.key] === true;
+                      return <td key={f.id} className="py-2 text-center" style={{ color: ok ? "#16a34a" : "#d1d5db", fontWeight: 700 }}>{ok ? "✓" : "—"}</td>;
+                    })}
                   </tr>
                 ))}
               </tbody>
             </table>
+            <p className="text-xs text-gray-400 mt-3">Les prix se mettent à jour avec le script prisma/formules-paie-2026.ts.</p>
           </div>
 
+          {/* Clients */}
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="flex justify-between items-center gap-3 flex-wrap mb-4">
+              <h2 className="text-xl font-bold">🏢 Clients et formule paie</h2>
+              <ExportCSV nom="clients-paie" entetes={["Entreprise", "Formule", "Bulletins ce mois", "Inclus", "En plus", "Montant paie estimé"]}
+                lignes={filtrees.map((l) => [l.e.nom, l.f?.nom ?? "Aucune", l.bulletins, l.f?.bulletinsInclus ?? "", l.supp, l.montant])} />
+            </div>
+            <div className="flex gap-2 flex-wrap mb-4">
+              <Link href={lienFiltre("")} className={puce(!sp.formule && !sp.tous)}>Avec formule paie</Link>
+              {formules.map((f) => <Link key={f.id} href={lienFiltre(`?formule=${f.id}`)} className={puce(sp.formule === f.id)}>{f.nom.replace(/^Paie /, "")} ({parFormule(f.id).length})</Link>)}
+              <Link href={lienFiltre("?tous=1")} className={puce(!!sp.tous)}>Tous les clients</Link>
+            </div>
+            {filtrees.length === 0 ? <p className="text-gray-500">Aucun client avec ce filtre.</p> : (
+              <div style={{ overflowX: "auto" }}>
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b text-gray-500">
+                      <th className="py-2">Entreprise</th><th className="py-2">Bulletins ce mois</th><th className="py-2">Montant paie estimé</th><th className="py-2">Conseil</th><th className="py-2">Formule</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtrees.map((l) => (
+                      <tr key={l.e.id} className="border-b align-middle">
+                        <td className="py-2 font-semibold">
+                          <Link href={`/admin/entreprises/${l.e.id}`} className="hover:underline">{l.e.nom}</Link>
+                          {l.e.actif === false && <span className="ml-2 text-xs text-red-600">suspendue</span>}
+                        </td>
+                        <td className="py-2">
+                          {l.f ? (
+                            <>
+                              <strong>{l.bulletins}</strong> / {l.f.bulletinsInclus}
+                              {l.supp > 0 && <span style={{ color: "#c2410c", fontWeight: 700 }}> (+{l.supp})</span>}
+                            </>
+                          ) : <span className="text-gray-400">{l.bulletins} salarié(s)</span>}
+                        </td>
+                        <td className="py-2 font-semibold">{l.f ? eur(l.montant) : "—"}</td>
+                        <td className="py-2 text-xs">{l.mieux ? <span style={{ color: "#15803d", fontWeight: 600 }}>💡 {l.mieux.nom} reviendrait moins cher</span> : ""}</td>
+                        <td className="py-2"><BoutonAbonnementPaie entrepriseId={l.e.id} abonnementPaieId={l.e.abonnementPaieId || ""} formules={formules} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </main>
       </div>
     </div>
