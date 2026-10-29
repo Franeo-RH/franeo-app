@@ -31,12 +31,13 @@ export default async function AdminDashboard() {
 
   const [
     entreprises,
-    nDemSal, nDemRH, nDemPaie, nDevis, nQuestions, nTickets, nHelpdesk, nPrest, nRecrut, nVariables, nAbsences, nReleves,
+    nDemSal, nInscriptions, nDemRH, nDemPaie, nDevis, nQuestions, nTickets, nHelpdesk, nPrest, nRecrut, nVariables, nAbsences, nReleves,
     echeances, facturesMois,
     actDemSal, actDevis, actQuestions, actTickets, actHelpdesk, actRecrut, actPrest, actAbs, actReleves,
   ] = await Promise.all([
     prisma.entreprise.findMany({ where: client, select: { id: true, nom: true, permissions: true, abonnementId: true, abonnementPaieId: true } }),
     prisma.demandeSalarie.count({ where: { statut: "EN_ATTENTE", entreprise: client } }),
+    prisma.demandeInscription.count({ where: { statut: "NOUVELLE" } }),
     prisma.demandeEvolution.count({ where: { statut: "En attente", entreprise: client } }),
     prisma.demandeEvolutionPaie.count({ where: { statut: "EN_ATTENTE", entreprise: client } }),
     prisma.devis.count({ where: { statut: "EN_ATTENTE", entreprise: client } }),
@@ -70,6 +71,7 @@ export default async function AdminDashboard() {
   const nbEspace = entreprises.filter((e) => e.permissions.includes("espace-salaries")).length;
 
   const aTraiter = [
+    { n: nInscriptions, icone: "🆕", label: "Nouveaux clients", href: "/admin/entreprises/nouveaux-clients", visible: true },
     { n: nDemSal, icone: "📝", label: "Demandes salariés", href: "/admin/salaries/demandes", visible: avec("salaries") },
     { n: nDemRH + nDemPaie, icone: "📦", label: "Changements d'abonnement", href: "/admin/entreprises/demandes", visible: true },
     { n: nDevis, icone: "🧾", label: "Devis à chiffrer", href: "/admin/entreprises/devis", visible: true },

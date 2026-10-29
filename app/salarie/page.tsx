@@ -7,6 +7,7 @@ import { LIBELLES_ABSENCE } from "@/lib/espace-salarie";
 import { aDroit } from "@/lib/droits";
 import { communicationsNonLues } from "@/lib/communications";
 import BandeauCommunications from "@/components/BandeauCommunications";
+import BandeauDemo from "@/components/BandeauDemo";
 import ReleveHeuresSalarie from "@/components/ReleveHeuresSalarie";
 import { libelleRappel, typeDe } from "@/lib/rappels";
 import { BoutonAnnulerAbsence, BoutonDeconnexionSalarie, FormulaireAbsenceSalarie } from "@/components/EspaceSalarieActions";
@@ -86,6 +87,7 @@ export default async function EspaceSalarie() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f3f4f6", fontFamily: "Arial, Helvetica, sans-serif", color: "#111827" }}>
+      {s.utilisateur.entreprise?.demo && <BandeauDemo />}
       <header style={{ background: "#000000", color: "#ffffff", padding: "calc(12px + env(safe-area-inset-top)) 16px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <Image src="/FRANEO-Logo-Orange.png" alt="Franeo" width={70} height={24} style={{ objectFit: "contain" }} />

@@ -30,6 +30,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
       return { titre: "Entreprises", items: [
         { href: "/admin/entreprises/nouveau", label: "➕ Ajouter une entreprise" },
         { href: "/admin/entreprises", label: "🏢 Liste des entreprises" },
+        { href: "/admin/entreprises/nouveaux-clients", label: "🆕 Nouveaux clients" },
         { href: "/admin/entreprises/demandes", label: "📦 Modifier un abonnement", badge: demandesEnAttente, aussi: ["/admin/abonnement-paie", "/admin/abonnements-rh"] },
         { href: "/admin/entreprises/facturation", label: "🧾 Facturation" },
         { href: "/admin/entreprises/prestations", label: "➕ Prestations supplémentaires" },

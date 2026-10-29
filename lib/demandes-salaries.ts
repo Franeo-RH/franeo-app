@@ -40,6 +40,8 @@ export function champsSalarie(d: Record<string, unknown>) {
     dateFin: date(d.dateFin),
     heuresHebdomadaires: nombre(d.heuresHebdomadaires),
     manager: texte(d.manager),
+    etablissement: texte(d.etablissement),
+    service: texte(d.service),
     conventionCollective: texte(d.conventionCollective),
     categorie: texte(d.categorie),
     coefficient: texte(d.coefficient),

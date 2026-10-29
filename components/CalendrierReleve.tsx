@@ -71,7 +71,7 @@ export default function CalendrierReleve({
               )}
               {j?.heures != null && <span style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#111827", marginTop: "2px" }}>{fmtH(j.heures).replace(" h", "h")}</span>}
               {j && j.heuresSupp > 0 && <span style={{ display: "block", fontSize: "10px", fontWeight: 700, color: "#c2410c" }}>+{fmtH(j.heuresSupp).replace(" h", "h")}</span>}
-              {j?.commentaire && <span aria-label="commentaire" style={{ display: "block", fontSize: "9px" }}>💬</span>}
+              {(j?.commentaire || j?.teletravail) && <span style={{ display: "block", fontSize: "9px" }}>{j?.teletravail ? "🏠" : ""}{j?.commentaire ? "💬" : ""}</span>}
             </>
           );
           const style: React.CSSProperties = {

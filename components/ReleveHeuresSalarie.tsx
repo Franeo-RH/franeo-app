@@ -5,8 +5,8 @@ import CalendrierReleve, { absenceDuJour, styleAbsence } from "@/components/Cale
 import { LIBELLES_ABSENCE } from "@/lib/espace-salarie";
 import { fmtH, joursDuMois, lireHeures, NOMS_MOIS, STATUTS_RELEVE, type AbsenceReleve, type JourReleve } from "@/lib/heures";
 
-type Saisie = { heures: string; heuresSupp: string; commentaire: string };
-const vide: Saisie = { heures: "", heuresSupp: "", commentaire: "" };
+type Saisie = { heures: string; heuresSupp: string; commentaire: string; teletravail?: boolean };
+const vide: Saisie = { heures: "", heuresSupp: "", commentaire: "", teletravail: false };
 const versTexte = (n: number | null | undefined) => (n == null || n === 0 ? "" : String(n).replace(".", ","));
 
 const champ: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: "1px solid #d1d5db", borderRadius: "8px", padding: "10px", fontSize: "16px", background: "#ffffff", marginTop: "4px" };
@@ -37,7 +37,7 @@ export default function ReleveHeuresSalarie() {
     setMotifRefus(d.motifRefus);
     setAbsences(d.absences || []);
     const s: Record<string, Saisie> = {};
-    for (const j of d.jours as JourReleve[]) s[j.date] = { heures: versTexte(j.heures), heuresSupp: versTexte(j.heuresSupp), commentaire: j.commentaire || "" };
+    for (const j of d.jours as JourReleve[]) s[j.date] = { heures: versTexte(j.heures), heuresSupp: versTexte(j.heuresSupp), commentaire: j.commentaire || "", teletravail: !!j.teletravail };
     setSaisie(s);
     setModifie(false);
     setSelection(null);
@@ -53,7 +53,7 @@ export default function ReleveHeuresSalarie() {
     setMessage(null);
   }
 
-  function maj(iso: string, champ: keyof Saisie, valeur: string) {
+  function maj(iso: string, champ: keyof Saisie, valeur: string | boolean) {
     setSaisie((s) => ({ ...s, [iso]: { ...(s[iso] || vide), [champ]: valeur } }));
     setModifie(true);
   }
@@ -96,8 +96,8 @@ export default function ReleveHeuresSalarie() {
     const s = lireHeures(v.heuresSupp);
     const hOk = h !== null && !Number.isNaN(h) ? h : null;
     const sOk = s !== null && !Number.isNaN(s) ? s : 0;
-    if (hOk === null && !sOk && !v.commentaire) continue;
-    pourCalendrier[iso] = { date: iso, heures: hOk, heuresSupp: sOk, commentaire: v.commentaire || null };
+    if (hOk === null && !sOk && !v.commentaire && !v.teletravail) continue;
+    pourCalendrier[iso] = { date: iso, heures: hOk, heuresSupp: sOk, commentaire: v.commentaire || null, teletravail: !!v.teletravail };
     totH += hOk || 0;
     totS += sOk;
   }
@@ -137,6 +137,10 @@ export default function ReleveHeuresSalarie() {
                 <label style={label}>Heures travaillées<input inputMode="decimal" placeholder="ex : 7 ou 7h30" value={s.heures} onChange={(e) => maj(selection, "heures", e.target.value)} style={champ} /></label>
                 <label style={label}>dont heures supp<input inputMode="decimal" placeholder="0" value={s.heuresSupp} onChange={(e) => maj(selection, "heuresSupp", e.target.value)} style={champ} /></label>
               </div>
+              <label style={{ ...label, display: "flex", alignItems: "center", gap: "8px" }}>
+                <input type="checkbox" checked={!!s.teletravail} onChange={(e) => maj(selection, "teletravail", e.target.checked)} style={{ width: "18px", height: "18px", accentColor: "#f97316" }} />
+                🏠 Journée en télétravail
+              </label>
               <label style={label}>Commentaire<input maxLength={300} value={s.commentaire} onChange={(e) => maj(selection, "commentaire", e.target.value)} placeholder="facultatif" style={champ} /></label>
               <button type="button" onClick={() => setSelection(null)} style={{ alignSelf: "flex-end", background: "#111827", color: "#ffffff", border: "none", borderRadius: "8px", padding: "8px 16px", fontWeight: 600, cursor: "pointer" }}>OK</button>
             </>

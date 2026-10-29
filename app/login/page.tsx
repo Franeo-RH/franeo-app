@@ -7,6 +7,7 @@ import Link from "next/link";
 import InstallerApp from "@/components/InstallerApp";
 import { viderCacheHorsLigne } from "@/components/EnregistrerSW";
 import { oublierDroits } from "@/components/useDroits";
+import DemandeAcces from "@/components/DemandeAcces";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -148,6 +149,10 @@ export default function LoginPage() {
           {chargementDemo ? "Ouverture de la démo..." : profilDemo === "salarie" ? "🧪 Tester l'espace salarié" : "🧪 Tester la démo"}
         </button>
         <p className="text-xs text-gray-400 text-center mt-2">{profilDemo === "salarie" ? "Vous êtes Sophie, salariée de l'entreprise démo : déclarez une absence et suivez sa validation." : "Sans inscription, avec des données fictives."}</p>
+
+        <div style={{ textAlign: "center", marginTop: "12px" }}>
+          <DemandeAcces variante="lien" />
+        </div>
 
         <InstallerApp
           style={{ width: "100%", marginTop: "16px", background: "#111827", color: "#ffffff", border: "none", borderRadius: "8px", padding: "12px", fontWeight: 600, cursor: "pointer" }}

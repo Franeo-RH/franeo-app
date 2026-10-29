@@ -22,7 +22,7 @@ export default function NouveauSalarieAdmin() {
     dateNaissance: "", lieuNaissance: "", nationalite: "",
     numeroSecuriteSociale: "", rue: "", codePostal: "", ville: "", pays: "",
     poste: "", typeContrat: "", dateDebut: "", dateFin: "",
-    heuresHebdomadaires: "", manager: "", conventionCollective: "",
+    heuresHebdomadaires: "", manager: "", etablissement: "", service: "", soldeConges: "", conventionCollective: "",
     categorie: "", coefficient: "",
     salaireMensuel: "", salaireAnnuel: "", primes: "", avantages: "",
   });
@@ -140,6 +140,8 @@ export default function NouveauSalarieAdmin() {
                 <Field label="Date de fin" name="dateFin" value={form.dateFin} onChange={handleChange} type="date" />
                 <Field label="Heures hebdomadaires" name="heuresHebdomadaires" value={form.heuresHebdomadaires} onChange={handleChange} type="number" />
                 <Field label="Manager" name="manager" value={form.manager} onChange={handleChange} />
+                <Field label="Établissement" name="etablissement" value={form.etablissement} onChange={handleChange} />
+                <Field label="Service" name="service" value={form.service} onChange={handleChange} />
                 <Field label="Convention collective" name="conventionCollective" value={form.conventionCollective} onChange={handleChange} />
                 <Field label="Catégorie" name="categorie" value={form.categorie} onChange={handleChange} />
                 <Field label="Coefficient" name="coefficient" value={form.coefficient} onChange={handleChange} />

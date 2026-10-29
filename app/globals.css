@@ -189,3 +189,14 @@ body {
 .fr-hors-ligne main textarea {
   pointer-events: none; opacity: 0.5;
 }
+
+/* =========================================================
+   Impression / PDF (Indicateurs RH) : seulement le contenu
+   ========================================================= */
+@media print {
+  .fr-nav, .fr-pas-imprimer, aside.fr-sidebar, .fr-bandeau-hors-ligne { display: none !important; }
+  body, .bg-gray-100 { background: #ffffff !important; }
+  .fr-indicateurs .shadow { box-shadow: none !important; border: 1px solid #e5e7eb; }
+  .fr-indicateurs section, .fr-indicateurs .rounded-xl { break-inside: avoid; }
+  @page { margin: 12mm; }
+}

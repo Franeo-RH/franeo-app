@@ -234,6 +234,8 @@ export async function POST(request: NextRequest) {
 
 
         manager: data.manager || null,
+        etablissement: data.etablissement || null,
+        service: data.service || null,
 
         conventionCollective:
           data.conventionCollective || null,

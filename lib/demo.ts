@@ -78,6 +78,10 @@ async function assurerEntrepriseEtUtilisateur() {
   if (!entreprise.permissions.includes("espace-salaries")) {
     entreprise = await prisma.entreprise.update({ where: { id: entreprise.id }, data: { permissions: { push: "espace-salaries" } } });
   }
+  // Les indicateurs RH sont visibles dans la démo
+  if (!entreprise.permissions.includes("indicateurs-rh")) {
+    entreprise = await prisma.entreprise.update({ where: { id: entreprise.id }, data: { permissions: { push: "indicateurs-rh" } } });
+  }
 
   return { entreprise, utilisateur };
 }
@@ -153,9 +157,55 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
       const date = new Date(Date.UTC(annee, mois - 1, d, 12));
       const js = date.getUTCDay();
       if (js === 0 || js === 6) continue;
-      lignes.push({ releveId: r.id, date, heures: d % 5 === 0 ? 9 : 7, heuresSupp: d % 5 === 0 ? 2 : 0, commentaire: d % 5 === 0 ? "Clôture" : null });
+      lignes.push({ releveId: r.id, date, heures: d % 5 === 0 ? 9 : 7, heuresSupp: d % 5 === 0 ? 2 : 0, teletravail: js === 3, commentaire: d % 5 === 0 ? "Clôture" : null });
     }
     if (lignes.length) await prisma.releveJour.createMany({ data: lignes });
+  }
+
+  // ── Données pour les indicateurs RH (12 derniers mois) ──
+  {
+    const orga: [string, string, string, number][] = [
+      [sophie.id, "Paris", "Administration", 18], [karim.id, "Lyon", "Finance", 9.5], [julie.id, "Paris", "Commercial", 4],
+      [thomas.id, "Lille", "Technique", 22], [emma.id, "Nantes", "Marketing", 6], [lucas.id, "Bordeaux", "Commercial", 12], [chloe.id, "Paris", "RH", 0],
+    ];
+    for (const [id, etablissement, service, soldeConges] of orga) {
+      await prisma.salarie.update({ where: { id }, data: { etablissement, service, soldeConges } });
+    }
+    await prisma.entreprise.update({ where: { id: entrepriseId }, data: { budgetPrimesAnnuel: 9000, budgetFormationAnnuel: 4000 } });
+    const moisAvant = (n: number) => { const d = new Date(annee, mois - 1 - n, 1); return { mois: d.getMonth() + 1, annee: d.getFullYear() }; };
+    const variablesPassees = [];
+    for (let n = 1; n <= 11; n++) {
+      const m = moisAvant(n);
+      if (n % 3 === 0) variablesPassees.push({ salarieId: lucas.id, entrepriseId, type: "PRIME" as const, valeur: 250 + n * 10, statut: "Validé", ...m });
+      if (n % 4 === 1) variablesPassees.push({ salarieId: sophie.id, entrepriseId, type: "PRIME" as const, valeur: 400, statut: "Validé", ...m });
+      variablesPassees.push({ salarieId: thomas.id, entrepriseId, type: "HEURE_SUPPLEMENTAIRE" as const, valeur: 3 + (n % 5), statut: "Validé", ...m });
+      if (n % 2 === 0) variablesPassees.push({ salarieId: karim.id, entrepriseId, type: "HEURE_SUPPLEMENTAIRE" as const, valeur: 2, statut: "Validé", ...m });
+    }
+    await prisma.variablePaie.createMany({ data: variablesPassees });
+    await prisma.absence.createMany({
+      data: [
+        { salarieId: thomas.id, entrepriseId, type: "MALADIE", dateDebut: jour(-75), dateFin: jour(-71), statut: "Validé" },
+        { salarieId: karim.id, entrepriseId, type: "CONGE_PAYE", dateDebut: jour(-120), dateFin: jour(-106), statut: "Validé" },
+        { salarieId: lucas.id, entrepriseId, type: "CONGE_PAYE", dateDebut: jour(-200), dateFin: jour(-190), statut: "Validé" },
+        { salarieId: emma.id, entrepriseId, type: "RTT", dateDebut: jour(-40), dateFin: jour(-40), statut: "Validé" },
+        { salarieId: julie.id, entrepriseId, type: "MALADIE", dateDebut: jour(-25), dateFin: jour(-23), statut: "Validé" },
+        { salarieId: thomas.id, entrepriseId, type: "CONGE_PAYE", dateDebut: jour(30), dateFin: jour(41), statut: "Validé" },
+      ],
+    });
+    await prisma.formation.createMany({
+      data: [
+        { salarieId: sophie.id, entrepriseId, intitule: "Gestion des absences", date: jour(-60), heures: 7, cout: 450 },
+        { salarieId: thomas.id, entrepriseId, intitule: "Habilitation électrique", date: jour(-150), heures: 14, cout: 900 },
+        { salarieId: lucas.id, entrepriseId, intitule: "Négociation commerciale", date: jour(-15), heures: 7, cout: 600 },
+      ],
+    });
+    await prisma.rappelSalarie.createMany({
+      data: [
+        { salarieId: karim.id, type: "ENTRETIEN_ANNUEL", dateEcheance: jour(-50), traite: true, traiteAt: jour(-52) },
+        { salarieId: thomas.id, type: "ENTRETIEN_ANNUEL", dateEcheance: jour(-20), traite: true, traiteAt: jour(-21) },
+        { salarieId: lucas.id, type: "ENTRETIEN_PRO", dateEcheance: jour(-10), traite: false },
+      ],
+    });
   }
 
   // Variables de paie du mois

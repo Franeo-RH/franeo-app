@@ -25,7 +25,7 @@ export default function ModifierSalarie() {
     dateNaissance: "", lieuNaissance: "", nationalite: "",
     numeroSecuriteSociale: "", rue: "", codePostal: "", ville: "", pays: "",
     poste: "", typeContrat: "", dateDebut: "", dateFin: "",
-    heuresHebdomadaires: "", manager: "", conventionCollective: "",
+    heuresHebdomadaires: "", manager: "", etablissement: "", service: "", soldeConges: "", conventionCollective: "",
     categorie: "", coefficient: "",
     salaireMensuel: "", salaireAnnuel: "", primes: "", avantages: "",
   });
@@ -55,6 +55,9 @@ export default function ModifierSalarie() {
           dateFin: data.dateFin ? data.dateFin.split("T")[0] : "",
           heuresHebdomadaires: data.heuresHebdomadaires?.toString() || "",
           manager: data.manager || "",
+          etablissement: data.etablissement || "",
+          service: data.service || "",
+          soldeConges: data.soldeConges != null ? String(data.soldeConges) : "",
           conventionCollective: data.conventionCollective || "",
           categorie: data.categorie || "",
           coefficient: data.coefficient || "",
@@ -189,6 +192,8 @@ export default function ModifierSalarie() {
                   {champ("Date de fin", "dateFin", "date", true)}
                   {champ("Heures hebdomadaires", "heuresHebdomadaires", "number")}
                   {champ("Manager", "manager")}
+                  {champ("Établissement", "etablissement")}
+                  {champ("Service", "service")}
                   {champ("Convention collective", "conventionCollective")}
                   {champ("Catégorie", "categorie")}
                   {champ("Coefficient", "coefficient")}

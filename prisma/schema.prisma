@@ -48,6 +48,9 @@ model Entreprise {
   ticketsUtilises   Int                @default(0)
 
   permissions       String[]           @default(["salaries", "paie", "tickets", "absences", "entreprise", "helpdesk"])
+  // Indicateurs RH : budgets annuels (facultatifs)
+  budgetPrimesAnnuel    Float?
+  budgetFormationAnnuel Float?
 
   createdAt         DateTime           @default(now())
 
@@ -71,6 +74,7 @@ model Entreprise {
   releves           ReleveMois[]
   devis             Devis[]
   questionsRH       QuestionRH[]
+  formations        Formation[]
 }
 
 model Facturation {
@@ -216,6 +220,11 @@ model Salarie {
 
   titreSejour           DateTime?
   matricule             String?
+  // Indicateurs RH
+  etablissement         String?
+  service               String?
+  soldeConges           Float?
+  formations            Formation[]
   rappels               RappelSalarie[]
   compte                Utilisateur?
 
@@ -574,6 +583,7 @@ model ReleveJour {
   date        DateTime
   heures      Float?
   heuresSupp  Float      @default(0)
+  teletravail Boolean    @default(false)
   commentaire String?
 
   @@unique([releveId, date])
@@ -640,4 +650,41 @@ model MessageQuestionRH {
   // réponse rapide « merci d'ouvrir un ticket » : affiche le lien vers un nouveau ticket
   versTicket Boolean    @default(false)
   createdAt  DateTime   @default(now())
+}
+
+// Formation suivie par un salarié (indicateurs RH : heures et budget)
+model Formation {
+  id           String     @id @default(cuid())
+  salarieId    String
+  salarie      Salarie    @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  intitule     String
+  date         DateTime
+  heures       Float      @default(0)
+  cout         Float      @default(0)
+  createdAt    DateTime   @default(now())
+
+  @@index([entrepriseId, date])
+}
+
+// Demande d'inscription ou de contact envoyée depuis la démo / la page de connexion
+// statut : NOUVELLE → VALIDEE (entreprise + compte créés) ou REFUSEE
+model DemandeInscription {
+  id           String    @id @default(cuid())
+  societe      String
+  prenom       String
+  nom          String
+  email        String
+  telephone    String?
+  effectif     String?
+  besoins      String[]
+  message      String?
+  type         String    @default("INSCRIPTION") // INSCRIPTION | CONTACT
+  statut       String    @default("NOUVELLE")
+  entrepriseId String?
+  createdAt    DateTime  @default(now())
+  traiteeAt    DateTime?
+
+  @@index([statut])
 }

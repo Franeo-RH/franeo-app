@@ -12,6 +12,7 @@ export const MODULES = [
   { id: "helpdesk", label: "🆘 Helpdesk" },
   { id: "entreprise", label: "🏢 Mon entreprise (infos, abonnements, factures)" },
   { id: "espace-salaries", label: "📱 Espace salarié (option : 1 €/salarié/mois, inclus en Premium et Entreprise)" },
+  { id: "indicateurs-rh", label: "📈 Indicateurs RH (VIEW_HR_INDICATORS)" },
 ] as const;
 
 export const ACTIONS = [

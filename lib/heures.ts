@@ -59,5 +59,5 @@ export const STATUTS_RELEVE: Record<string, { fond: string; texte: string; libel
   "Refusé": { fond: "#fee2e2", texte: "#b91c1c", libelle: "↩️ Refusé, à corriger" },
 };
 
-export type JourReleve = { date: string; heures: number | null; heuresSupp: number; commentaire: string | null };
+export type JourReleve = { date: string; heures: number | null; heuresSupp: number; commentaire: string | null; teletravail?: boolean };
 export type AbsenceReleve = { type: string; dateDebut: string; dateFin: string; statut: string };

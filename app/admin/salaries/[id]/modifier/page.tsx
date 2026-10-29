@@ -19,7 +19,7 @@ export default function ModifierSalarieAdmin({ params }: { params: Promise<{ id:
     dateNaissance: "", lieuNaissance: "", nationalite: "",
     numeroSecuriteSociale: "", rue: "", codePostal: "", ville: "", pays: "",
     poste: "", typeContrat: "", dateDebut: "", dateFin: "",
-    heuresHebdomadaires: "", manager: "", conventionCollective: "",
+    heuresHebdomadaires: "", manager: "", etablissement: "", service: "", soldeConges: "", conventionCollective: "",
     categorie: "", coefficient: "", statut: "Actif",
     salaireMensuel: "", salaireAnnuel: "", primes: "", avantages: "",
   });
@@ -49,6 +49,9 @@ export default function ModifierSalarieAdmin({ params }: { params: Promise<{ id:
             dateFin: data.dateFin ? data.dateFin.split("T")[0] : "",
             heuresHebdomadaires: data.heuresHebdomadaires?.toString() || "",
             manager: data.manager || "",
+          etablissement: data.etablissement || "",
+          service: data.service || "",
+          soldeConges: data.soldeConges != null ? String(data.soldeConges) : "",
             conventionCollective: data.conventionCollective || "",
             categorie: data.categorie || "",
             coefficient: data.coefficient || "",
@@ -187,6 +190,9 @@ export default function ModifierSalarieAdmin({ params }: { params: Promise<{ id:
 
                 <Field label="Heures hebdomadaires" name="heuresHebdomadaires" value={form.heuresHebdomadaires} onChange={handleChange} type="number" />
                 <Field label="Manager" name="manager" value={form.manager} onChange={handleChange} />
+                <Field label="Établissement" name="etablissement" value={form.etablissement} onChange={handleChange} />
+                <Field label="Service" name="service" value={form.service} onChange={handleChange} />
+                <Field label="Solde de congés (jours)" name="soldeConges" value={String(form.soldeConges)} onChange={handleChange} type="number" />
                 <Field label="Convention collective" name="conventionCollective" value={form.conventionCollective} onChange={handleChange} />
                 <Field label="Catégorie" name="categorie" value={form.categorie} onChange={handleChange} />
                 <Field label="Coefficient" name="coefficient" value={form.coefficient} onChange={handleChange} />

@@ -39,7 +39,7 @@ export async function PUT(request: NextRequest) {
   }
 
   const joursValides = new Set(joursDuMois(mois, annee));
-  const lignes: { date: Date; heures: number | null; heuresSupp: number; commentaire: string | null }[] = [];
+  const lignes: { date: Date; heures: number | null; heuresSupp: number; commentaire: string | null; teletravail: boolean }[] = [];
   for (const brut of Array.isArray(corps?.jours) ? corps.jours.slice(0, 31) : []) {
     const j = brut as Record<string, unknown>;
     const iso = String(j.date ?? "");
@@ -51,8 +51,9 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ erreur: `Heures invalides le ${date.toLocaleDateString("fr-FR", { timeZone: "UTC" })} (ex : 7, 7,5 ou 7h30).` }, { status: 400 });
     }
     const commentaire = typeof j.commentaire === "string" && j.commentaire.trim() ? j.commentaire.trim().slice(0, 300) : null;
-    if (heures === null && supp === 0 && !commentaire) continue;
-    lignes.push({ date, heures, heuresSupp: supp, commentaire });
+    const teletravail = j.teletravail === true;
+    if (heures === null && supp === 0 && !commentaire && !teletravail) continue;
+    lignes.push({ date, heures, heuresSupp: supp, commentaire, teletravail });
   }
 
   const envoyer = corps?.envoyer === true;
