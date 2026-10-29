@@ -7,6 +7,8 @@ export const CONTRATS_FILTRE = ["CDI", "CDD", "Alternant", "Stagiaire"] as const
 
 const JOUR = 86400000;
 const minuit = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+// Jour suivant au calendrier (sûr lors des changements d'heure)
+const plusJours = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 
 /** Période à partir d'un raccourci (aujourd'hui, ce mois…) ou de dates personnalisées */
 export function periodeDepuis(cle: string | null, startDate?: string | null, endDate?: string | null, maintenant = new Date()): Periode {
@@ -56,7 +58,7 @@ export function present(s: { dateDebut: Date | null; dateFin: Date | null }, d: 
 /** Jours ouvrés (lundi-vendredi) entre deux dates incluses */
 export function joursOuvres(debut: Date, fin: Date): number {
   let n = 0;
-  for (let d = minuit(debut); d <= fin; d = new Date(d.getTime() + JOUR)) {
+  for (let d = minuit(debut); d <= fin; d = plusJours(d, 1)) {
     const j = d.getDay();
     if (j !== 0 && j !== 6) n++;
     if (n > 4000) break;
@@ -93,3 +95,32 @@ export function anciennete(dateDebut: Date | null, a: Date): number {
 
 export const arrondi = (n: number, c = 1) => Math.round(n * 10 ** c) / 10 ** c;
 export const pct = (num: number, den: number) => (den > 0 ? arrondi((num / den) * 100, 1) : null);
+
+export type Tranche = { libelle: string; debut: Date; fin: Date };
+
+/** Découpe la période en tranches lisibles : jours (≤ 45 j), semaines (≤ 120 j) ou mois */
+export function decoupage(p: Periode): { granularite: "jour" | "semaine" | "mois"; tranches: Tranche[] } {
+  const jours = Math.round((p.fin.getTime() - p.debut.getTime()) / JOUR) + 1;
+  const fin = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+  const court = (d: Date) => d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+  if (jours <= 45) {
+    const t: Tranche[] = [];
+    for (let d = minuit(p.debut); d <= p.fin; d = plusJours(d, 1)) t.push({ libelle: court(d), debut: d, fin: fin(d) });
+    return { granularite: "jour", tranches: t };
+  }
+  if (jours <= 120) {
+    const t: Tranche[] = [];
+    for (let d = minuit(p.debut); d <= p.fin; d = plusJours(d, 7)) {
+      const f = new Date(Math.min(plusJours(d, 6).getTime(), p.fin.getTime()));
+      t.push({ libelle: court(d), debut: d, fin: fin(f) });
+    }
+    return { granularite: "semaine", tranches: t };
+  }
+  return { granularite: "mois", tranches: moisDeLaPeriode(p).map((m) => ({ libelle: m.libelle, debut: m.debut, fin: m.fin < p.fin ? m.fin : p.fin })) };
+}
+
+/** Fenêtre mensuelle pour les données saisies au mois (primes, heures supp) : au moins 12 mois jusqu'à la fin de période */
+export function fenetreMensuelle(p: Periode): Periode {
+  const debut12 = new Date(p.fin.getFullYear(), p.fin.getMonth() - 11, 1);
+  return { debut: p.debut < debut12 ? p.debut : debut12, fin: p.fin };
+}

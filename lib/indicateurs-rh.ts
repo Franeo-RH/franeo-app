@@ -1,7 +1,7 @@
 // Indicateurs RH : agrégats calculés côté serveur, en un petit nombre de requêtes (pas de N+1), avec cache court.
 import { prisma } from "@/lib/prisma";
 import {
-  anciennete, arrondi, chevauchement, contratsBase, familleContrat, joursOuvres, moisDeLaPeriode, pct, present, type Periode,
+  anciennete, arrondi, chevauchement, contratsBase, decoupage, familleContrat, fenetreMensuelle, joursOuvres, moisDeLaPeriode, pct, present, type Periode,
 } from "@/lib/indicateurs-calculs";
 
 export type FiltresRH = {
@@ -67,7 +67,9 @@ async function calcul(f: FiltresRH) {
   const salaries = await salariesFiltres(f);
   const ids = salaries.map((s) => s.id);
   const mois = moisDeLaPeriode(p);
-  const filtreMois = { OR: mois.map((m) => ({ mois: m.mois, annee: m.annee })) };
+  const moisFenetre = moisDeLaPeriode(fenetreMensuelle(p));
+  const filtreMois = { OR: moisFenetre.map((m) => ({ mois: m.mois, annee: m.annee })) };
+  const dansPeriode = (v: { mois: number; annee: number }) => mois.some((m) => m.mois === v.mois && m.annee === v.annee);
   const aujourdhui = new Date();
 
   // Toutes les données en parallèle, filtrées par la liste des salariés (pas de requête par salarié)
@@ -87,7 +89,8 @@ async function calcul(f: FiltresRH) {
     }) : Promise.resolve([] as { traite: boolean }[]),
     ok ? prisma.formation.findMany({ where: { salarieId: { in: ids }, date: { gte: p.debut, lte: p.fin } }, select: { heures: true, cout: true, date: true } })
       : Promise.resolve([] as { heures: number; cout: number; date: Date }[]),
-    ok ? prisma.releveJour.count({ where: { teletravail: true, date: { gte: p.debut, lte: p.fin }, releve: { salarieId: { in: ids } } } }) : Promise.resolve(0),
+    ok ? prisma.releveJour.findMany({ where: { teletravail: true, date: { gte: p.debut, lte: p.fin }, releve: { salarieId: { in: ids } } }, select: { date: true } })
+      : Promise.resolve([] as { date: Date }[]),
     ok ? prisma.entreprise.findMany({ where: { id: { in: [...new Set(salaries.map((s) => s.entrepriseId))] } }, select: { budgetPrimesAnnuel: true, budgetFormationAnnuel: true } })
       : Promise.resolve([] as { budgetPrimesAnnuel: number | null; budgetFormationAnnuel: number | null }[]),
     ok ? prisma.absence.count({ where: { salarieId: { in: ids }, statut: "En attente", type: { in: ["CONGE_PAYE", "RTT"] } } }) : Promise.resolve(0),
@@ -125,8 +128,10 @@ async function calcul(f: FiltresRH) {
   const joursPlanifies = aVenir.reduce((a, x) => a + chevauchement(x, { debut: aujourdhui, fin: new Date(aujourdhui.getFullYear() + 2, 0, 1) }).ouvres, 0);
 
   // ── Heures supp et primes ──
-  const hs = variables.filter((v) => v.type === "HEURE_SUPPLEMENTAIRE");
-  const primes = variables.filter((v) => v.type === "PRIME");
+  const hsFenetre = variables.filter((v) => v.type === "HEURE_SUPPLEMENTAIRE");
+  const primesFenetre = variables.filter((v) => v.type === "PRIME");
+  const hs = hsFenetre.filter(dansPeriode);
+  const primes = primesFenetre.filter(dansPeriode);
   const totalHS = hs.reduce((a, v) => a + v.valeur, 0);
   const totalPrimes = primes.reduce((a, v) => a + v.valeur, 0);
   const prorata = mois.length / 12;
@@ -138,17 +143,44 @@ async function calcul(f: FiltresRH) {
   const heuresFormation = formations.reduce((a, x) => a + x.heures, 0);
   const coutFormation = formations.reduce((a, x) => a + x.cout, 0);
 
-  // ── Séries par mois pour les graphiques ──
-  const series = mois.map((m) => {
-    const pm = { debut: m.debut, fin: m.fin };
-    return {
-      mois: m.libelle,
-      effectif: salaries.filter((s) => present(s, m.fin)).length,
-      absences: absences.reduce((a, x) => a + chevauchement(x, pm).calendaires, 0),
-      primes: arrondi(primes.filter((v) => v.mois === m.mois && v.annee === m.annee).reduce((a, v) => a + v.valeur, 0), 2),
-      heuresSupp: arrondi(hs.filter((v) => v.mois === m.mois && v.annee === m.annee).reduce((a, v) => a + v.valeur, 0), 2),
-    };
-  });
+  // ── Séries pour les graphiques : découpage adapté à la période filtrée ──
+  const { granularite, tranches } = decoupage(p);
+  const series = {
+    granularite,
+    points: tranches.map((t) => ({
+      label: t.libelle,
+      effectif: salaries.filter((s) => present(s, t.fin)).length,
+      absences: absences.reduce((a, x) => a + chevauchement(x, t).calendaires, 0),
+      entrees: salaries.filter((s) => s.dateDebut && s.dateDebut >= t.debut && s.dateDebut <= t.fin).length,
+      sorties: salaries.filter((s) => s.dateFin && s.dateFin >= t.debut && s.dateFin <= t.fin).length,
+      teletravail: teletravail.filter((j) => j.date >= t.debut && j.date <= t.fin).length,
+    })),
+  };
+  // Primes et heures supp sont saisies au mois : courbe sur au moins 12 mois jusqu'à la fin de période
+  const mensuel = moisFenetre.map((m) => ({
+    label: m.libelle,
+    dansPeriode: dansPeriode(m),
+    primes: arrondi(primesFenetre.filter((v) => v.mois === m.mois && v.annee === m.annee).reduce((a, v) => a + v.valeur, 0), 2),
+    heuresSupp: arrondi(hsFenetre.filter((v) => v.mois === m.mois && v.annee === m.annee).reduce((a, v) => a + v.valeur, 0), 2),
+  }));
+
+  // ── Répartitions ──
+  const nomDe = new Map(salaries.map((s) => [s.id, `${s.prenom} ${s.nom.charAt(0)}.`]));
+  const serviceDe = new Map(salaries.map((s) => [s.id, s.service || "Sans service"]));
+  const somme = <T,>(liste: T[], cle: (x: T) => string, val: (x: T) => number) => {
+    const m = new Map<string, number>();
+    for (const x of liste) m.set(cle(x), (m.get(cle(x)) || 0) + val(x));
+    return [...m.entries()].map(([label, valeur]) => ({ label, valeur: arrondi(valeur, 2) })).filter((x) => x.valeur > 0).sort((a, b) => b.valeur - a.valeur);
+  };
+  const repartitions = {
+    contrats: [["CDI", parContrat.CDI], ["CDD", parContrat.CDD], ["Alternants", parContrat.Alternant], ["Stagiaires", parContrat.Stagiaire], ["Autres", parContrat.Autre]]
+      .map(([label, valeur]) => ({ label: String(label), valeur: Number(valeur) })).filter((x) => x.valeur > 0),
+    effectifParService: somme(presents, (s) => s.service || "Sans service", () => 1),
+    effectifParEtablissement: somme(presents, (s) => s.etablissement || "Non renseigné", () => 1),
+    absencesParService: somme(absences, (a) => serviceDe.get(a.salarieId) || "Sans service", (a) => chevauchement(a, p).calendaires),
+    heuresSuppParSalarie: somme(hs, (v) => nomDe.get(v.salarieId) || "?", (v) => v.valeur).slice(0, 8),
+    primesParService: somme(primes, (v) => serviceDe.get(v.salarieId) || "Sans service", (v) => v.valeur),
+  };
 
   return {
     periode: { debut: p.debut.toISOString(), fin: p.fin.toISOString(), joursOuvres: ouvresPeriode },
@@ -156,11 +188,13 @@ async function calcul(f: FiltresRH) {
     movements: { entrees, sorties },
     absences: { tauxAbsenteisme: tauxAbs, joursTotal: joursAbsence, joursOuvres: ouvresAbsence, parMotif: Object.entries(parMotif).map(([motif, jours]) => ({ motif, jours })).filter((x) => x.jours > 0).sort((a, b) => b.jours - a.jours) },
     leaveBalances: { soldeTotal: soldes.length ? arrondi(soldes.reduce((a, s) => a + (s.soldeConges ?? 0), 0), 1) : null, salariesAvecSolde: soldes.length, demandesEnAttente: enAttente, joursPlanifies },
-    overtime: { heuresTotal: arrondi(totalHS, 2), salaries: new Set(hs.map((v) => v.salarieId)).size, joursTeletravail: teletravail },
+    overtime: { heuresTotal: arrondi(totalHS, 2), salaries: new Set(hs.map((v) => v.salarieId)).size, joursTeletravail: teletravail.length },
     bonuses: { total: arrondi(totalPrimes, 2), moyenneParSalarie: presents.length ? arrondi(totalPrimes / presents.length, 2) : 0, budget: budgetPrimes ? arrondi(budgetPrimes, 2) : null, tauxConsommation: budgetPrimes ? pct(totalPrimes, budgetPrimes) : null },
     interviews: { prevus: entretiens.length, realises: faits, pourcentage: pct(faits, entretiens.length) },
     trainings: { heures: arrondi(heuresFormation, 1), cout: arrondi(coutFormation, 2), budget: budgetFormation ? arrondi(budgetFormation, 2) : null, tauxConsommation: budgetFormation ? pct(coutFormation, budgetFormation) : null, nombre: formations.length },
     series,
+    mensuel,
+    repartitions,
   };
 }
 

@@ -43,7 +43,18 @@ export async function GET(request: NextRequest) {
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Indicateur", "Valeur"], ...kpi]), "Indicateurs");
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ind.series.map((s) => ({ Mois: s.mois, Effectif: s.effectif, "Jours d'absence": s.absences, "Primes (€)": s.primes, "Heures supp": s.heuresSupp }))), "Par mois");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ind.series.points.map((s) => ({ [ind.series.granularite === "mois" ? "Mois" : ind.series.granularite === "semaine" ? "Semaine du" : "Jour"]: s.label, Effectif: s.effectif, "Jours d'absence": s.absences, Entrées: s.entrees, Sorties: s.sorties, "Jours de télétravail": s.teletravail }))), "Évolution");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ind.mensuel.map((s) => ({ Mois: s.label, "Primes (€)": s.primes, "Heures supp": s.heuresSupp, "Dans la période": s.dansPeriode ? "oui" : "" }))), "Primes et HS par mois");
+  const R = ind.repartitions;
+  const reps = [
+    ...R.contrats.map((x) => ({ Répartition: "Contrats", Libellé: x.label, Valeur: x.valeur })),
+    ...R.effectifParService.map((x) => ({ Répartition: "Effectif par service", Libellé: x.label, Valeur: x.valeur })),
+    ...R.effectifParEtablissement.map((x) => ({ Répartition: "Effectif par établissement", Libellé: x.label, Valeur: x.valeur })),
+    ...R.absencesParService.map((x) => ({ Répartition: "Jours d'absence par service", Libellé: x.label, Valeur: x.valeur })),
+    ...R.heuresSuppParSalarie.map((x) => ({ Répartition: "Heures supp par salarié", Libellé: x.label, Valeur: x.valeur })),
+    ...R.primesParService.map((x) => ({ Répartition: "Primes par service (€)", Libellé: x.label, Valeur: x.valeur })),
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reps.length ? reps : [{ Information: "Aucune donnée" }]), "Répartitions");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detail.length ? detail : [{ Information: "Aucune donnée" }]), VUES[vue].slice(0, 31));
   const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
   return new NextResponse(buffer, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="indicateurs-rh-${date}.xlsx"` } });

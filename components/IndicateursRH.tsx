@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Camembert, Courbe, Histogramme } from "@/components/GraphiquesRH";
+import { BarresGroupees, BarresHorizontales, Camembert, Courbe, Histogramme, Jauge } from "@/components/GraphiquesRH";
 
 type Indicateurs = {
   periode: { debut: string; fin: string; joursOuvres: number };
@@ -13,7 +13,9 @@ type Indicateurs = {
   bonuses: { total: number; moyenneParSalarie: number; budget: number | null; tauxConsommation: number | null };
   interviews: { prevus: number; realises: number; pourcentage: number | null };
   trainings: { heures: number; cout: number; budget: number | null; tauxConsommation: number | null; nombre: number };
-  series: { mois: string; effectif: number; absences: number; primes: number; heuresSupp: number }[];
+  series: { granularite: "jour" | "semaine" | "mois"; points: { label: string; effectif: number; absences: number; entrees: number; sorties: number; teletravail: number }[] };
+  mensuel: { label: string; dansPeriode: boolean; primes: number; heuresSupp: number }[];
+  repartitions: Record<"contrats" | "effectifParService" | "effectifParEtablissement" | "absencesParService" | "heuresSuppParSalarie" | "primesParService", { label: string; valeur: number }[]>;
   detail: { vue: string; colonnes: { cle: string; label: string; type?: string }[]; lignes: Record<string, string | number | null>[]; total: number; page: number; parPage: number } | null;
   options: { societes: { id: string; nom: string }[]; etablissements: string[]; services: string[]; salaries: { id: string; nom: string }[] } | null;
   admin: boolean;
@@ -31,22 +33,32 @@ const VUES = [
 const nb = (n: number | null | undefined, suffixe = "") => (n === null || n === undefined ? "—" : `${n.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}${suffixe}`);
 const champ: React.CSSProperties = { border: "1px solid #d1d5db", borderRadius: "8px", padding: "8px 10px", fontSize: "14px", background: "#ffffff", minWidth: 0 };
 
-function Carte({ icone, label, valeur, detail, couleur = "#f97316" }: { icone: string; label: string; valeur: string; detail?: string; couleur?: string }) {
+function Chiffre({ label, valeur, couleur = "#111827" }: { label: string; valeur: string; couleur?: string }) {
   return (
-    <div style={{ background: "#ffffff", borderRadius: "14px", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", padding: "12px 14px", borderTop: `3px solid ${couleur}`, minWidth: 0 }}>
-      <p style={{ margin: 0, fontSize: "12px", fontWeight: 700, color: "#6b7280" }}>{icone} {label}</p>
-      <p style={{ margin: "4px 0 0", fontSize: "24px", fontWeight: 800, color: "#111827", lineHeight: 1.1 }}>{valeur}</p>
-      {detail && <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#9ca3af" }}>{detail}</p>}
+    <div style={{ background: "#f9fafb", borderRadius: "10px", padding: "6px 10px", minWidth: 0 }}>
+      <p style={{ margin: 0, fontSize: "11px", fontWeight: 700, color: "#6b7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</p>
+      <p style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: couleur, lineHeight: 1.2 }}>{valeur}</p>
     </div>
   );
 }
 
-function Section({ titre, children }: { titre: string; children: React.ReactNode }) {
+/** Un bloc d'indicateurs : quelques chiffres clés puis un ou plusieurs graphiques */
+function Panneau({ titre, chiffres, children, large = false }: { titre: string; chiffres: React.ReactNode; children: React.ReactNode; large?: boolean }) {
   return (
-    <section style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-      <h2 style={{ margin: 0, fontSize: "13px", fontWeight: 800, textTransform: "uppercase", color: "#6b7280", letterSpacing: "0.5px" }}>{titre}</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(165px, 1fr))", gap: "10px" }}>{children}</div>
+    <section className="bg-white rounded-xl shadow" style={{ padding: "14px", minWidth: 0, gridColumn: large ? "1 / -1" : undefined, display: "flex", flexDirection: "column", gap: "10px" }}>
+      <h2 style={{ margin: 0, fontSize: "15px", fontWeight: 800 }}>{titre}</h2>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(105px, 1fr))", gap: "6px" }}>{chiffres}</div>
+      {children}
     </section>
+  );
+}
+
+function SousGraphique({ titre, children }: { titre: string; children: React.ReactNode }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <p style={{ margin: "0 0 4px", fontSize: "12px", fontWeight: 700, color: "#6b7280" }}>{titre}</p>
+      {children}
+    </div>
   );
 }
 
@@ -130,6 +142,7 @@ export default function IndicateursRH() {
   const colsVisibles = det?.colonnes.filter((c) => c.label) ?? [];
   const pages = det ? Math.max(Math.ceil(det.total / det.parPage), 1) : 1;
   const peutBudget = !!d && (!d.admin || !!f.companyId);
+  const libGran = d?.series.granularite === "jour" ? "par jour" : d?.series.granularite === "semaine" ? "par semaine" : "par mois";
 
   return (
     <div className="fr-indicateurs" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -194,55 +207,90 @@ export default function IndicateursRH() {
 
       {d && (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px", opacity: chargement ? 0.6 : 1, transition: "opacity 0.2s" }}>
-          {/* 2. Cartes KPI */}
-          <Section titre="👥 Effectif">
-            <Carte icone="👥" label="Effectif total" valeur={nb(d.workforce.total)} detail="à la fin de la période" />
-            <Carte icone="📄" label="CDI" valeur={nb(d.workforce.cdi)} couleur="#3b82f6" />
-            <Carte icone="⏳" label="CDD" valeur={nb(d.workforce.cdd)} couleur="#8b5cf6" />
-            <Carte icone="🎓" label="Alternants" valeur={nb(d.workforce.alternants)} couleur="#10b981" detail={d.workforce.stagiaires ? `+ ${d.workforce.stagiaires} stagiaire(s)` : undefined} />
-            <Carte icone="📅" label="Ancienneté moyenne" valeur={nb(d.workforce.ancienneteMoyenne, " an(s)")} couleur="#6b7280" />
-          </Section>
-          <Section titre="🔄 Mouvements">
-            <Carte icone="➕" label="Entrées" valeur={nb(d.movements.entrees)} couleur="#10b981" />
-            <Carte icone="➖" label="Sorties" valeur={nb(d.movements.sorties)} couleur="#ef4444" />
-          </Section>
-          <Section titre="🏖️ Absences & congés">
-            <Carte icone="📉" label="Taux d'absentéisme" valeur={nb(d.absences.tauxAbsenteisme, " %")} couleur="#ef4444" detail="jours ouvrés d'absence / jours ouvrés théoriques" />
-            <Carte icone="🗓️" label="Jours d'absence" valeur={nb(d.absences.joursTotal)} detail={`${d.absences.joursOuvres} jours ouvrés`} />
-            <Carte icone="🧮" label="Solde de congés restant" valeur={d.leaveBalances.soldeTotal === null ? "Non renseigné" : nb(d.leaveBalances.soldeTotal, " j")} couleur="#3b82f6" detail={d.leaveBalances.soldeTotal === null ? "à saisir dans les fiches salariés" : `${d.leaveBalances.salariesAvecSolde} salarié(s) renseigné(s)`} />
-            <Carte icone="⏳" label="Demandes en attente" valeur={nb(d.leaveBalances.demandesEnAttente)} couleur="#f59e0b" detail="congés payés et RTT" />
-            <Carte icone="✈️" label="Jours planifiés à venir" valeur={nb(d.leaveBalances.joursPlanifies)} couleur="#3b82f6" detail="congés et RTT, jours ouvrés" />
-          </Section>
-          <Section titre="⏰ Temps de travail">
-            <Carte icone="⏰" label="Heures supplémentaires" valeur={nb(d.overtime.heuresTotal, " h")} />
-            <Carte icone="🧑‍🔧" label="Salariés concernés" valeur={nb(d.overtime.salaries)} couleur="#8b5cf6" />
-            <Carte icone="🏠" label="Jours de télétravail" valeur={nb(d.overtime.joursTeletravail)} couleur="#10b981" detail="déclarés dans les relevés d'heures" />
-          </Section>
-          <Section titre="💶 Rémunération variable">
-            <Carte icone="💶" label="Primes versées" valeur={nb(d.bonuses.total, " €")} />
-            <Carte icone="➗" label="Prime moyenne / salarié" valeur={nb(d.bonuses.moyenneParSalarie, " €")} couleur="#6b7280" />
-            <Carte icone="🎯" label="Budget primes consommé" valeur={d.bonuses.tauxConsommation === null ? "Pas de budget" : nb(d.bonuses.tauxConsommation, " %")} couleur="#f59e0b" detail={d.bonuses.budget ? `sur ${nb(d.bonuses.budget, " €")} (prorata de la période)` : "à définir plus bas"} />
-          </Section>
-          <Section titre="🗣️ Entretiens & formation">
-            <Carte icone="🗣️" label="Entretiens réalisés" valeur={d.interviews.pourcentage === null ? "—" : nb(d.interviews.pourcentage, " %")} detail={`${d.interviews.realises} / ${d.interviews.prevus} prévus sur la période`} />
-            <Carte icone="🎓" label="Heures de formation" valeur={nb(d.trainings.heures, " h")} couleur="#3b82f6" detail={`${d.trainings.nombre} formation(s)`} />
-            <Carte icone="💰" label="Budget formation consommé" valeur={d.trainings.tauxConsommation === null ? nb(d.trainings.cout, " €") : nb(d.trainings.tauxConsommation, " %")} couleur="#10b981" detail={d.trainings.budget ? `${nb(d.trainings.cout, " €")} sur ${nb(d.trainings.budget, " €")}` : "pas de budget défini"} />
-          </Section>
+          {/* 2. Indicateurs en graphiques (tout suit les filtres) */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(330px, 100%), 1fr))", gap: "12px" }}>
+            <Panneau titre="👥 Effectif" chiffres={<>
+              <Chiffre label="Effectif total" valeur={nb(d.workforce.total)} couleur="#ea580c" />
+              <Chiffre label="CDI" valeur={nb(d.workforce.cdi)} />
+              <Chiffre label="CDD" valeur={nb(d.workforce.cdd)} />
+              <Chiffre label="Alternants" valeur={nb(d.workforce.alternants)} />
+              <Chiffre label="Ancienneté moy." valeur={nb(d.workforce.ancienneteMoyenne, " an")} />
+            </>}>
+              <SousGraphique titre={`Évolution de l'effectif (${libGran})`}><Courbe points={d.series.points.map((x) => ({ label: x.label, valeur: x.effectif }))} /></SousGraphique>
+              <SousGraphique titre="Répartition par contrat"><Camembert parts={d.repartitions.contrats} /></SousGraphique>
+            </Panneau>
 
-          {/* 3. Graphiques */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "12px" }}>
-            {[
-              { t: "📈 Effectif dans le temps", g: <Courbe points={d.series.map((s) => ({ label: s.mois, valeur: s.effectif }))} /> },
-              { t: "📊 Jours d'absence par mois", g: <Histogramme points={d.series.map((s) => ({ label: s.mois, valeur: s.absences }))} couleur="#ef4444" unite=" j" /> },
-              { t: "🥧 Motifs d'absence", g: <Camembert parts={d.absences.parMotif.map((m) => ({ label: m.motif, valeur: m.jours }))} unite=" j" /> },
-              { t: "💶 Primes versées par mois", g: <Histogramme points={d.series.map((s) => ({ label: s.mois, valeur: s.primes }))} couleur="#f59e0b" unite=" €" /> },
-              { t: "⏰ Heures supplémentaires", g: <Courbe points={d.series.map((s) => ({ label: s.mois, valeur: s.heuresSupp }))} couleur="#8b5cf6" unite=" h" /> },
-            ].map((x) => (
-              <div key={x.t} className="bg-white rounded-xl shadow p-4" style={{ minWidth: 0 }}>
-                <h3 style={{ margin: "0 0 8px", fontSize: "14px", fontWeight: 700 }}>{x.t}</h3>
-                {x.g}
-              </div>
-            ))}
+            <Panneau titre="🏢 Organisation" chiffres={<>
+              <Chiffre label="Services" valeur={nb(d.repartitions.effectifParService.length)} />
+              <Chiffre label="Établissements" valeur={nb(d.repartitions.effectifParEtablissement.length)} />
+            </>}>
+              <SousGraphique titre="Effectif par service"><BarresHorizontales points={d.repartitions.effectifParService} /></SousGraphique>
+              <SousGraphique titre="Effectif par établissement"><BarresHorizontales points={d.repartitions.effectifParEtablissement} couleur="#3b82f6" /></SousGraphique>
+            </Panneau>
+
+            <Panneau titre="🔄 Mouvements" chiffres={<>
+              <Chiffre label="Entrées" valeur={nb(d.movements.entrees)} couleur="#059669" />
+              <Chiffre label="Sorties" valeur={nb(d.movements.sorties)} couleur="#dc2626" />
+              <Chiffre label="Solde" valeur={nb(d.movements.entrees - d.movements.sorties)} />
+            </>}>
+              <SousGraphique titre={`Entrées et sorties (${libGran})`}>
+                <BarresGroupees points={d.series.points.map((x) => ({ label: x.label, a: x.entrees, b: x.sorties }))} series={[{ nom: "Entrées", couleur: "#10b981" }, { nom: "Sorties", couleur: "#ef4444" }]} />
+              </SousGraphique>
+            </Panneau>
+
+            <Panneau titre="🏖️ Absences" chiffres={<>
+              <Chiffre label="Absentéisme" valeur={nb(d.absences.tauxAbsenteisme, " %")} couleur="#dc2626" />
+              <Chiffre label="Jours d'absence" valeur={nb(d.absences.joursTotal)} />
+              <Chiffre label="Jours ouvrés" valeur={nb(d.absences.joursOuvres)} />
+            </>}>
+              <SousGraphique titre={`Jours d'absence (${libGran})`}><Histogramme points={d.series.points.map((x) => ({ label: x.label, valeur: x.absences }))} couleur="#ef4444" unite=" j" /></SousGraphique>
+              <SousGraphique titre="Motifs d'absence"><Camembert parts={d.absences.parMotif.map((m) => ({ label: m.motif, valeur: m.jours }))} unite=" j" /></SousGraphique>
+              <SousGraphique titre="Jours d'absence par service"><BarresHorizontales points={d.repartitions.absencesParService} couleur="#ef4444" unite=" j" /></SousGraphique>
+            </Panneau>
+
+            <Panneau titre="🌴 Congés" chiffres={<>
+              <Chiffre label="Solde restant" valeur={d.leaveBalances.soldeTotal === null ? "—" : nb(d.leaveBalances.soldeTotal, " j")} couleur="#2563eb" />
+              <Chiffre label="En attente" valeur={nb(d.leaveBalances.demandesEnAttente)} couleur="#d97706" />
+              <Chiffre label="Planifiés à venir" valeur={nb(d.leaveBalances.joursPlanifies, " j")} />
+            </>}>
+              <SousGraphique titre="Congés : à prendre, demandés, planifiés">
+                <BarresHorizontales points={[
+                  { label: "Solde restant", valeur: d.leaveBalances.soldeTotal ?? 0 },
+                  { label: "Jours planifiés", valeur: d.leaveBalances.joursPlanifies },
+                  { label: "Demandes en attente", valeur: d.leaveBalances.demandesEnAttente },
+                ].filter((x) => x.valeur > 0)} couleur="#3b82f6" />
+              </SousGraphique>
+              {d.leaveBalances.soldeTotal === null && <p style={{ margin: 0, fontSize: "12px", color: "#9ca3af" }}>Solde de congés non renseigné dans les fiches salariés.</p>}
+            </Panneau>
+
+            <Panneau titre="⏰ Temps de travail" chiffres={<>
+              <Chiffre label="Heures supp" valeur={nb(d.overtime.heuresTotal, " h")} couleur="#7c3aed" />
+              <Chiffre label="Salariés concernés" valeur={nb(d.overtime.salaries)} />
+              <Chiffre label="Télétravail" valeur={nb(d.overtime.joursTeletravail, " j")} couleur="#059669" />
+            </>}>
+              <SousGraphique titre="Heures supp par mois (période en couleur)"><Histogramme points={d.mensuel.map((x) => ({ label: x.label, valeur: x.heuresSupp, attenue: !x.dansPeriode }))} couleur="#8b5cf6" unite=" h" /></SousGraphique>
+              <SousGraphique titre="Heures supp par salarié"><BarresHorizontales points={d.repartitions.heuresSuppParSalarie} couleur="#8b5cf6" unite=" h" /></SousGraphique>
+              <SousGraphique titre={`Jours de télétravail (${libGran})`}><Histogramme points={d.series.points.map((x) => ({ label: x.label, valeur: x.teletravail }))} couleur="#10b981" unite=" j" /></SousGraphique>
+            </Panneau>
+
+            <Panneau titre="💶 Rémunération variable" chiffres={<>
+              <Chiffre label="Primes versées" valeur={nb(d.bonuses.total, " €")} couleur="#d97706" />
+              <Chiffre label="Moyenne / salarié" valeur={nb(d.bonuses.moyenneParSalarie, " €")} />
+            </>}>
+              <Jauge label="Budget primes consommé" pourcentage={d.bonuses.tauxConsommation} detail={d.bonuses.budget ? `${nb(d.bonuses.total, " €")} sur ${nb(d.bonuses.budget, " €")} (prorata de la période)` : "Aucun budget défini (voir plus bas)"} />
+              <SousGraphique titre="Primes par mois (période en couleur)"><Histogramme points={d.mensuel.map((x) => ({ label: x.label, valeur: x.primes, attenue: !x.dansPeriode }))} couleur="#f59e0b" unite=" €" /></SousGraphique>
+              <SousGraphique titre="Primes par service"><BarresHorizontales points={d.repartitions.primesParService} couleur="#f59e0b" unite=" €" /></SousGraphique>
+            </Panneau>
+
+            <Panneau titre="🗣️ Entretiens & formation" chiffres={<>
+              <Chiffre label="Entretiens prévus" valeur={nb(d.interviews.prevus)} />
+              <Chiffre label="Réalisés" valeur={nb(d.interviews.realises)} couleur="#059669" />
+              <Chiffre label="Heures de formation" valeur={nb(d.trainings.heures, " h")} couleur="#2563eb" />
+              <Chiffre label="Coût formation" valeur={nb(d.trainings.cout, " €")} />
+            </>}>
+              <Jauge label="Entretiens réalisés" pourcentage={d.interviews.pourcentage} detail={`${d.interviews.realises} sur ${d.interviews.prevus} prévus sur la période`} />
+              <Jauge label="Budget formation consommé" pourcentage={d.trainings.tauxConsommation} detail={d.trainings.budget ? `${nb(d.trainings.cout, " €")} sur ${nb(d.trainings.budget, " €")}` : "Aucun budget défini (voir plus bas)"} />
+            </Panneau>
           </div>
 
           {/* 4. Tableau détaillé */}
