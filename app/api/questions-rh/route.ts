@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { notifierAdmin } from "@/lib/notifications";
+import { aDroit } from "@/lib/droits";
 
 // GET : demandes RH ponctuelles (client : les siennes ; admin : toutes, filtres ?statut=&entrepriseId=)
 export async function GET(request: NextRequest) {
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
 // POST (client) { sujet, contenu } : nouvelle question simple (non décomptée des tickets RH)
 export async function POST(request: NextRequest) {
   const session = await getSession();
+  if (session?.role === "CLIENT" && !aDroit(session.entreprise?.permissions, "tickets.questions")) return NextResponse.json({ erreur: "Action non autorisée pour votre compte. Contactez FRANEO RH." }, { status: 403 });
   if (!session || session.role !== "CLIENT" || !session.entrepriseId) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   const { sujet, contenu } = await request.json().catch(() => ({}));
   if (typeof contenu !== "string" || !contenu.trim()) return NextResponse.json({ erreur: "Écrivez votre question." }, { status: 400 });

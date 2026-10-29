@@ -12,7 +12,7 @@ import { EncartMasseSalariale } from "@/components/SuiviMasseSalariale";
 import { calculerMasseSalariale } from "@/lib/masse-salariale";
 import { calculerFacture, PRIX_TICKET_SANS_ABONNEMENT, quotaTickets, ticketsDuMois } from "@/lib/facturation";
 import type { Echeance } from "@/lib/rappels";
-import { aAccesPaie } from "@/lib/droits";
+import { aAccesPaie, aDroit } from "@/lib/droits";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +57,8 @@ export default async function ClientDashboard() {
   // Paie : seulement si une formule paie est souscrite (sinon tableau de bord « module RH »)
   const avecPaie = aAccesPaie(session.entreprise);
   const avecAbsences = permissions.includes("absences") || permissions.includes("salaries");
+  const peut = (d: Parameters<typeof aDroit>[1]) => aDroit(permissions, d);
+  const voitEcheances = peut("salaries.echeances");
   const avecTickets = permissions.includes("tickets");
   const masseP = avecPaie ? calculerMasseSalariale({ mois: moisActuel, annee: anneeActuelle, entrepriseId }) : null;
 
@@ -134,7 +136,7 @@ export default async function ClientDashboard() {
     avecAbsences && { href: "/client/salaries/absences", icone: "📅", label: "Absences ce mois", n: nbAbsences, couleur: "text-orange-500" },
     permissions.includes("tickets") && { href: "/client/tickets", icone: "🎫", label: "Tickets RH", n: nbTickets, couleur: "text-gray-800" },
     { href: "/client/helpdesk", icone: "🆘", label: "Helpdesk", n: nbTicketsSupport, couleur: "text-red-500" },
-    (avecSalaries || avecAbsences) && { href: "/client/salaries/echeances", icone: "⏰", label: "Échéances", n: echeances.length, couleur: "text-orange-500" },
+    voitEcheances && (avecSalaries || avecAbsences) && { href: "/client/salaries/echeances", icone: "⏰", label: "Échéances", n: echeances.length, couleur: "text-orange-500" },
   ].filter(Boolean) as { href: string; icone: string; label: string; n: number | string; couleur: string }[];
 
   const lienFacture = permissions.includes("entreprise") ? "/client/entreprise/facturation" : "#";
@@ -166,13 +168,14 @@ export default async function ClientDashboard() {
         {/* Actions rapides */}
         <div className="flex gap-2 flex-wrap">
           {[
-            permissions.includes("tickets") && { href: "/client/tickets/nouveau", label: "🎫 Demander un ticket RH" },
-            avecSalaries && { href: "/client/salaries/nouveau", label: "➕ Ajouter un salarié" },
-            avecAbsences && { href: "/client/salaries/absences", label: "🏖️ Saisir une absence" },
-            avecPaie && { href: "/client/paie/saisie", label: "✏️ Saisir des variables" },
+            peut("tickets.creer") && { href: "/client/tickets/nouveau", label: "🎫 Demander un ticket RH" },
+            peut("tickets.questions") && { href: "/client/tickets/questions", label: "💬 Poser une question RH" },
+            avecSalaries && peut("salaries.creer") && { href: "/client/salaries/nouveau", label: "➕ Ajouter un salarié" },
+            avecAbsences && peut("paie.absences") && { href: "/client/salaries/absences", label: "🏖️ Saisir une absence" },
+            avecPaie && peut("paie.variables") && { href: "/client/paie/saisie", label: "✏️ Saisir des variables" },
             !avecPaie && permissions.includes("entreprise") && { href: "/client/abonnement-paie", label: "💼 Demander une prise en charge de la paie" },
-            permissions.includes("tickets") && { href: "/client/tickets/recrutement", label: "🎯 Lancer un recrutement" },
-            permissions.includes("entreprise") && { href: "/client/entreprise/devis", label: "🧾 Demander un devis" },
+            peut("tickets.recrutement") && { href: "/client/tickets/recrutement", label: "🎯 Lancer un recrutement" },
+            peut("entreprise.devis") && { href: "/client/entreprise/devis", label: "🧾 Demander un devis" },
           ].filter(Boolean).map((a) => {
             const x = a as { href: string; label: string };
             return (
@@ -197,7 +200,7 @@ export default async function ClientDashboard() {
         {masse && <EncartMasseSalariale data={masse} lien="/client/paie" />}
 
         {/* Graphique des coûts + abonnements actuels */}
-        <div className="fr-grille-2" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
+        <div className="fr-grille-2" style={{ display: peut("global.couts") ? "grid" : "none", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
           <div className="bg-white rounded-2xl shadow p-4">
             <div className="flex justify-between items-center mb-3">
               <h2 className="text-sm font-bold">📊 Évolution de vos coûts Franeo {anneeActuelle}</h2>
@@ -263,7 +266,7 @@ export default async function ClientDashboard() {
           </Link>
         </div>
 
-        {(avecSalaries || avecAbsences) && (
+        {voitEcheances && (avecSalaries || avecAbsences) && (
           <div className="max-h-[170px] flex flex-col">
             <BlocEcheances echeances={echeances} role="CLIENT" max={6} />
           </div>

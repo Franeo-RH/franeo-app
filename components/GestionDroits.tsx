@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ACTIONS, MODULES } from "@/lib/droits";
+import { ACTIONS, MODULES, PROFILS_DROITS } from "@/lib/droits";
 
 /** Bloc « Accès & droits » de la fiche client : modules visibles et actions autorisées */
 export default function GestionDroits({
@@ -28,6 +28,16 @@ export default function GestionDroits({
   function basculerAction(a: string) {
     setEtat("");
     setPerms((p) => (p.includes(`-${a}`) ? p.filter((x) => x !== `-${a}`) : [...p, `-${a}`]));
+  }
+
+  function appliquerProfil(retirer: readonly string[]) {
+    setEtat("");
+    setPerms((p) => [...p.filter((x) => !x.startsWith("-")), ...retirer.map((a) => `-${a}`)]);
+  }
+  function toutModule(m: string, autoriser: boolean) {
+    setEtat("");
+    const ids = ACTIONS.filter((a) => a.module === m).map((a) => `-${a.id}`);
+    setPerms((p) => (autoriser ? p.filter((x) => !ids.includes(x)) : [...p.filter((x) => !ids.includes(x)), ...ids]));
   }
 
   async function enregistrer() {
@@ -56,17 +66,38 @@ export default function GestionDroits({
         </p>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "18px" }}>
-        <div>
-          <p style={{ margin: "0 0 6px", fontWeight: 700 }}>Modules visibles</p>
-          {MODULES.map((m) => <div key={m.id}>{case_(moduleActif(m.id), () => basculerModule(m.id), m.label)}</div>)}
-        </div>
-        <div>
-          <p style={{ margin: "0 0 6px", fontWeight: 700 }}>Actions autorisées</p>
-          {ACTIONS.map((a) => (
-            <div key={a.id}>{case_(actionActive(a.id), () => basculerAction(a.id), a.label, a.module !== "global" && !moduleActif(a.module))}</div>
-          ))}
-        </div>
+      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center", marginBottom: "14px" }}>
+        <span style={{ fontSize: "13px", fontWeight: 700 }}>Profil rapide :</span>
+        {PROFILS_DROITS.map((p) => (
+          <button key={p.id} type="button" onClick={() => appliquerProfil(p.retirer)} style={{ background: "#ffffff", border: "1px solid #d1d5db", borderRadius: "999px", padding: "5px 12px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px" }}>
+        {[...MODULES, { id: "global", label: "🌐 Partout" }].map((m) => {
+          const actions = ACTIONS.filter((a) => a.module === m.id);
+          const actif = m.id === "global" || moduleActif(m.id);
+          return (
+            <div key={m.id} style={{ border: "1px solid #e5e7eb", borderRadius: "12px", padding: "10px 12px", background: actif ? "#ffffff" : "#f9fafb" }}>
+              {m.id === "global"
+                ? <p style={{ margin: "4px 0", fontWeight: 700 }}>{m.label}</p>
+                : <div style={{ fontWeight: 700 }}>{case_(moduleActif(m.id), () => basculerModule(m.id), m.label)}</div>}
+              {actions.length > 0 && (
+                <div style={{ borderTop: "1px solid #f3f4f6", marginTop: "4px", paddingLeft: "6px" }}>
+                  {actions.map((a) => <div key={a.id}>{case_(actionActive(a.id), () => basculerAction(a.id), a.label, !actif)}</div>)}
+                  {actif && actions.length > 1 && (
+                    <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+                      <button type="button" onClick={() => toutModule(m.id, true)} style={{ background: "none", border: "none", color: "#15803d", fontSize: "12px", textDecoration: "underline", cursor: "pointer", padding: 0 }}>tout cocher</button>
+                      <button type="button" onClick={() => toutModule(m.id, false)} style={{ background: "none", border: "none", color: "#6b7280", fontSize: "12px", textDecoration: "underline", cursor: "pointer", padding: 0 }}>tout décocher</button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "14px" }}>

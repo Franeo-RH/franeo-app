@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { aDroit, droitPourChemin } from "@/lib/droits";
+import { useDroits } from "@/components/useDroits";
 
 interface SidebarProps {
   role: "ADMIN" | "CLIENT";
@@ -121,8 +123,13 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
 
 export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 0 }: SidebarProps) {
   const pathname = usePathname();
-  const r = rubrique(pathname, role, demandesEnAttente, ticketsOuverts);
-  if (!r) return null;
+  const moi = useDroits();
+  const brut = rubrique(pathname, role, demandesEnAttente, ticketsOuverts);
+  if (!brut) return null;
+  // Client : on cache les liens dont le droit a été retiré par l'admin
+  const r = role === "CLIENT" && moi
+    ? { ...brut, items: brut.items.filter((it) => { const d = droitPourChemin(it.href); return !d || aDroit(moi.permissions, d); }) }
+    : brut;
 
   // Lien actif : le plus long chemin qui correspond (ex. /admin/paie/variables plutôt que /admin/paie)
   const correspond = (h: string) => pathname === h || pathname.startsWith(h + "/");

@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import InstallerApp from "@/components/InstallerApp";
 import { viderCacheHorsLigne } from "@/components/EnregistrerSW";
+import { oublierDroits } from "@/components/useDroits";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -36,13 +37,13 @@ export default function LoginPage() {
     }
 
     if (data.role === "SALARIE") {
-      await viderCacheHorsLigne();
+      await viderCacheHorsLigne(); oublierDroits();
       router.push("/salarie");
     } else if (data.role === "ADMIN") {
-      await viderCacheHorsLigne(); // nouvelle session : on repart d'un cache vide
+      await viderCacheHorsLigne(); oublierDroits(); // nouvelle session : on repart d'un cache vide
       router.push("/admin/dashboard");
     } else {
-      await viderCacheHorsLigne(); // nouvelle session : on repart d'un cache vide
+      await viderCacheHorsLigne(); oublierDroits(); // nouvelle session : on repart d'un cache vide
       router.push("/client/dashboard");
     }
   }
@@ -58,7 +59,7 @@ export default function LoginPage() {
         setChargementDemo(false);
         return;
       }
-      await viderCacheHorsLigne(); // nouvelle session : on repart d'un cache vide
+      await viderCacheHorsLigne(); oublierDroits(); // nouvelle session : on repart d'un cache vide
       router.push(profilDemo === "salarie" ? "/salarie" : "/client/dashboard");
     } catch {
       setErreur("Problème de connexion, réessayez.");

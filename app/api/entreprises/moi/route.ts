@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { aDroit } from "@/lib/droits";
 
 export async function GET() {
   const session = await getSession();
@@ -17,6 +18,7 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   const session = await getSession();
+  if (session?.role === "CLIENT" && !aDroit(session.entreprise?.permissions, "entreprise.modifier")) return NextResponse.json({ erreur: "Action non autorisée pour votre compte. Contactez FRANEO RH." }, { status: 403 });
   if (!session || !session.entrepriseId) {
     return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   }

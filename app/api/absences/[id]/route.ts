@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { aDroit } from "@/lib/droits";
 
 const STATUTS = ["En attente", "Validé", "Refusé"];
 
@@ -12,6 +13,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getSession();
+  if (session?.role === "CLIENT" && !aDroit(session.entreprise?.permissions, "absences.valider")) return NextResponse.json({ erreur: "Action non autorisée pour votre compte. Contactez FRANEO RH." }, { status: 403 });
   if (!session) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
 
   const { id } = await params;

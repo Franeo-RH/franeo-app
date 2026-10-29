@@ -37,6 +37,7 @@ export default async function FicheSalarie({
   const permissions = session.entreprise?.permissions || [];
   const peutModifier = aDroit(permissions, "salaries.modifier");
   const peutSupprimer = aDroit(permissions, "salaries.supprimer");
+  const voitSalaires = aDroit(permissions, "salaries.salaires");
   const validation = passeParValidation(session.entreprise);
   const demandesEnCours = await prisma.demandeSalarie.count({ where: { salarieId: salarie.id, statut: "EN_ATTENTE" } });
 
@@ -104,7 +105,7 @@ export default async function FicheSalarie({
                 <Info label="Date de naissance" value={salarie.dateNaissance?.toLocaleDateString("fr-FR")} />
                 <Info label="Lieu de naissance" value={salarie.lieuNaissance} />
                 <Info label="Nationalité" value={salarie.nationalite} />
-                <Info label="N° sécurité sociale" value={salarie.numeroSecuriteSociale} />
+                {voitSalaires && <Info label="N° sécurité sociale" value={salarie.numeroSecuriteSociale} />}
               </div>
             </div>
 
@@ -132,7 +133,7 @@ export default async function FicheSalarie({
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow p-6">
+            <div className="bg-white rounded-xl shadow p-6" style={{ display: voitSalaires ? undefined : "none" }}>
               <h2 className="text-lg font-bold mb-4">💰 Salaire</h2>
               <div className="flex flex-col gap-3">
                 <Info label="Salaire mensuel" value={salarie.salaireMensuel ? `${salarie.salaireMensuel} €` : null} />

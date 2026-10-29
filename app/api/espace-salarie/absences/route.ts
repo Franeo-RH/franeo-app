@@ -3,11 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { getSessionSalarie } from "@/lib/session";
 import { notifierClients } from "@/lib/notifications";
 import { LIBELLES_ABSENCE, TYPES_ABSENCE_SALARIE } from "@/lib/espace-salarie";
+import { aDroit } from "@/lib/droits";
 
 // Le salarié déclare une absence : elle part « En attente » chez son employeur
 export async function POST(request: NextRequest) {
   const s = await getSessionSalarie();
   if (!s.ok) return NextResponse.json({ erreur: "Accès refusé" }, { status: 401 });
+  if (!aDroit(s.utilisateur.entreprise?.permissions, "espace.absences")) return NextResponse.json({ erreur: "Fonction non activée par votre employeur." }, { status: 403 });
 
   const { type, dateDebut, dateFin, commentaire } = await request.json();
   if (!TYPES_ABSENCE_SALARIE.some((t) => t.value === type)) {

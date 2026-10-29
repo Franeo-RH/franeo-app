@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { notifierAdmin } from "@/lib/notifications";
 import { categorieRecrutement } from "@/lib/recrutement";
+import { aDroit } from "@/lib/droits";
 
 export async function GET() {
   const session = await getSession();
@@ -25,6 +26,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
+  if (session?.role === "CLIENT" && !aDroit(session.entreprise?.permissions, "tickets.recrutement")) return NextResponse.json({ erreur: "Action non autorisée pour votre compte. Contactez FRANEO RH." }, { status: 403 });
   if (!session || session.role !== "CLIENT") {
     return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   }

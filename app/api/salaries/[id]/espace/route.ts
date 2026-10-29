@@ -3,6 +3,7 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { refuserSansDroit } from "@/lib/droits-serveur";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -30,6 +31,8 @@ async function controler(id: string) {
 // Inviter (ou générer un nouveau lien) : renvoie un lien de création du mot de passe à transmettre au salarié
 export async function POST(request: NextRequest, { params }: Ctx) {
   const { id } = await params;
+  const refusPOST = await refuserSansDroit("espace.gerer");
+  if (refusPOST) return refusPOST;
   const r = await controler(id);
   if (r.erreur) return r.erreur;
   const { salarie } = r;
@@ -76,6 +79,8 @@ export async function POST(request: NextRequest, { params }: Ctx) {
 // Couper l'accès (le compte est gardé, l'historique aussi)
 export async function DELETE(_request: NextRequest, { params }: Ctx) {
   const { id } = await params;
+  const refusDELETE = await refuserSansDroit("espace.gerer");
+  if (refusDELETE) return refusDELETE;
   const r = await controler(id);
   if (r.erreur) return r.erreur;
   if (!r.salarie.compte) return NextResponse.json({ succes: true });

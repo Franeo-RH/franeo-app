@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { notifierAdmin } from "@/lib/notifications";
 import { OFFRES } from "@/lib/catalogue";
+import { aDroit } from "@/lib/droits";
 
 // GET : devis du client (ou tous pour l'admin, filtrables par ?entrepriseId=&statut=)
 export async function GET(request: NextRequest) {
@@ -24,6 +25,7 @@ export async function GET(request: NextRequest) {
 // POST (client) { lignes: [{ code, quantite, precision? }], message? }
 export async function POST(request: NextRequest) {
   const session = await getSession();
+  if (session?.role === "CLIENT" && !aDroit(session.entreprise?.permissions, "entreprise.devis")) return NextResponse.json({ erreur: "Action non autorisée pour votre compte. Contactez FRANEO RH." }, { status: 403 });
   if (!session || session.role !== "CLIENT" || !session.entrepriseId) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   const corps = await request.json().catch(() => ({}));
   const brutes: unknown[] = Array.isArray(corps?.lignes) ? corps.lignes.slice(0, 50) : [];

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { getSessionSalarie } from "@/lib/session";
 import { LIBELLES_ABSENCE } from "@/lib/espace-salarie";
+import { aDroit } from "@/lib/droits";
 import { communicationsNonLues } from "@/lib/communications";
 import BandeauCommunications from "@/components/BandeauCommunications";
 import ReleveHeuresSalarie from "@/components/ReleveHeuresSalarie";
@@ -50,6 +51,14 @@ export default async function EspaceSalarie() {
 
   const aujourdhui = new Date();
   aujourdhui.setHours(0, 0, 0, 0);
+  // Ce que l'employeur (réglé par FRANEO RH) laisse voir dans l'espace salarié
+  const permsEnt = s.utilisateur.entreprise?.permissions || [];
+  const voit = {
+    absences: aDroit(permsEnt, "espace.absences"),
+    heures: aDroit(permsEnt, "espace.heures"),
+    echeances: aDroit(permsEnt, "espace.echeances"),
+    communications: aDroit(permsEnt, "espace.communications"),
+  };
   const [absences, rappels, communications] = await Promise.all([
     prisma.absence.findMany({ where: { salarieId: s.salarie.id }, orderBy: { dateDebut: "desc" }, take: 50 }),
     prisma.rappelSalarie.findMany({ where: { salarieId: s.salarie.id, traite: false, dateEcheance: { gte: aujourdhui } }, orderBy: { dateEcheance: "asc" }, take: 10 }),
@@ -91,17 +100,17 @@ export default async function EspaceSalarie() {
           <p style={{ margin: "4px 0 0", color: "#4b5563", fontSize: "14px" }}>{s.salarie.poste} · {s.utilisateur.entreprise?.nom}</p>
         </div>
 
-        <BandeauCommunications communications={communications} />
+        {voit.communications && <BandeauCommunications communications={communications} />}
 
-        <section style={carte} aria-labelledby="t-demande">
+        {voit.absences && (<section style={carte} aria-labelledby="t-demande">
           <h1 id="t-demande" style={{ margin: "0 0 12px", fontSize: "18px" }}>📅 Demander une absence</h1>
           <FormulaireAbsenceSalarie />
-        </section>
+        </section>)}
 
-        <section style={carte} aria-labelledby="t-heures">
+        {voit.heures && (<section style={carte} aria-labelledby="t-heures">
           <h2 id="t-heures" style={{ margin: "0 0 12px", fontSize: "18px" }}>⏱️ Mon relevé d&apos;heures</h2>
           <ReleveHeuresSalarie />
-        </section>
+        </section>)}
 
         <section style={carte} aria-labelledby="t-absences">
           <h2 id="t-absences" style={{ margin: "0 0 4px", fontSize: "18px" }}>Mes absences à venir</h2>
@@ -112,7 +121,7 @@ export default async function EspaceSalarie() {
           )}
         </section>
 
-        {(rappels.length > 0 || s.salarie.dateFin) && (
+        {voit.echeances && (rappels.length > 0 || s.salarie.dateFin) && (
           <section style={carte} aria-labelledby="t-echeances">
             <h2 id="t-echeances" style={{ margin: "0 0 8px", fontSize: "18px" }}>⏰ Mes échéances</h2>
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { refuserSansDroit } from "@/lib/droits-serveur";
 
 export async function GET() {
   const session = await getSession();
@@ -22,6 +23,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const refus = await refuserSansDroit("entreprise.abonnements");
+  if (refus) return refus;
   const session = await getSession();
   if (!session || session.role !== "CLIENT") {
     return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });

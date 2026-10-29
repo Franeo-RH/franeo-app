@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { fmtH, NOMS_MOIS } from "@/lib/heures";
+import { aDroit } from "@/lib/droits";
 
 /**
  * PUT { statut: "Validé" | "Refusé", motif? } : l'employeur (ou l'admin) valide ou refuse un relevé envoyé.
@@ -10,6 +11,7 @@ import { fmtH, NOMS_MOIS } from "@/lib/heures";
  */
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
+  if (session?.role === "CLIENT" && !aDroit(session.entreprise?.permissions, "paie.releves")) return NextResponse.json({ erreur: "Action non autorisée pour votre compte. Contactez FRANEO RH." }, { status: 403 });
   if (!session) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   const { id } = await params;
   const { statut, motif } = await request.json().catch(() => ({}));

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { lireRappel, versISO } from "@/lib/rappels";
+import { refuserSansDroit } from "@/lib/droits-serveur";
 
 async function rappelAutorise(rappelId: string) {
   const session = await getSession();
@@ -22,6 +23,8 @@ export async function PUT(
   { params }: { params: Promise<{ rappelId: string }> }
 ) {
   const { rappelId } = await params;
+  const refusPUT = await refuserSansDroit("salaries.echeances-modifier");
+  if (refusPUT) return refusPUT;
   const acces = await rappelAutorise(rappelId);
   if (acces.erreur) return acces.erreur;
   const rappel = acces.rappel;
@@ -62,6 +65,8 @@ export async function DELETE(
   { params }: { params: Promise<{ rappelId: string }> }
 ) {
   const { rappelId } = await params;
+  const refusDELETE = await refuserSansDroit("salaries.echeances-modifier");
+  if (refusDELETE) return refusDELETE;
   const acces = await rappelAutorise(rappelId);
   if (acces.erreur) return acces.erreur;
 

@@ -4,6 +4,7 @@ import { getSessionSalarie } from "@/lib/session";
 import { notifierClients } from "@/lib/notifications";
 import { fmtH, joursDuMois, jourUTC, lireHeures, NOMS_MOIS } from "@/lib/heures";
 import { chargerReleve, lireMoisAnnee } from "@/lib/releves";
+import { aDroit } from "@/lib/droits";
 
 const MODIFIABLE = ["Brouillon", "Refusé"];
 
@@ -11,6 +12,7 @@ const MODIFIABLE = ["Brouillon", "Refusé"];
 export async function GET(request: NextRequest) {
   const s = await getSessionSalarie();
   if (!s.ok) return NextResponse.json({ erreur: "Accès refusé" }, { status: 401 });
+  if (!aDroit(s.utilisateur.entreprise?.permissions, "espace.heures")) return NextResponse.json({ erreur: "Fonction non activée par votre employeur." }, { status: 403 });
   const p = request.nextUrl.searchParams;
   const ma = lireMoisAnnee(p.get("mois"), p.get("annee"));
   if (!ma) return NextResponse.json({ erreur: "Mois invalide" }, { status: 400 });
@@ -25,6 +27,7 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const s = await getSessionSalarie();
   if (!s.ok) return NextResponse.json({ erreur: "Accès refusé" }, { status: 401 });
+  if (!aDroit(s.utilisateur.entreprise?.permissions, "espace.heures")) return NextResponse.json({ erreur: "Fonction non activée par votre employeur." }, { status: 403 });
   const corps = await request.json().catch(() => ({}));
   const ma = lireMoisAnnee(corps?.mois, corps?.annee);
   if (!ma) return NextResponse.json({ erreur: "Mois invalide" }, { status: 400 });

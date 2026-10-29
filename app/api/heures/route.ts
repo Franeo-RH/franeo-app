@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { chargerReleve } from "@/lib/releves";
+import { aDroit } from "@/lib/droits";
 
 /**
  * GET : relevés d'heures (client : son entreprise ; admin : toutes)
@@ -10,6 +11,7 @@ import { chargerReleve } from "@/lib/releves";
  */
 export async function GET(request: NextRequest) {
   const session = await getSession();
+  if (session?.role === "CLIENT" && !aDroit(session.entreprise?.permissions, "paie.releves")) return NextResponse.json({ erreur: "Action non autorisée pour votre compte. Contactez FRANEO RH." }, { status: 403 });
   if (!session) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   const p = request.nextUrl.searchParams;
   const statut = p.get("statut") || "Envoyé";

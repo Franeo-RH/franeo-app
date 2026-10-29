@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { lireRappel } from "@/lib/rappels";
+import { refuserSansDroit } from "@/lib/droits-serveur";
 
 async function salarieAutorise(id: string) {
   const session = await getSession();
@@ -78,6 +79,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const refusPOST = await refuserSansDroit("salaries.echeances-modifier");
+  if (refusPOST) return refusPOST;
 
   const acces = await salarieAutorise(id);
 

@@ -1,4 +1,5 @@
 import BuddyChat from "@/components/BuddyChat";
+import GardeDroits from "@/components/GardeDroits";
 import BandeauDemo from "@/components/BandeauDemo";
 import { getSessionBrute } from "@/lib/session";
 import { redirect } from "next/navigation";
@@ -34,7 +35,7 @@ export default async function ClientLayout({ children }: { children: React.React
   return (
     <>
       {estSessionDemo(session) && <BandeauDemo />}
-      {children}
+      <GardeDroits>{children}</GardeDroits>
       <BuddyChat />
     </>
   );
