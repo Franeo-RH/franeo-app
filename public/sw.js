@@ -2,7 +2,7 @@
 // - rend l'app installable ;
 // - hors connexion : les pages déjà consultées restent visibles (lecture seule) ;
 // - tout est effacé à la déconnexion (message "vider-cache" envoyé par l'app).
-const VERSION = "v4";
+const VERSION = "v3";
 const CACHE_STATIQUE = "franeo-statique-" + VERSION;
 const CACHE_PAGES = "franeo-pages-" + VERSION;
 const HORS_LIGNE = "/hors-ligne.html";
@@ -55,12 +55,6 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return; // aucune modification hors ligne
   const url = new URL(req.url);
   if (url.origin !== self.location.origin || estExclu(url)) return;
-
-  // Icônes de l'app et logos : toujours le réseau d'abord, pour qu'une nouvelle icône s'affiche tout de suite
-  if (/^\/(favicon\.ico|icon|apple-icon|manifest)/.test(url.pathname) || /-LOGO\.png$/i.test(url.pathname)) {
-    event.respondWith(fetch(req).catch(() => caches.match(req)));
-    return;
-  }
 
   // Fichiers techniques versionnés : cache d'abord (rapide)
   if (url.pathname.startsWith("/_next/static/") || /\.(png|jpg|jpeg|svg|ico|woff2?)$/.test(url.pathname)) {
