@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import InstallerApp from "@/components/InstallerApp";
+import BoutonTheme from "@/components/BoutonTheme";
 import { viderCacheHorsLigne } from "@/components/EnregistrerSW";
 import { oublierDroits } from "@/components/useDroits";
 
@@ -117,6 +118,7 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
     <>
       {role === "CLIENT" && <Link href="/client/profil" className="fr-nav-petit">🔒 Mot de passe</Link>}
       <a href={SITE_URL} target="_blank" rel="noopener noreferrer" className="fr-nav-petit">🌐 Voir nos offres ↗</a>
+      <BoutonTheme className="fr-nav-theme" />
       <button onClick={handleLogout} disabled={chargement} className="fr-nav-deco">
         {chargement ? "..." : "Déconnexion"}
       </button>

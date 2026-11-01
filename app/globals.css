@@ -34,6 +34,8 @@ body {
 .fr-nav-prenom { color: #ffffff; font-size: 14px; font-weight: 700; }
 .fr-nav-petit { color: #d1d5db; font-size: 12px; text-decoration: none; white-space: nowrap; }
 .fr-nav-petit:hover { color: #fb923c; }
+.fr-nav-theme { background: none; border: none; color: #d1d5db; font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; white-space: nowrap; }
+.fr-nav-theme:hover { color: #fb923c; }
 .fr-nav-deco { background: none; border: none; color: #f87171; font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; }
 .fr-burger { display: none; background: none; border: none; color: #ffffff; cursor: pointer; padding: 8px; border-radius: 8px; }
 .fr-menu-mobile { display: none; }
@@ -55,7 +57,7 @@ body {
     background: #ffffff; color: #111827; border: none; border-radius: 12px; font-weight: 700; font-size: 15px; cursor: pointer;
   }
   .fr-menu-pied { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; color: #d1d5db; font-size: 14px; flex-wrap: wrap; }
-  .fr-menu-pied .fr-nav-deco, .fr-menu-pied .fr-nav-petit { font-size: 14px; }
+  .fr-menu-pied .fr-nav-deco, .fr-menu-pied .fr-nav-petit, .fr-menu-pied .fr-nav-theme { font-size: 14px; }
 }
 
 /* =========================================================
@@ -200,3 +202,17 @@ body {
   .fr-indicateurs section, .fr-indicateurs .rounded-xl { break-inside: avoid; }
   @page { margin: 12mm; }
 }
+
+/* =========================================================
+   Thème sombre (bouton « 🌙 Thème sombre » au-dessus de Déconnexion)
+   La page est inversée en douceur ; la barre noire, les images et les graphiques
+   gardent leurs vraies couleurs.
+   ========================================================= */
+html[data-theme="dark"] { filter: invert(0.92) hue-rotate(180deg); background: #ffffff; color-scheme: light; }
+html[data-theme="dark"] .fr-nav { filter: invert(1) hue-rotate(180deg); }
+html[data-theme="dark"] main img:not(.invert),
+html[data-theme="dark"] main video,
+html[data-theme="dark"] main canvas,
+html[data-theme="dark"] main picture { filter: invert(1) hue-rotate(180deg); }
+html[data-theme="dark"] .fr-garder-couleurs { filter: invert(1) hue-rotate(180deg); }
+@media print { html[data-theme="dark"] { filter: none; } }

@@ -8,6 +8,7 @@ import { aDroit } from "@/lib/droits";
 import { communicationsNonLues } from "@/lib/communications";
 import BandeauCommunications from "@/components/BandeauCommunications";
 import BandeauDemo from "@/components/BandeauDemo";
+import BoutonTheme from "@/components/BoutonTheme";
 import ReleveHeuresSalarie from "@/components/ReleveHeuresSalarie";
 import { libelleRappel, typeDe } from "@/lib/rappels";
 import { BoutonAnnulerAbsence, BoutonDeconnexionSalarie, FormulaireAbsenceSalarie } from "@/components/EspaceSalarieActions";
@@ -93,7 +94,10 @@ export default async function EspaceSalarie() {
           <Image src="/FRANEO-Logo-Orange.png" alt="Franeo" width={70} height={24} style={{ objectFit: "contain" }} />
           <span style={{ fontSize: "14px", color: "#d1d5db" }}>Espace salarié</span>
         </div>
-        <BoutonDeconnexionSalarie />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+          <BoutonTheme style={{ background: "none", border: "none", color: "#d1d5db", fontSize: "13px", fontWeight: 600, cursor: "pointer", padding: 0 }} />
+          <BoutonDeconnexionSalarie />
+        </div>
       </header>
 
       <main style={{ maxWidth: "640px", margin: "0 auto", padding: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>

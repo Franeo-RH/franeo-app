@@ -37,7 +37,16 @@ export default function RootLayout({
     <html
       lang="fr"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        {/* Thème sombre / clair appliqué avant l'affichage (pas de flash blanc) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem("franeo-theme");if(t==="dark")document.documentElement.dataset.theme="dark";}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         {children}
         <EnregistrerSW />
