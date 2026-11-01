@@ -19,6 +19,14 @@ export const metadata: Metadata = {
   applicationName: "Franeo",
   // iPhone : ouverture en plein écran depuis l'écran d'accueil
   appleWebApp: { capable: true, title: "Franeo", statusBarStyle: "black" },
+  // Icônes déclarées explicitement (le « ?v=2 » force les navigateurs à recharger l'icône)
+  icons: {
+    icon: [
+      { url: "/favicon.ico?v=2", sizes: "any" },
+      { url: "/icon-192.png?v=2", type: "image/png", sizes: "192x192" },
+    ],
+    apple: [{ url: "/apple-icon.png?v=2", sizes: "180x180" }],
+  },
 };
 
 export const viewport: Viewport = {
