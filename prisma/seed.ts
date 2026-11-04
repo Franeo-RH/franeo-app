@@ -1,5 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+
+// Mots de passe de développement générés au hasard (jamais écrits dans le code) et affichés une seule fois
+const MDP_ADMIN = process.env.SEED_ADMIN_PASSWORD || crypto.randomBytes(12).toString("base64url");
+const MDP_CLIENT = process.env.SEED_CLIENT_PASSWORD || crypto.randomBytes(12).toString("base64url");
 
 const prisma = new PrismaClient();
 
@@ -100,7 +105,7 @@ async function main() {
   await prisma.utilisateur.create({
     data: {
       email: "admin@franeo.fr",
-      motDePasse: await bcrypt.hash("admin123", 10),
+      motDePasse: await bcrypt.hash(MDP_ADMIN, 10),
       prenom: "Admin",
       role: "ADMIN",
     },
@@ -109,7 +114,7 @@ async function main() {
   await prisma.utilisateur.create({
     data: {
       email: "client@demo.fr",
-      motDePasse: await bcrypt.hash("client123", 10),
+      motDePasse: await bcrypt.hash(MDP_CLIENT, 10),
       prenom: "Lucas",
       role: "CLIENT",
       entrepriseId: entreprise.id,
@@ -132,3 +137,5 @@ async function main() {
 main()
   .catch(console.error)
   .finally(() => prisma.$disconnect());
+
+console.log(`Comptes de test : admin@franeo.fr / ${MDP_ADMIN} — client@demo.fr / ${MDP_CLIENT}`);

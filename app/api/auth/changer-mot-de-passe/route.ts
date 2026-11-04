@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import bcrypt from "bcryptjs";
 import { estSessionDemo } from "@/lib/demo";
+import { ouvrirSession } from "@/lib/jeton-session";
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -32,10 +33,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ erreur: "Mot de passe actuel incorrect" }, { status: 400 });
   }
 
-  await prisma.utilisateur.update({
+  if (String(nouveauMotDePasse).length < 8) {
+    return NextResponse.json({ erreur: "Le nouveau mot de passe doit faire au moins 8 caractères." }, { status: 400 });
+  }
+
+  const misAJour = await prisma.utilisateur.update({
     where: { id: session.id },
     data: { motDePasse: await bcrypt.hash(nouveauMotDePasse, 10) },
   });
 
-  return NextResponse.json({ succes: true });
+  // Les autres sessions (autres appareils) sont déconnectées ; celle-ci reste ouverte avec un nouveau cookie
+  return ouvrirSession(NextResponse.json({ succes: true }), misAJour, 60 * 60 * 24 * 7);
 }

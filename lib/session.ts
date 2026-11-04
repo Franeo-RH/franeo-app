@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
+import { empreinte, lireJeton, NOM_COOKIE } from "./jeton-session";
 
 /**
  * Utilisateur connecté, quel que soit son rôle et même si son entreprise est suspendue.
@@ -9,18 +10,21 @@ import { prisma } from "./prisma";
  */
 export const getSessionBrute = cache(async () => {
   const cookieStore = await cookies();
-  const userId = cookieStore.get("userId")?.value;
-
-  if (!userId) return null;
+  // Cookie signé : un cookie modifié ou expiré est refusé
+  const jeton = lireJeton(cookieStore.get(NOM_COOKIE)?.value);
+  if (!jeton) return null;
 
   const utilisateur = await prisma.utilisateur.findUnique({
-    where: { id: userId },
+    where: { id: jeton.userId },
     include: {
       entreprise: {
         include: { abonnement: true },
       },
     },
   });
+
+  // Mot de passe changé depuis l'ouverture de la session : la session n'est plus valable
+  if (!utilisateur || empreinte(utilisateur.motDePasse) !== jeton.empreinte) return null;
 
   return utilisateur;
 });

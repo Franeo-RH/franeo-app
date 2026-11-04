@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fermerSession } from "@/lib/jeton-session";
 
 export async function POST(request: NextRequest) {
   const res = NextResponse.redirect(new URL("/login", request.url), 303);
-  res.cookies.delete("userId");
-  return res;
+  return fermerSession(res);
 }
