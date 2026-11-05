@@ -4,10 +4,13 @@ import { Resend } from "resend";
 import crypto from "crypto";
 import { EMAIL_DEMO } from "@/lib/demo";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Expéditeur : une adresse du domaine validé sur Resend (franeo-rh.com).
+// « onboarding@resend.dev » ne livre QUE l'adresse du compte Resend : les autres mails partent dans le vide.
+const EXPEDITEUR = process.env.MAIL_FROM || "Franeo <noreply@franeo-rh.com>";
 
 export async function POST(request: NextRequest) {
-  const { email } = await request.json();
+  const corps = await request.json().catch(() => ({}));
+  const email = typeof corps?.email === "string" ? corps.email.trim().toLowerCase() : "";
 
   if (!email) {
     return NextResponse.json({ erreur: "Email requis" }, { status: 400 });
@@ -18,7 +21,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ succes: true });
   }
 
-  const utilisateur = await prisma.utilisateur.findUnique({ where: { email } });
+  // Recherche sans tenir compte des majuscules (« Prenom.Nom@… » = « prenom.nom@… »)
+  const utilisateur = await prisma.utilisateur.findFirst({ where: { email: { equals: email, mode: "insensitive" }, actif: true } });
 
   // On répond toujours OK pour ne pas révéler si l'email existe
   if (!utilisateur) {
@@ -26,21 +30,28 @@ export async function POST(request: NextRequest) {
   }
 
   // Supprimer les anciens tokens pour cet email
-  await prisma.tokenReset.deleteMany({ where: { email } });
+  await prisma.tokenReset.deleteMany({ where: { email: utilisateur.email } });
 
   // Créer un nouveau token
   const token = crypto.randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 heure
 
   await prisma.tokenReset.create({
-    data: { token, email, expiresAt },
+    data: { token, email: utilisateur.email, expiresAt },
   });
 
-  const lien = `${process.env.NEXT_PUBLIC_URL || "http://localhost:3000"}/reinitialiser-mot-de-passe?token=${token}`;
+  // Adresse de l'app : variable Vercel, sinon l'adresse sur laquelle la demande a été faite
+  const base = (process.env.NEXT_PUBLIC_URL || process.env.APP_URL || request.nextUrl.origin).replace(/\/$/, "");
+  const lien = `${base}/reinitialiser-mot-de-passe?token=${token}`;
 
-  await resend.emails.send({
-    from: "Franeo <onboarding@resend.dev>",
-    to: email,
+  if (!process.env.RESEND_API_KEY) {
+    console.error("Mot de passe oublié : RESEND_API_KEY absente, aucun mail envoyé.");
+    return NextResponse.json({ succes: true });
+  }
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const { error } = await resend.emails.send({
+    from: EXPEDITEUR,
+    to: utilisateur.email,
     subject: "Réinitialisation de votre mot de passe",
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -67,6 +78,8 @@ export async function POST(request: NextRequest) {
       </div>
     `,
   });
+  // Resend ne lève pas d'exception : l'erreur est renvoyée ici (visible dans Vercel › Logs)
+  if (error) console.error("Mot de passe oublié : mail refusé par Resend", error);
 
   return NextResponse.json({ succes: true });
 }

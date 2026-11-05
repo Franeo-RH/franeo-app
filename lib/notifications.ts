@@ -7,7 +7,7 @@ import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
 
 const DESTINATAIRE = process.env.MAIL_ADMIN || "lfranchino@franeo-rh.com";
-const EXPEDITEUR = process.env.MAIL_FROM || "Franeo <onboarding@resend.dev>";
+const EXPEDITEUR = process.env.MAIL_FROM || "Franeo <noreply@franeo-rh.com>";
 const APP_URL = (process.env.APP_URL || "https://franeo-app.vercel.app").replace(/\/$/, "");
 
 const echapper = (s: string) =>
