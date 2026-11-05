@@ -12,6 +12,73 @@ body {
 }
 
 /* =========================================================
+   Barre latérale (rubriques de chaque onglet)
+   ========================================================= */
+.fr-sidebar {
+  width: 248px; flex-shrink: 0; align-self: flex-start; position: sticky; top: 0;
+  height: 100vh; overflow-y: auto; background: #ffffff; border-right: 1px solid #eef0f3;
+  padding: 18px 12px; display: flex; flex-direction: column; gap: 2px;
+}
+.fr-side-titre { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #9ca3af; margin: 0 10px 10px; }
+.fr-side-lien {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px;
+  color: #374151; font-size: 14px; font-weight: 600; text-decoration: none; transition: background 0.15s, color 0.15s;
+}
+.fr-side-lien:hover { background: #fff7ed; color: #c2410c; }
+.fr-side-lien.fr-actif { background: #fff7ed; color: #c2410c; box-shadow: inset 3px 0 0 #f97316; }
+.fr-side-icone { width: 22px; text-align: center; flex-shrink: 0; }
+.fr-side-texte { flex: 1; min-width: 0; }
+.fr-side-badge { background: #ef4444; color: #ffffff; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 7px; }
+
+/* =========================================================
+   Espace salarié : rubriques par thème
+   ========================================================= */
+.fr-es-page { max-width: 1100px; margin: 0 auto; padding: 16px; }
+.fr-es { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 20px; align-items: start; }
+.fr-es-nav {
+  position: sticky; top: 12px; background: #ffffff; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  padding: 14px 10px; display: flex; flex-direction: column; gap: 2px;
+}
+.fr-es-nav-titre { font-size: 12px; font-weight: 800; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 10px 8px; }
+.fr-es-lien {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: none; background: none;
+  padding: 11px 12px; border-radius: 10px; font-size: 15px; font-weight: 600; color: #374151; cursor: pointer;
+}
+.fr-es-lien:hover { background: #fff7ed; color: #c2410c; }
+.fr-es-lien.fr-actif { background: #f97316; color: #ffffff; }
+.fr-es-lien-texte { flex: 1; }
+.fr-es-badge { background: #ef4444; color: #ffffff; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 7px; }
+.fr-es-lien.fr-actif .fr-es-badge { background: #ffffff; color: #dc2626; }
+.fr-es-contenu { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.fr-es-titre { margin: 2px 0 0; font-size: 22px; font-weight: 800; }
+@media (max-width: 768px) {
+  .fr-es-page { padding: 0 0 12px; }
+  .fr-es { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .fr-es-nav {
+    top: 0; z-index: 40; flex-direction: row; overflow-x: auto; gap: 6px; border-radius: 0; padding: 8px 12px;
+    scrollbar-width: none; box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+  .fr-es-nav::-webkit-scrollbar { display: none; }
+  .fr-es-nav-titre { display: none; }
+  .fr-es-lien { width: auto; flex-shrink: 0; white-space: nowrap; padding: 8px 12px; font-size: 14px; border-radius: 999px; border: 1px solid #e5e7eb; }
+  .fr-es-lien.fr-actif { border-color: #f97316; }
+  .fr-es-contenu { padding: 0 12px; }
+  .fr-es-titre { font-size: 19px; }
+}
+
+/* =========================================================
+   Buddy : plus discret sur téléphone
+   ========================================================= */
+@media (max-width: 768px) {
+  .fr-buddy { bottom: calc(12px + env(safe-area-inset-bottom)) !important; right: 12px !important; }
+  .fr-buddy-bouton { width: 48px !important; height: 48px !important; border-width: 3px !important; padding: 2px !important; }
+  .fr-buddy-fenetre {
+    left: 8px !important; right: 8px !important; bottom: calc(70px + env(safe-area-inset-bottom)) !important;
+    width: auto !important; max-width: none !important; height: 70vh !important; max-height: calc(100vh - 100px) !important;
+  }
+}
+
+/* =========================================================
    Barre de navigation
    ========================================================= */
 .fr-nav { background: #000000; color: #ffffff; width: 100%; position: relative; z-index: 50; padding-top: env(safe-area-inset-top); }
@@ -88,18 +155,21 @@ body {
 
   /* Barre latérale + contenu : l'un sous l'autre */
   div.flex:has(> aside.fr-sidebar) { flex-direction: column; }
-  /* Barre latérale : petits boutons sur plusieurs lignes, tous visibles */
+  /* Barre latérale : une ligne d'onglets qui défile, collée en haut */
   aside.fr-sidebar {
-    width: 100% !important; min-height: 0 !important;
-    flex-direction: row !important; flex-wrap: wrap !important;
-    gap: 6px !important; padding: 10px 12px !important;
-    box-shadow: none !important; border-bottom: 1px solid #e5e7eb;
+    position: sticky; top: 0; z-index: 40;
+    width: 100%; height: auto; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+    gap: 6px; padding: 8px 12px; border-right: none; border-bottom: 1px solid #e5e7eb;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04); scrollbar-width: none;
   }
-  aside.fr-sidebar > p { display: none; }
-  aside.fr-sidebar > a {
-    padding: 6px 10px !important; font-size: 13px !important; border-radius: 999px !important;
-    border: 1px solid #e5e7eb; gap: 6px; min-height: 34px;
+  aside.fr-sidebar::-webkit-scrollbar { display: none; }
+  aside.fr-sidebar .fr-side-titre { display: none; }
+  aside.fr-sidebar .fr-side-lien {
+    flex-shrink: 0; padding: 7px 12px; font-size: 13px; border-radius: 999px;
+    border: 1px solid #e5e7eb; box-shadow: none; white-space: nowrap;
   }
+  aside.fr-sidebar .fr-side-lien.fr-actif { background: #f97316; color: #ffffff; border-color: #f97316; box-shadow: none; }
+  aside.fr-sidebar .fr-side-lien.fr-actif .fr-side-badge { background: #ffffff; color: #dc2626; }
 
   /* Contenu plus compact */
   main { padding: 12px !important; min-width: 0; width: 100%; box-sizing: border-box; }

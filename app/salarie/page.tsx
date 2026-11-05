@@ -101,63 +101,73 @@ export default async function EspaceSalarie() {
         </div>
       </header>
 
-      <main style={{ maxWidth: "640px", margin: "0 auto", padding: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
-        <div style={carte}>
-          <p style={{ margin: 0, fontSize: "20px", fontWeight: 700 }}>Bonjour {s.salarie.prenom} 👋</p>
-          <p style={{ margin: "4px 0 0", color: "#4b5563", fontSize: "14px" }}>{s.salarie.poste} · {s.utilisateur.entreprise?.nom}</p>
-        </div>
-
-        {voit.communications && <BandeauCommunications communications={communications} />}
-
-        <EspaceSalarieRH avecPaie={!!s.utilisateur.entreprise?.abonnementPaieId} />
-
-        {voit.absences && (<section style={carte} aria-labelledby="t-demande">
-          <h1 id="t-demande" style={{ margin: "0 0 12px", fontSize: "18px" }}>📅 Demander une absence</h1>
-          <FormulaireAbsenceSalarie />
-        </section>)}
-
-        {voit.heures && (<section style={carte} aria-labelledby="t-heures">
-          <h2 id="t-heures" style={{ margin: "0 0 12px", fontSize: "18px" }}>⏱️ Mon relevé mensuel (heures et heures supp.)</h2>
-          <ReleveHeuresSalarie />
-        </section>)}
-
-        <section style={carte} aria-labelledby="t-absences">
-          <h2 id="t-absences" style={{ margin: "0 0 4px", fontSize: "18px" }}>Mes absences à venir</h2>
-          {aVenir.length === 0 ? (
-            <p style={{ margin: "8px 0 0", color: "#6b7280", fontSize: "14px" }}>Aucune absence prévue.</p>
-          ) : (
-            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>{aVenir.map((a) => ligneAbsence(a, true))}</ul>
-          )}
-        </section>
-
-        {voit.echeances && (rappels.length > 0 || s.salarie.dateFin) && (
-          <section style={carte} aria-labelledby="t-echeances">
-            <h2 id="t-echeances" style={{ margin: "0 0 8px", fontSize: "18px" }}>⏰ Mes échéances</h2>
-            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {rappels.map((r) => (
-                <li key={r.id} style={{ borderTop: "1px solid #f3f4f6", padding: "10px 0", display: "flex", justifyContent: "space-between", gap: "10px", fontSize: "14px" }}>
-                  <span>{typeDe(r.type).icone} {libelleRappel(r)}</span>
-                  <strong style={{ whiteSpace: "nowrap" }}>{fr(r.dateEcheance)}</strong>
-                </li>
-              ))}
-              {s.salarie.dateFin && (
-                <li style={{ borderTop: "1px solid #f3f4f6", padding: "10px 0", display: "flex", justifyContent: "space-between", gap: "10px", fontSize: "14px" }}>
-                  <span>⏳ Fin de contrat</span>
-                  <strong style={{ whiteSpace: "nowrap" }}>{fr(s.salarie.dateFin)}</strong>
-                </li>
+      <main className="fr-es-page">
+        <EspaceSalarieRH
+          avecPaie={!!s.utilisateur.entreprise?.abonnementPaieId}
+          accueil={
+            <>
+              <div style={carte}>
+                <p style={{ margin: 0, fontSize: "20px", fontWeight: 700 }}>Bonjour {s.salarie.prenom} 👋</p>
+                <p style={{ margin: "4px 0 0", color: "#4b5563", fontSize: "14px" }}>{s.salarie.poste} · {s.utilisateur.entreprise?.nom}</p>
+              </div>
+              {voit.communications && <BandeauCommunications communications={communications} />}
+              {voit.echeances && (rappels.length > 0 || s.salarie.dateFin) && (
+                <section style={carte} aria-labelledby="t-echeances">
+                  <h2 id="t-echeances" style={{ margin: "0 0 8px", fontSize: "18px" }}>⏰ Mes échéances</h2>
+                  <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                    {rappels.map((r) => (
+                      <li key={r.id} style={{ borderTop: "1px solid #f3f4f6", padding: "10px 0", display: "flex", justifyContent: "space-between", gap: "10px", fontSize: "14px" }}>
+                        <span>{typeDe(r.type).icone} {libelleRappel(r)}</span>
+                        <strong style={{ whiteSpace: "nowrap" }}>{fr(r.dateEcheance)}</strong>
+                      </li>
+                    ))}
+                    {s.salarie.dateFin && (
+                      <li style={{ borderTop: "1px solid #f3f4f6", padding: "10px 0", display: "flex", justifyContent: "space-between", gap: "10px", fontSize: "14px" }}>
+                        <span>⏳ Fin de contrat</span>
+                        <strong style={{ whiteSpace: "nowrap" }}>{fr(s.salarie.dateFin)}</strong>
+                      </li>
+                    )}
+                  </ul>
+                </section>
               )}
-            </ul>
-          </section>
-        )}
-
-        {passees.length > 0 && (
-          <section style={carte} aria-labelledby="t-historique">
-            <h2 id="t-historique" style={{ margin: "0 0 4px", fontSize: "18px" }}>Historique</h2>
-            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>{passees.map((a) => ligneAbsence(a, false))}</ul>
-          </section>
-        )}
-
-        <p style={{ textAlign: "center", fontSize: "12px", color: "#6b7280", margin: "4px 0 16px" }}>
+              {aVenir.length > 0 && (
+                <section style={carte}>
+                  <h2 style={{ margin: "0 0 4px", fontSize: "18px" }}>Mes prochaines absences</h2>
+                  <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>{aVenir.slice(0, 3).map((a) => ligneAbsence(a, false))}</ul>
+                </section>
+              )}
+            </>
+          }
+          absences={voit.absences ? (
+            <>
+              <section style={carte} aria-labelledby="t-demande">
+                <h2 id="t-demande" style={{ margin: "0 0 12px", fontSize: "18px" }}>📅 Demander une absence</h2>
+                <FormulaireAbsenceSalarie />
+              </section>
+              <section style={carte} aria-labelledby="t-absences">
+                <h2 id="t-absences" style={{ margin: "0 0 4px", fontSize: "18px" }}>Mes absences à venir</h2>
+                {aVenir.length === 0 ? (
+                  <p style={{ margin: "8px 0 0", color: "#6b7280", fontSize: "14px" }}>Aucune absence prévue.</p>
+                ) : (
+                  <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>{aVenir.map((a) => ligneAbsence(a, true))}</ul>
+                )}
+              </section>
+              {passees.length > 0 && (
+                <section style={carte} aria-labelledby="t-historique">
+                  <h2 id="t-historique" style={{ margin: "0 0 4px", fontSize: "18px" }}>Historique</h2>
+                  <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>{passees.map((a) => ligneAbsence(a, false))}</ul>
+                </section>
+              )}
+            </>
+          ) : undefined}
+          releve={voit.heures ? (
+            <section style={carte} aria-labelledby="t-heures">
+              <h2 id="t-heures" style={{ margin: "0 0 12px", fontSize: "18px" }}>Mes heures et heures supplémentaires</h2>
+              <ReleveHeuresSalarie />
+            </section>
+          ) : undefined}
+        />
+        <p style={{ textAlign: "center", fontSize: "12px", color: "#6b7280", margin: "16px 0" }}>
           Vos demandes sont validées par votre manager ou votre employeur. Pour toute question sur votre paie, adressez-vous à lui.
         </p>
       </main>

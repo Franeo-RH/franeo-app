@@ -2,7 +2,7 @@
 // POST : ouvre une session sur l'entreprise de démonstration (bouton « Tester la démo »).
 
 import { NextResponse } from "next/server";
-import { preparerDemo, preparerDemoSalarie } from "@/lib/demo";
+import { preparerDemo, preparerDemoManager, preparerDemoSalarie } from "@/lib/demo";
 import { prisma } from "@/lib/prisma";
 import { ouvrirSession } from "@/lib/jeton-session";
 
@@ -12,8 +12,8 @@ export const maxDuration = 60;
 export async function POST(request: Request) {
   try {
     const corps = await request.json().catch(() => ({}));
-    const salarie = corps?.profil === "salarie";
-    const userId = salarie ? await preparerDemoSalarie() : (await preparerDemo()).userId;
+    const salarie = corps?.profil === "salarie" || corps?.profil === "manager";
+    const userId = corps?.profil === "manager" ? await preparerDemoManager() : corps?.profil === "salarie" ? await preparerDemoSalarie() : (await preparerDemo()).userId;
     const res = NextResponse.json({ ok: true, role: salarie ? "SALARIE" : "CLIENT" });
     const compte = await prisma.utilisateur.findUnique({ where: { id: userId }, select: { id: true, motDePasse: true } });
     if (!compte) throw new Error("Compte démo introuvable");

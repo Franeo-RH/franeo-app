@@ -31,7 +31,9 @@ type Question = { id: string; sujet: string; statut: string; versFraneo: boolean
 type Frais = { id: string; date: string; montant: number; motif: string; statut: string; motifRefus: string | null };
 
 /** Espace salarié : organisation, notes de frais, questions au N+1 et, pour les managers et dirigeants, la validation de l'équipe */
-export default function EspaceSalarieRH({ avecPaie }: { avecPaie: boolean }) {
+export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve }: { avecPaie: boolean; accueil: React.ReactNode; absences?: React.ReactNode; releve?: React.ReactNode }) {
+  const [onglet, setOnglet] = useState("accueil");
+  useEffect(() => { try { const o = sessionStorage.getItem("fr-onglet-salarie"); if (o) setOnglet(o); } catch {} }, []);
   const [eq, setEq] = useState<Equipe | null>(null);
   const [frais, setFrais] = useState<Frais[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -105,9 +107,9 @@ export default function EspaceSalarieRH({ avecPaie }: { avecPaie: boolean }) {
     </li>
   );
 
-  return (
+  const blocOrga = (
     <>
-      {/* Mon organisation */}
+
       {eq && (
         <section style={carte} aria-labelledby="t-orga">
           <h2 id="t-orga" style={{ margin: "0 0 10px", fontSize: "18px" }}>🏢 Mon organisation</h2>
@@ -130,8 +132,11 @@ export default function EspaceSalarieRH({ avecPaie }: { avecPaie: boolean }) {
           )}
         </section>
       )}
+    </>
+  );
+  const blocValidation = (
+    <>
 
-      {/* Validation de l'équipe */}
       {eq && valideur && (
         <section style={{ ...carte, border: "2px solid #fed7aa" }} aria-labelledby="t-valid">
           <h2 id="t-valid" style={{ margin: "0 0 4px", fontSize: "18px" }}>✅ À valider ({eq.releves.length + eq.absences.length + eq.frais.length})</h2>
@@ -169,8 +174,11 @@ export default function EspaceSalarieRH({ avecPaie }: { avecPaie: boolean }) {
           </div>
         </section>
       )}
+    </>
+  );
+  const blocVariables = (
+    <>
 
-      {/* Saisie de variables par un manager autorisé */}
       {eq && valideur && eq.peutSaisirVariables && avecPaie && (
         <section style={carte} aria-labelledby="t-var">
           <h2 id="t-var" style={{ margin: "0 0 10px", fontSize: "18px" }}>✏️ Saisir une variable de paie</h2>
@@ -186,8 +194,11 @@ export default function EspaceSalarieRH({ avecPaie }: { avecPaie: boolean }) {
           </form>
         </section>
       )}
+    </>
+  );
+  const blocFrais = (
+    <>
 
-      {/* Notes de frais */}
       <section style={carte} aria-labelledby="t-frais">
         <h2 id="t-frais" style={{ margin: "0 0 10px", fontSize: "18px" }}>🧾 Mes notes de frais</h2>
         <form onSubmit={async (e) => { e.preventDefault(); if (await appel("/api/espace-salarie/frais", "POST", nf, "frais", "✅ Note de frais envoyée")) setNf({ date: "", montant: "", motif: "" }); }} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -214,8 +225,11 @@ export default function EspaceSalarieRH({ avecPaie }: { avecPaie: boolean }) {
           </ul>
         )}
       </section>
+    </>
+  );
+  const blocQuestions = (
+    <>
 
-      {/* Questions */}
       <section style={carte} aria-labelledby="t-q">
         <h2 id="t-q" style={{ margin: "0 0 10px", fontSize: "18px" }}>💬 Poser une question à {eq?.n1 ? `${eq.n1.prenom} (mon N+1)` : "la direction"}</h2>
         <form onSubmit={async (e) => { e.preventDefault(); if (await appel("/api/espace-salarie/questions", "POST", nq, "q", "✅ Question envoyée")) setNq({ sujet: "", contenu: "" }); }} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -228,5 +242,41 @@ export default function EspaceSalarieRH({ avecPaie }: { avecPaie: boolean }) {
         {posees.length > 0 && (<><h3 style={{ margin: "14px 0 0", fontSize: "15px" }}>📤 Mes questions</h3><ul style={{ listStyle: "none", margin: 0, padding: 0 }}>{posees.map(fil)}</ul></>)}
       </section>
     </>
+  );
+
+  const nbAValider = eq ? eq.releves.length + eq.absences.length + eq.frais.length : 0;
+  const questionsEnAttente = recues.filter((q) => q.statut === "OUVERTE" && !q.versFraneo).length;
+  const onglets: { id: string; label: string; icone: string; badge?: number; contenu: React.ReactNode }[] = [
+    { id: "accueil", label: "Accueil", icone: "🏠", contenu: <>{accueil}{blocOrga}</> },
+    ...(valideur ? [{ id: "equipe", label: "Mon équipe", icone: "✅", badge: nbAValider, contenu: <>{blocValidation}{blocVariables}</> }] : []),
+    ...(absences ? [{ id: "absences", label: "Absences", icone: "🏖️", contenu: absences }] : []),
+    ...(releve ? [{ id: "releve", label: "Relevé mensuel", icone: "⏱️", contenu: releve }] : []),
+    { id: "frais", label: "Notes de frais", icone: "🧾", contenu: blocFrais },
+    { id: "questions", label: "Questions", icone: "💬", badge: questionsEnAttente, contenu: blocQuestions },
+  ];
+  const courant = onglets.find((o) => o.id === onglet) ?? onglets[0];
+  function choisir(id: string) {
+    setOnglet(id);
+    try { sessionStorage.setItem("fr-onglet-salarie", id); } catch {}
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  return (
+    <div className="fr-es">
+      <nav className="fr-es-nav" aria-label="Rubriques de l'espace salarié">
+        <p className="fr-es-nav-titre">{eq ? (eq.role === "DIRIGEANT" ? "👑 Dirigeant" : eq.role === "MANAGER" ? "🧑‍💼 Manager" : "👤 Salarié") : "Mon espace"}</p>
+        {onglets.map((o) => (
+          <button key={o.id} type="button" onClick={() => choisir(o.id)} className={`fr-es-lien${o.id === courant.id ? " fr-actif" : ""}`} aria-current={o.id === courant.id ? "page" : undefined}>
+            <span aria-hidden="true">{o.icone}</span>
+            <span className="fr-es-lien-texte">{o.label}</span>
+            {!!o.badge && <span className="fr-es-badge">{o.badge}</span>}
+          </button>
+        ))}
+      </nav>
+      <div className="fr-es-contenu">
+        <h1 className="fr-es-titre">{courant.icone} {courant.label}</h1>
+        {courant.contenu}
+      </div>
+    </div>
   );
 }

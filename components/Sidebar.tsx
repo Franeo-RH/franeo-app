@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { aDroit, droitPourChemin } from "@/lib/droits";
 import { useDroits } from "@/components/useDroits";
 
@@ -136,6 +137,14 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
 export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 0 }: SidebarProps) {
   const pathname = usePathname();
   const moi = useDroits();
+  const ref = useRef<HTMLElement>(null);
+  // Téléphone : la rubrique active reste visible dans la barre qui défile
+  useEffect(() => {
+    const a = ref.current?.querySelector<HTMLElement>(".fr-actif");
+    if (a && ref.current && ref.current.scrollWidth > ref.current.clientWidth) {
+      ref.current.scrollTo({ left: a.offsetLeft - 12, behavior: "smooth" });
+    }
+  }, [pathname]);
   const brut = rubrique(pathname, role, demandesEnAttente, ticketsOuverts);
   if (!brut) return null;
   // Client : on cache les liens dont le droit a été retiré par l'admin
@@ -154,8 +163,8 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
   }
 
   return (
-    <aside className="fr-sidebar w-70 min-h-screen bg-white shadow-md p-6 flex flex-col gap-2">
-      <p className="text-xs text-gray-400 font-semibold uppercase mb-4">{r.titre}</p>
+    <aside ref={ref} className="fr-sidebar" aria-label={r.titre}>
+      <p className="fr-side-titre">{r.titre}</p>
       {r.items.map((it) => (
         <SidebarLink key={it.href} href={it.href} label={it.label} active={actif === it} badge={it.badge} />
       ))}
@@ -174,20 +183,14 @@ function SidebarLink({
   active: boolean;
   badge?: number;
 }) {
+  // « 👥 Liste des salariés » : l'icône et le texte sont séparés pour un alignement propre
+  const [icone, ...reste] = label.split(" ");
+  const aIcone = !!icone && !/[A-Za-zÀ-ÿ0-9]/.test(icone);
   return (
-    <Link
-      href={href}
-      className={`
-        flex items-center justify-between px-4 py-3 rounded-lg font-semibold transition
-        ${active ? "bg-orange-500 text-white" : "text-black hover:bg-gray-100"}
-      `}
-    >
-      <span>{label}</span>
-      {badge > 0 && (
-        <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
-          {badge}
-        </span>
-      )}
+    <Link href={href} className={`fr-side-lien${active ? " fr-actif" : ""}`} aria-current={active ? "page" : undefined}>
+      {aIcone && <span className="fr-side-icone" aria-hidden="true">{icone}</span>}
+      <span className="fr-side-texte">{aIcone ? reste.join(" ") : label}</span>
+      {badge > 0 && <span className="fr-side-badge">{badge}</span>}
     </Link>
   );
 }

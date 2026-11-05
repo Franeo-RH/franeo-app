@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [erreur, setErreur] = useState("");
   const [chargement, setChargement] = useState(false);
   const [chargementDemo, setChargementDemo] = useState(false);
-  const [profilDemo, setProfilDemo] = useState<"client" | "salarie">("client");
+  const [profilDemo, setProfilDemo] = useState<"client" | "salarie" | "manager">("client");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,7 +61,7 @@ export default function LoginPage() {
         return;
       }
       await viderCacheHorsLigne(); oublierDroits(); // nouvelle session : on repart d'un cache vide
-      router.push(profilDemo === "salarie" ? "/salarie" : "/client/dashboard");
+      router.push(profilDemo === "client" ? "/client/dashboard" : "/salarie");
     } catch {
       setErreur("Problème de connexion, réessayez.");
       setChargementDemo(false);
@@ -126,7 +126,7 @@ export default function LoginPage() {
         </div>
 
         <div role="tablist" aria-label="Type de démo" style={{ display: "flex", background: "#f3f4f6", borderRadius: "10px", padding: "4px", marginBottom: "10px" }}>
-          {([["client", "🏢 Démo client"], ["salarie", "📱 Démo salarié"]] as const).map(([val, lib]) => (
+          {([["client", "🏢 Client"], ["salarie", "📱 Salarié"], ["manager", "🧑‍💼 Manager"]] as const).map(([val, lib]) => (
             <button
               key={val}
               type="button"
@@ -146,9 +146,9 @@ export default function LoginPage() {
           disabled={chargementDemo}
           className="w-full border-2 border-orange-500 text-orange-600 rounded-lg py-3 font-semibold hover:bg-orange-50 transition disabled:opacity-60"
         >
-          {chargementDemo ? "Ouverture de la démo..." : profilDemo === "salarie" ? "🧪 Tester l'espace salarié" : "🧪 Tester la démo"}
+          {chargementDemo ? "Ouverture de la démo..." : profilDemo === "salarie" ? "🧪 Tester l'espace salarié" : profilDemo === "manager" ? "🧪 Tester l'espace manager" : "🧪 Tester la démo"}
         </button>
-        <p className="text-xs text-gray-400 text-center mt-2">{profilDemo === "salarie" ? "Vous êtes Sophie, salariée de l'entreprise démo : déclarez une absence et suivez sa validation." : "Sans inscription, avec des données fictives."}</p>
+        <p className="text-xs text-gray-400 text-center mt-2">{profilDemo === "salarie" ? "Vous êtes Sophie, salariée de l'entreprise démo : relevé, absences, frais et questions à votre manager." : profilDemo === "manager" ? "Vous êtes Karim, manager de 4 salariés : validez relevés, absences et frais, répondez aux questions de l'équipe." : "Sans inscription, avec des données fictives."}</p>
 
         <div style={{ textAlign: "center", marginTop: "12px" }}>
           <DemandeAcces variante="lien" />

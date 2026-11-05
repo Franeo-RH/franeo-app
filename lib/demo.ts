@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 export const EMAIL_DEMO = "demo@franeo-rh.com";
 export const EMAIL_DEMO_SALARIE = "demo-salarie@franeo-rh.com";
+export const EMAIL_DEMO_MANAGER = "demo-manager@franeo-rh.com";
 export const NOM_DEMO = "Entreprise Démo";
 export const LIMITE_SALARIES_DEMO = 30;
 export const NOM_FAMILLE_DEMO = "Démo";
@@ -94,7 +95,13 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
   /* 1) Nettoyage — uniquement l'entreprise démo */
   await prisma.variablePaie.deleteMany({ where: { entrepriseId } });
   await prisma.absence.deleteMany({ where: { entrepriseId } });
-  await prisma.utilisateur.deleteMany({ where: { OR: [{ email: EMAIL_DEMO_SALARIE }, { role: "SALARIE", entrepriseId }] } });
+  await prisma.utilisateur.deleteMany({ where: { OR: [{ email: EMAIL_DEMO_SALARIE }, { email: EMAIL_DEMO_MANAGER }, { role: "SALARIE", entrepriseId }] } });
+  await prisma.questionInterne.deleteMany({ where: { entrepriseId } });
+  await prisma.journalPaie.deleteMany({ where: { entrepriseId } });
+  await prisma.clotureMois.deleteMany({ where: { entrepriseId } });
+  await prisma.demandeService.deleteMany({ where: { entrepriseId } });
+  await prisma.etablissement.deleteMany({ where: { entrepriseId } });
+  await prisma.service.deleteMany({ where: { entrepriseId } });
   await prisma.salarie.deleteMany({ where: { entrepriseId } }); // supprime aussi échéances et documents
   await prisma.ticket.deleteMany({ where: { entrepriseId } }); // supprime aussi les messages
   await prisma.ticketSupport.deleteMany({ where: { entrepriseId, NOT: { categorie: "SUGGESTION" } } }); // on garde les suggestions des visiteurs
@@ -242,7 +249,75 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
     data: { entrepriseId, code: "ATTESTATION_MALADIE", libelle: "Attestation de salaire maladie / maternité", quantite: 1, prixUnitaire: 0, total: 0, statut: "A_FAIRE", salarie: "Chloé Petit", auteur: "Démo", mois, annee },
   });
 
+  // ── Gestion RH : établissements, services, rôles et démo manager ──
+  {
+    await prisma.etablissement.createMany({
+      data: [
+        { entrepriseId, nom: "Siège Paris", rue: "10 rue de la Paix", codePostal: "75002", ville: "Paris" },
+        { entrepriseId, nom: "Agence Lyon", rue: "5 place Bellecour", codePostal: "69002", ville: "Lyon" },
+        { entrepriseId, nom: "Agence Lille", rue: "2 rue Nationale", codePostal: "59000", ville: "Lille" },
+      ],
+    });
+    await prisma.service.createMany({
+      data: ["Direction", "Administration", "Finance", "Commercial", "Technique", "Marketing", "RH"].map((nom, ordre) => ({ entrepriseId, nom, ordre })),
+    });
+    // Lucas dirige ; Karim manage Sophie, Julie, Chloé et Emma ; Thomas est rattaché à Lucas
+    await prisma.salarie.update({ where: { id: lucas.id }, data: { roleRH: "DIRIGEANT", poste: "Directeur commercial", service: "Direction" } });
+    await prisma.salarie.update({ where: { id: karim.id }, data: { roleRH: "MANAGER", managerId: lucas.id, voitSalairesEquipe: true, saisieVariables: true, coefficient: "250", position: "2.3" } });
+    await prisma.salarie.updateMany({ where: { id: { in: [sophie.id, julie.id, chloe.id, emma.id] } }, data: { managerId: karim.id } });
+    await prisma.salarie.update({ where: { id: thomas.id }, data: { managerId: lucas.id } });
+
+    // Compte démo manager (Karim Benali)
+    await prisma.utilisateur.create({
+      data: { email: EMAIL_DEMO_MANAGER, motDePasse: `!${randomBytes(24).toString("hex")}`, prenom: "Karim", role: "SALARIE", entrepriseId, salarieId: karim.id, actif: true },
+    });
+
+    // Ce qui attend Karim : relevé de Julie (mois dernier), notes de frais, une question
+    const mp = mois === 1 ? 12 : mois - 1, ap = mois === 1 ? annee - 1 : annee;
+    const rj = await prisma.releveMois.create({ data: { salarieId: julie.id, entrepriseId, mois: mp, annee: ap, statut: "Envoyé", envoyeAt: jour(-2), commentaire: "2 h supp. pour le salon du 12." } });
+    const joursJulie = [];
+    for (let d = 1; d <= new Date(Date.UTC(ap, mp, 0)).getUTCDate(); d++) {
+      const date = new Date(Date.UTC(ap, mp - 1, d, 12));
+      const js = date.getUTCDay();
+      if (js === 0 || js === 6) continue;
+      joursJulie.push({ releveId: rj.id, date, heures: d === 12 ? 9 : 7, heuresSupp: d === 12 ? 2 : 0, teletravail: false, commentaire: d === 12 ? "Salon professionnel" : null });
+    }
+    await prisma.releveJour.createMany({ data: joursJulie });
+    await prisma.noteFrais.createMany({
+      data: [
+        { salarieId: sophie.id, entrepriseId, date: jour(-4), montant: 32.4, motif: "Repas avec un fournisseur" },
+        { salarieId: emma.id, entrepriseId, date: jour(-6), montant: 18, motif: "Parking — salon" },
+        { salarieId: julie.id, entrepriseId, date: jour(-30), montant: 56.9, motif: "Train Paris-Lille", statut: "Validé", traitePar: "Karim Benali" },
+      ],
+    });
+    await prisma.questionInterne.create({
+      data: {
+        entrepriseId, auteurId: sophie.id, destinataireId: karim.id, sujet: "Pose de RTT en décembre",
+        messages: { create: { auteur: "Sophie Martin", contenu: "Bonjour Karim, puis-je poser 2 jours de RTT entre Noël et le jour de l'an ?" } },
+      },
+    });
+    await prisma.questionInterne.create({
+      data: {
+        entrepriseId, auteurId: sophie.id, destinataireId: karim.id, sujet: "Télétravail le mercredi", statut: "REPONDUE",
+        messages: { create: [
+          { auteur: "Sophie Martin", contenu: "Est-ce que je peux passer le mercredi en télétravail ?" },
+          { auteur: "Karim Benali", contenu: "Oui, c'est validé à partir du mois prochain." },
+        ] },
+      },
+    });
+  }
+
   return { entrepriseId, userId: utilisateur.id };
+}
+
+/** Démo manager : renvoie l'id du compte de Karim Benali (recrée la démo s'il manque). */
+export async function preparerDemoManager(): Promise<string> {
+  const compte = await prisma.utilisateur.findUnique({ where: { email: EMAIL_DEMO_MANAGER }, select: { id: true } });
+  if (compte) return compte.id;
+  await reinitialiserDemo();
+  const cree = await prisma.utilisateur.findUnique({ where: { email: EMAIL_DEMO_MANAGER }, select: { id: true } });
+  if (!cree) throw new Error("Compte démo manager introuvable");
+  return cree.id;
 }
 
 /** Prépare la démo côté salarié : renvoie l'id du compte démo salarié (recrée la démo s'il manque). */
