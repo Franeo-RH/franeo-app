@@ -8,6 +8,7 @@ import { BoutonExportComplet, BoutonModifierAdmin, BoutonSupprimerAdmin } from "
 type Releve = {
   entreprise?: { nom: string } | null;
   id: string; mois: number; annee: number; premier: string; statut: string; motifRefus: string | null; envoyeAt: string | null;
+  commentaire?: string | null; valideePar?: string | null; annulationBloquee?: boolean;
   salarie: { prenom: string; nom: string }; jours: JourReleve[]; absences: AbsenceReleve[];
 };
 
@@ -61,13 +62,39 @@ export default function ListeReleves({ admin = false }: { admin?: boolean }) {
     charger(filtre, mois, entrepriseId);
   }
 
+  async function action(r: Releve, a: "annuler" | "bloquer" | "debloquer" | "supprimer") {
+    if (a === "annuler" && !confirm("Annuler ce relevé validé ? Il sera rouvert au salarié et ses heures supp. retirées des variables.")) return;
+    if (a === "supprimer" && !confirm("Supprimer ce relevé ?")) return;
+    setOccupe(true);
+    const res = a === "supprimer"
+      ? await fetch(`/api/heures/${r.id}`, { method: "DELETE" })
+      : await fetch(`/api/heures/${r.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: a }) });
+    setOccupe(false);
+    if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.erreur || "Erreur"); }
+    charger(filtre, mois, entrepriseId);
+  }
+
+  function extraire() {
+    const lignes = [["Salarié", "Mois", "Statut", "Heures", "Heures supp.", "Commentaire", "Validé par"]];
+    for (const r of releves) {
+      lignes.push([`${r.salarie.prenom} ${r.salarie.nom}`, `${NOMS_MOIS[r.mois - 1]} ${r.annee}`, r.statut,
+        String(r.jours.reduce((a, j) => a + (j.heures || 0), 0)).replace(".", ","), String(r.jours.reduce((a, j) => a + j.heuresSupp, 0)).replace(".", ","),
+        r.commentaire || "", r.valideePar || ""]);
+    }
+    const csv = "\ufeff" + lignes.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    a.download = "releves.csv";
+    a.click();
+  }
+
   const btn = (fond: string): React.CSSProperties => ({ background: fond, color: "#ffffff", border: "none", borderRadius: "8px", padding: "8px 14px", fontSize: "14px", fontWeight: 700, cursor: "pointer", opacity: occupe ? 0.6 : 1 });
 
   return (
         <div className="flex flex-col gap-6" style={{ minWidth: 0 }}>
           <div className="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
             <div>
-              <h1 className="text-3xl font-bold">⏱️ Relevés d&apos;heures</h1>
+              <h1 className="text-3xl font-bold">⏱️ Relevés mensuels (RMA)</h1>
               {admin && <div className="flex gap-2 flex-wrap mt-3"><BoutonExportComplet jeu="releves" label="📥 Export complet (relevés + détail des jours)" /></div>}
               <p className="text-gray-500 mt-1">Tous les relevés mensuels des salariés{admin ? ", toutes entreprises confondues" : ""}. À la validation, les heures supplémentaires du mois sont ajoutées aux variables de paie.</p>
             </div>
@@ -77,6 +104,7 @@ export default function ListeReleves({ admin = false }: { admin?: boolean }) {
               </select>
               <input type="month" value={mois} onChange={(e) => setMois(e.target.value)} className="border rounded-lg px-3 py-2" aria-label="Mois" />
               {mois && <button type="button" onClick={() => setMois("")} className="text-sm text-gray-500 underline">tous les mois</button>}
+              <button type="button" onClick={extraire} disabled={releves.length === 0} className="border rounded-lg px-3 py-2 text-sm font-semibold">📥 Extraire (Excel)</button>
               {admin && (
                 <select value={entrepriseId} onChange={(e) => setEntrepriseId(e.target.value)} className="border rounded-lg px-3 py-2" aria-label="Entreprise">
                   <option value="">Toutes les entreprises</option>
@@ -119,6 +147,18 @@ export default function ListeReleves({ admin = false }: { admin?: boolean }) {
                           <button type="button" disabled={occupe} onClick={() => decider(r, "Refusé")} style={btn("#dc2626")}>↩️ Refuser</button>
                         </>
                       )}
+                      {r.statut === "Validé" && !r.annulationBloquee && (
+                        <button type="button" disabled={occupe} onClick={() => action(r, "annuler")} style={btn("#6b7280")}>↺ Annuler le relevé</button>
+                      )}
+                      {r.statut === "Validé" && r.annulationBloquee && !admin && <span className="text-xs text-gray-500">🔒 Paie faite : annulation bloquée</span>}
+                      {r.statut !== "Validé" && !admin && (
+                        <button type="button" disabled={occupe} onClick={() => action(r, "supprimer")} className="text-sm text-red-600">🗑️</button>
+                      )}
+                      {admin && r.statut === "Validé" && (
+                        <button type="button" disabled={occupe} onClick={() => action(r, r.annulationBloquee ? "debloquer" : "bloquer")} style={btn(r.annulationBloquee ? "#9ca3af" : "#111827")}>
+                          {r.annulationBloquee ? "🔓 Autoriser l'annulation" : "🔒 Bloquer l'annulation"}
+                        </button>
+                      )}
                       {admin && (
                         <>
                           <BoutonModifierAdmin modele="releveMois" id={r.id} valeurs={{ statut: r.statut, motifRefus: r.motifRefus }} onFait={() => charger(filtre, mois, entrepriseId)} />
@@ -128,6 +168,8 @@ export default function ListeReleves({ admin = false }: { admin?: boolean }) {
                     </div>
                   </div>
                   {r.statut === "Refusé" && r.motifRefus && <p className="text-sm text-red-600 mt-2">Motif du refus : {r.motifRefus}</p>}
+                  {r.commentaire && <p className="text-sm mt-2" style={{ background: "#f9fafb", borderRadius: "8px", padding: "8px 10px" }}>💬 Commentaire du salarié : {r.commentaire}</p>}
+                  {r.valideePar && r.statut !== "Envoyé" && <p className="text-xs text-gray-500 mt-1">Traité par {r.valideePar}</p>}
                   {ouvert === r.id && (
                     <div className="mt-4" style={{ maxWidth: "560px" }}>
                       <CalendrierReleve premier={r.premier} jours={jours} absences={r.absences} />

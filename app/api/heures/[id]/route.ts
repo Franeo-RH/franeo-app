@@ -1,51 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { fmtH, NOMS_MOIS } from "@/lib/heures";
 import { aDroit } from "@/lib/droits";
+import { annulerReleve, deciderReleve } from "@/lib/decisions";
 
 /**
- * PUT { statut: "Validé" | "Refusé", motif? } : l'employeur (ou l'admin) valide ou refuse un relevé envoyé.
- * Validé : les heures supplémentaires du mois deviennent une variable de paie.
- * Refusé : le relevé est rouvert au salarié avec le motif.
+ * PUT :
+ *  { statut: "Validé" | "Refusé", motif? } : l'employeur (ou l'admin) valide ou refuse un relevé envoyé ;
+ *  { action: "annuler" } : un relevé validé est annulé (rouvert au salarié), sauf si l'admin l'a bloqué ;
+ *  { action: "bloquer" | "debloquer" } (admin) : empêche l'annulation (paie déjà faite).
  */
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
-  if (session?.role === "CLIENT" && !aDroit(session.entreprise?.permissions, "paie.releves")) return NextResponse.json({ erreur: "Action non autorisée pour votre compte. Contactez FRANEO RH." }, { status: 403 });
   if (!session) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
+  if (session.role === "CLIENT" && !aDroit(session.entreprise?.permissions, "paie.releves")) return NextResponse.json({ erreur: "Action non autorisée pour votre compte. Contactez FRANEO RH." }, { status: 403 });
   const { id } = await params;
-  const { statut, motif } = await request.json().catch(() => ({}));
-  if (statut !== "Validé" && statut !== "Refusé") return NextResponse.json({ erreur: "Statut invalide" }, { status: 400 });
+  const corps = await request.json().catch(() => ({}));
 
-  const r = await prisma.releveMois.findUnique({ where: { id }, include: { jours: true } });
+  const r = await prisma.releveMois.findUnique({ where: { id }, select: { entrepriseId: true } });
   if (!r) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
   if (session.role === "CLIENT" && r.entrepriseId !== session.entrepriseId) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
-  if (r.statut !== "Envoyé") return NextResponse.json({ erreur: "Ce relevé n'est pas en attente de validation." }, { status: 400 });
+  const auteur = session.role === "ADMIN" ? "FRANEO RH" : session.prenom;
 
-  if (statut === "Refusé") {
-    await prisma.releveMois.update({
-      where: { id },
-      data: { statut, motifRefus: typeof motif === "string" && motif.trim() ? motif.trim().slice(0, 300) : null },
-    });
+  if (corps?.action === "bloquer" || corps?.action === "debloquer") {
+    if (session.role !== "ADMIN") return NextResponse.json({ erreur: "Réservé à FRANEO RH" }, { status: 403 });
+    await prisma.releveMois.update({ where: { id }, data: { annulationBloquee: corps.action === "bloquer" } });
     return NextResponse.json({ succes: true });
   }
-
-  const totS = Math.round(r.jours.reduce((a, j) => a + j.heuresSupp, 0) * 100) / 100;
-  let variableId: string | null = null;
-  if (totS > 0) {
-    const v = await prisma.variablePaie.create({
-      data: {
-        salarieId: r.salarieId,
-        entrepriseId: r.entrepriseId,
-        type: "HEURE_SUPPLEMENTAIRE",
-        valeur: totS,
-        mois: r.mois,
-        annee: r.annee,
-        commentaire: `Relevé d'heures ${NOMS_MOIS[r.mois - 1]} ${r.annee} (${fmtH(totS)})`,
-      },
-    });
-    variableId = v.id;
+  if (corps?.action === "annuler") {
+    const res = await annulerReleve(id, auteur);
+    return res.ok ? NextResponse.json({ succes: true }) : NextResponse.json({ erreur: res.erreur }, { status: res.status });
   }
-  await prisma.releveMois.update({ where: { id }, data: { statut, valideAt: new Date(), motifRefus: null, variableId } });
-  return NextResponse.json({ succes: true, variableId });
+
+  const { statut, motif } = corps ?? {};
+  if (statut !== "Validé" && statut !== "Refusé") return NextResponse.json({ erreur: "Statut invalide" }, { status: 400 });
+  const res = await deciderReleve(id, statut, motif, auteur);
+  return res.ok ? NextResponse.json({ succes: true }) : NextResponse.json({ erreur: res.erreur }, { status: res.status });
+}
+
+/** DELETE : suppression d'un relevé, impossible une fois validé (il faut d'abord l'annuler) */
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
+  const { id } = await params;
+  const r = await prisma.releveMois.findUnique({ where: { id }, select: { entrepriseId: true, statut: true } });
+  if (!r) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
+  if (session.role === "CLIENT" && (r.entrepriseId !== session.entrepriseId || !aDroit(session.entreprise?.permissions, "paie.releves"))) return NextResponse.json({ erreur: "Non autorisé" }, { status: 403 });
+  if (r.statut === "Validé") return NextResponse.json({ erreur: "Relevé validé : il faut d'abord l'annuler avant de le supprimer." }, { status: 400 });
+  await prisma.releveMois.delete({ where: { id } });
+  return NextResponse.json({ succes: true });
 }

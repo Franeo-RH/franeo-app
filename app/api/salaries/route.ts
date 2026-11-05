@@ -245,6 +245,10 @@ export async function POST(request: NextRequest) {
 
         coefficient:
           data.coefficient || null,
+        position: data.position || null,
+        iban: data.iban || null,
+        ...(["SALARIE", "MANAGER", "DIRIGEANT"].includes(data.roleRH) ? { roleRH: data.roleRH } : {}),
+        managerId: data.managerId || null,
 
 
         salaireMensuel:

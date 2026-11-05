@@ -26,6 +26,7 @@ export default function ReleveHeuresSalarie() {
   const [envoi, setEnvoi] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; texte: string } | null>(null);
   const [remplir, setRemplir] = useState("7");
+  const [commentaireMois, setCommentaireMois] = useState("");
 
   const modifiable = statut === "Brouillon" || statut === "Refusé";
   const jours = joursDuMois(mois, annee);
@@ -35,6 +36,7 @@ export default function ReleveHeuresSalarie() {
     if (!d || d.erreur) return;
     setStatut(d.statut);
     setMotifRefus(d.motifRefus);
+    setCommentaireMois(d.commentaire || "");
     setAbsences(d.absences || []);
     const s: Record<string, Saisie> = {};
     for (const j of d.jours as JourReleve[]) s[j.date] = { heures: versTexte(j.heures), heuresSupp: versTexte(j.heuresSupp), commentaire: j.commentaire || "", teletravail: !!j.teletravail };
@@ -79,7 +81,7 @@ export default function ReleveHeuresSalarie() {
     if (envoyer && !confirm(`Envoyer votre relevé de ${NOMS_MOIS[mois - 1]} ${annee} ?\n\nUne fois envoyé, vous ne pourrez plus le modifier.`)) return;
     setEnvoi(true);
     setMessage(null);
-    const corps = { mois, annee, envoyer, jours: Object.entries(saisie).map(([date, v]) => ({ date, ...v })) };
+    const corps = { mois, annee, envoyer, commentaire: commentaireMois, jours: Object.entries(saisie).map(([date, v]) => ({ date, ...v })) };
     const res = await fetch("/api/espace-salarie/heures", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) });
     const d = await res.json().catch(() => ({}));
     setEnvoi(false);
@@ -165,6 +167,14 @@ export default function ReleveHeuresSalarie() {
       <p style={{ margin: 0, fontSize: "14px" }}>
         Total du mois : <strong>{fmtH(totH)}</strong>{totS > 0 && <> dont <strong style={{ color: "#c2410c" }}>{fmtH(totS)} supp.</strong></>}
       </p>
+
+      {modifiable ? (
+        <label style={label}>💬 Commentaire sur mon relevé (facultatif)
+          <textarea rows={2} maxLength={1000} value={commentaireMois} onChange={(e) => { setCommentaireMois(e.target.value); setModifie(true); }} placeholder="Ex : heures supp. demandées par mon manager pour l'inventaire" style={{ ...champ, resize: "none" }} />
+        </label>
+      ) : commentaireMois ? (
+        <p style={{ margin: 0, fontSize: "14px", background: "#f9fafb", borderRadius: "8px", padding: "8px 10px" }}>💬 {commentaireMois}</p>
+      ) : null}
 
       {modifiable && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px" }}>

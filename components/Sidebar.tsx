@@ -35,6 +35,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/entreprises/facturation", label: "🧾 Facturation" },
         { href: "/admin/entreprises/prestations", label: "➕ Prestations supplémentaires" },
         { href: "/admin/entreprises/devis", label: "🧾 Demandes de devis" },
+        { href: "/admin/entreprises/demandes-services", label: "📱 Apps, audits & formations" },
       ] };
     }
     if (dans("/admin/salaries")) {
@@ -54,6 +55,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/paie/variables", label: "💰 Variables" },
         { href: "/admin/paie/releves", label: "⏱️ Relevés d'heures" },
         { href: "/admin/paie/historique", label: "📋 Historique" },
+        { href: "/admin/paie/clotures", label: "🔒 Clôtures & journal" },
       ] };
     }
     if (dans("/admin/actualites", "/admin/communication", "/admin/faq")) {
@@ -76,26 +78,33 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
     return { titre: "Tickets RH", items: [
       { href: "/client/tickets", label: "🎫 Mes tickets" },
       { href: "/client/tickets/nouveau", label: "➕ Nouveau ticket" },
-      { href: "/client/tickets/questions", label: "💬 Demande RH ponctuelle" },
-      { href: "/client/tickets/recrutement", label: "🎯 Demander un recrutement" },
-      { href: "/client/tickets/recrutement/historique", label: "📋 Historique recrutement" },
+      { href: "/client/tickets/questions", label: "💬 Mes demandes ponctuelles" },
+      { href: "/client/tickets/questions/nouvelle", label: "➕ Nouvelle demande ponctuelle" },
+      { href: "/client/tickets/recrutement", label: "🎯 Demander un recrutement", aussi: ["/client/tickets/recrutement/historique"] },
+      { href: "/client/tickets/audit", label: "🔍 Demander un audit" },
+      { href: "/client/tickets/historique", label: "📋 Historique des demandes" },
     ] };
   }
   if (dans("/client/entreprise", "/client/abonnement-paie")) {
     return { titre: "Mon entreprise", items: [
-      { href: "/client/entreprise", label: "🏢 Informations" },
+      { href: "/client/entreprise", label: "🏢 Informations & établissements" },
       { href: "/client/entreprise/facturation", label: "🧾 Mes factures" },
       { href: "/client/entreprise/abonnement", label: "📦 Gestion de mes abonnements", aussi: ["/client/abonnement-paie"] },
       { href: "/client/entreprise/supplements", label: "➕ Mes suppléments" },
-      { href: "/client/entreprise/devis", label: "🧾 Demande de devis" },
+      { href: "/client/entreprise/devis", label: "📱 Autres apps & demandes" },
     ] };
   }
   if (dans("/client/salaries")) {
-    return { titre: "Salariés", items: [
+    return { titre: "Gestion RH", items: [
+      { href: "/client/salaries/tableau-de-bord", label: "📊 Tableau de bord" },
       { href: "/client/salaries", label: "👥 Liste des salariés" },
+      { href: "/client/salaries/services", label: "🧩 Services" },
+      { href: "/client/salaries/releves", label: "⏱️ Relevés" },
+      { href: "/client/salaries/absences", label: "🏖️ Absences" },
+      { href: "/client/salaries/frais", label: "🧾 Notes de frais" },
+      { href: "/client/salaries/questions", label: "💬 Questions des salariés" },
       { href: "/client/salaries/mouvements", label: "🔄 Mouvements" },
       { href: "/client/salaries/echeances", label: "⏰ Échéances" },
-      { href: "/client/salaries/absences", label: "🏖️ Absences" },
       { href: "/client/salaries/demandes", label: "📝 Mes demandes", aussi: ["/client/salaries/nouveau"] },
     ] };
   }
@@ -103,8 +112,10 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
     return { titre: "Paie", items: [
       { href: "/client/paie", label: "📊 Tableau de bord" },
       { href: "/client/paie/saisie", label: "✏️ Saisir des variables" },
-      { href: "/client/paie/releves", label: "⏱️ Relevés d'heures" },
+      { href: "/client/paie/import", label: "📥 Importer en masse" },
+      { href: "/client/paie/controle", label: "🔎 Contrôle avant paie" },
       { href: "/client/paie/historique", label: "📋 Historique" },
+      { href: "/client/paie/journal", label: "🕓 Journal des saisies" },
     ] };
   }
   if (dans("/client/actualites", "/client/faq")) {

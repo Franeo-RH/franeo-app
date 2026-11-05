@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
+import GestionEtablissements from "@/components/GestionEtablissements";
+import { aDroit } from "@/lib/droits";
 
 export default async function EntrepriseClient() {
   await connection();
@@ -19,7 +21,7 @@ export default async function EntrepriseClient() {
 
   const entreprise = await prisma.entreprise.findUnique({
     where: { id: session.entrepriseId! },
-    include: { abonnement: true },
+    include: { abonnement: true, abonnementPaie: true },
   });
 
   if (!entreprise) redirect("/login");
@@ -36,12 +38,11 @@ export default async function EntrepriseClient() {
               <h1 className="text-3xl font-bold">🏢 {entreprise.nom}</h1>
               <p className="text-gray-500 mt-1">Informations de votre entreprise</p>
             </div>
-            <Link
-              href="/client/entreprise/modifier"
-              className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition"
-            >
-              ✏️ Modifier
-            </Link>
+            <div className="flex gap-2 flex-wrap">
+              <Link href="/client/entreprise/devis?type=AUDIT" className="bg-white border-2 border-black px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition">🔍 Demander un audit RH</Link>
+              <Link href="/client/entreprise/devis?type=FORMATION" className="px-4 py-2 rounded-lg font-semibold text-white transition" style={{ background: "#17a34a" }}>🎓 Demander une formation</Link>
+              <Link href="/client/entreprise/modifier" className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition">✏️ Modifier</Link>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-6">
@@ -54,6 +55,8 @@ export default async function EntrepriseClient() {
                 <Info label="Email" value={entreprise.email} />
                 <Info label="Téléphone" value={entreprise.telephone} />
                 <Info label="Site web" value={entreprise.siteWeb} />
+                <Info label="Convention collective (CCN)" value={entreprise.ccn} />
+                <Info label="Secteur d'activité" value={entreprise.secteur} />
               </div>
             </div>
 
@@ -77,18 +80,18 @@ export default async function EntrepriseClient() {
             </div>
 
             <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="text-lg font-bold mb-4">💳 Abonnement Franeo</h2>
+              <h2 className="text-lg font-bold mb-4">💳 Abonnements Franeo</h2>
               <div className="flex flex-col gap-3">
-                <Info label="Formule" value={entreprise.abonnement?.nom} />
-                <Info label="Prix mensuel" value={entreprise.abonnement ? `${entreprise.abonnement.prixMensuel} €/mois` : null} />
-                <Info label="Tickets RH inclus" value={entreprise.abonnement?.ticketsRH.toString()} />
-                <Info label="Tickets utilisés" value={entreprise.ticketsUtilises.toString()} />
+                <Info label="Formule RH" value={entreprise.abonnement ? `${entreprise.abonnement.nom} — ${entreprise.abonnement.prixMensuel} €/mois` : "Accès de base (gratuit)"} />
+                <Info label="Tickets RH inclus / mois" value={entreprise.abonnement?.ticketsRH.toString()} />
+                <Info label="Formule paie" value={entreprise.abonnementPaie ? `Paie ${entreprise.abonnementPaie.nom} — ${entreprise.abonnementPaie.prixMensuel} €/mois` : "—"} />
               </div>
               <Link href="/client/entreprise/abonnement" className="block mt-4 text-orange-500 font-semibold hover:underline">
-                Demander une évolution →
+                Gérer mes abonnements →
               </Link>
             </div>
 
+            <GestionEtablissements modifiable={aDroit(session.entreprise?.permissions, "entreprise.modifier")} />
           </div>
 
         </main>

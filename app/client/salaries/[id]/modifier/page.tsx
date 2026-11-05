@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import { ChampsRoleRH, ChoixOrganisation, type RoleRH } from "@/components/ChampsRoleRH";
 import RappelsSalarie from "@/components/RappelsSalarie";
 
 const ONGLETS = ["Infos personnelles", "Poste", "Salaire", "Documents & échéances"];
@@ -19,6 +20,7 @@ export default function ModifierSalarie() {
   const [chargementInitial, setChargementInitial] = useState(true);
   const [demo, setDemo] = useState(false);
 
+  const [rh, setRh] = useState<RoleRH>({ roleRH: "SALARIE", managerId: "", voitSalairesEquipe: false, saisieVariables: false });
   const [form, setForm] = useState({
     matricule: "",
     nom: "", prenom: "", email: "", telephone: "",
@@ -26,7 +28,7 @@ export default function ModifierSalarie() {
     numeroSecuriteSociale: "", rue: "", codePostal: "", ville: "", pays: "",
     poste: "", typeContrat: "", dateDebut: "", dateFin: "",
     heuresHebdomadaires: "", manager: "", etablissement: "", service: "", soldeConges: "", conventionCollective: "",
-    categorie: "", coefficient: "",
+    categorie: "", coefficient: "", position: "", iban: "",
     salaireMensuel: "", salaireAnnuel: "", primes: "", avantages: "",
   });
 
@@ -61,11 +63,14 @@ export default function ModifierSalarie() {
           conventionCollective: data.conventionCollective || "",
           categorie: data.categorie || "",
           coefficient: data.coefficient || "",
+          position: data.position || "",
+          iban: data.iban || "",
           salaireMensuel: data.salaireMensuel?.toString() || "",
           salaireAnnuel: data.salaireAnnuel?.toString() || "",
           primes: data.primes?.toString() || "",
           avantages: data.avantages || "",
         });
+        setRh({ roleRH: data.roleRH || "SALARIE", managerId: data.managerId || "", voitSalairesEquipe: !!data.voitSalairesEquipe, saisieVariables: !!data.saisieVariables });
         setChargementInitial(false);
       });
   }, [id]);
@@ -81,7 +86,7 @@ export default function ModifierSalarie() {
     const res = await fetch(`/api/salaries/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, ...(demo ? {} : rh) }),
     });
 
     if (!res.ok) {
@@ -191,12 +196,14 @@ export default function ModifierSalarie() {
                   {champ("Date de début", "dateDebut", "date", true)}
                   {champ("Date de fin", "dateFin", "date", true)}
                   {champ("Heures hebdomadaires", "heuresHebdomadaires", "number")}
-                  {champ("Manager", "manager")}
-                  {champ("Établissement", "etablissement")}
-                  {champ("Service", "service")}
+                  
+                  {demo ? <Verrou label="Établissement" /> : <ChoixOrganisation type="etablissement" valeur={form.etablissement} onChange={(v) => setForm({ ...form, etablissement: v })} />}
+                  {demo ? <Verrou label="Service" /> : <ChoixOrganisation type="service" valeur={form.service} onChange={(v) => setForm({ ...form, service: v })} />}
                   {champ("Convention collective", "conventionCollective")}
                   {champ("Catégorie", "categorie")}
                   {champ("Coefficient", "coefficient")}
+                  {champ("Position", "position")}
+                  {!demo && <ChampsRoleRH valeur={rh} onChange={setRh} exclureId={id} />}
                 </div>
               )}
               {onglet === 2 && (
@@ -205,6 +212,7 @@ export default function ModifierSalarie() {
                   {champ("Salaire annuel (€)", "salaireAnnuel", "number", true)}
                   {champ("Primes (€)", "primes", "number")}
                   {champ("Avantages", "avantages")}
+                  {champ("RIB (IBAN)", "iban")}
                 </div>
               )}
             </div>

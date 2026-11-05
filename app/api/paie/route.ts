@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { journaliser } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
@@ -64,5 +65,6 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  await journaliser(session.entrepriseId, session.prenom, "Saisie variable", `${salarie.prenom} ${salarie.nom} : ${type} ${valeur} — ${mois}/${annee}${commentaire ? ` (${String(commentaire).slice(0, 80)})` : ""}`);
   return NextResponse.json({ succes: true, variable });
 }

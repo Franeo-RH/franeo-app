@@ -5,7 +5,7 @@
 //   - une action retirée : "-salaries.creer" (par défaut, toute action d'un module activé est permise)
 
 export const MODULES = [
-  { id: "salaries", label: "👥 Salariés" },
+  { id: "salaries", label: "👥 Gestion RH (salariés)" },
   { id: "paie", label: "💰 Paie" },
   { id: "absences", label: "🏖️ Absences" },
   { id: "tickets", label: "🎫 Tickets RH" },
@@ -26,14 +26,19 @@ export const ACTIONS = [
   { id: "salaries.echeances", module: "salaries", label: "Voir les échéances" },
   { id: "salaries.echeances-modifier", module: "salaries", label: "Ajouter / modifier des échéances" },
   { id: "salaries.demandes", module: "salaries", label: "Voir ses demandes de validation" },
+  { id: "rh.services", module: "salaries", label: "Organiser les services et l'organigramme" },
+  { id: "rh.frais", module: "espace-salaries", label: "Gestion RH : valider les notes de frais" },
+  { id: "rh.questions", module: "espace-salaries", label: "Gestion RH : répondre aux questions des salariés" },
   // Absences
   { id: "paie.absences", module: "absences", label: "Déclarer des absences" },
   { id: "absences.valider", module: "absences", label: "Valider / refuser les absences des salariés" },
   // Paie
   { id: "paie.variables", module: "paie", label: "Saisir des variables de paie" },
   { id: "paie.tableau-bord", module: "paie", label: "Voir le tableau de bord paie (masse salariale)" },
-  { id: "paie.releves", module: "paie", label: "Voir et valider les relevés d'heures" },
+  { id: "paie.releves", module: "espace-salaries", label: "Gestion RH : voir, valider et annuler les relevés (RMA)" },
   { id: "paie.historique", module: "paie", label: "Voir l'historique de paie" },
+  { id: "paie.import", module: "paie", label: "Importer des variables en masse" },
+  { id: "paie.cloture", module: "paie", label: "Demander la clôture / réouverture du mois" },
   // Tickets RH
   { id: "tickets.creer", module: "tickets", label: "Ouvrir des tickets RH" },
   { id: "tickets.recrutement", module: "tickets", label: "Demander un recrutement" },
@@ -43,7 +48,7 @@ export const ACTIONS = [
   { id: "entreprise.factures", module: "entreprise", label: "Voir les factures" },
   { id: "entreprise.abonnements", module: "entreprise", label: "Voir et demander un changement d'abonnement" },
   { id: "entreprise.supplements", module: "entreprise", label: "Voir les suppléments du mois" },
-  { id: "entreprise.devis", module: "entreprise", label: "Demander des devis" },
+  { id: "entreprise.devis", module: "entreprise", label: "Faire des demandes (autres apps, audit, formation, devis)" },
   // Espace salarié : ce que les salariés voient dans leur espace
   { id: "espace.gerer", module: "espace-salaries", label: "Le client gère les accès de ses salariés" },
   { id: "espace.absences", module: "espace-salaries", label: "Salariés : demander leurs absences" },
@@ -73,11 +78,19 @@ export const DROITS_PAGES: { prefixe: string; droit: ActionId }[] = [
   { prefixe: "/client/salaries/echeances", droit: "salaries.echeances" },
   { prefixe: "/client/salaries/demandes", droit: "salaries.demandes" },
   { prefixe: "/client/paie/saisie", droit: "paie.variables" },
-  { prefixe: "/client/paie/releves", droit: "paie.releves" },
+  { prefixe: "/client/salaries/releves", droit: "paie.releves" },
+  { prefixe: "/client/salaries/services", droit: "rh.services" },
+  { prefixe: "/client/salaries/frais", droit: "rh.frais" },
+  { prefixe: "/client/salaries/questions", droit: "rh.questions" },
+  { prefixe: "/client/paie/import", droit: "paie.import" },
+  { prefixe: "/client/paie/journal", droit: "paie.historique" },
+  { prefixe: "/client/paie/controle", droit: "paie.variables" },
+  { prefixe: "/client/tickets/historique", droit: "tickets.creer" },
   { prefixe: "/client/paie/historique", droit: "paie.historique" },
   { prefixe: "/client/tickets/nouveau", droit: "tickets.creer" },
   { prefixe: "/client/tickets/recrutement", droit: "tickets.recrutement" },
   { prefixe: "/client/tickets/questions", droit: "tickets.questions" },
+  { prefixe: "/client/tickets/audit", droit: "tickets.creer" },
   { prefixe: "/client/entreprise/modifier", droit: "entreprise.modifier" },
   { prefixe: "/client/entreprise/facturation", droit: "entreprise.factures" },
   { prefixe: "/client/entreprise/abonnement", droit: "entreprise.abonnements" },
@@ -108,9 +121,12 @@ export function passeParValidation(entreprise: { abonnementPaieId?: string | nul
   return !!entreprise && !!entreprise.abonnementPaieId && !entreprise.demo;
 }
 
-/** Tout ajout de salarié par un client (hors démo) passe par une demande validée par l'admin */
-export function ajoutParValidation(entreprise: { demo?: boolean } | null | undefined): boolean {
-  return !!entreprise && !entreprise.demo;
+/**
+ * Ajout de salarié par un client : validé par FRANEO RH seulement avec une formule paie.
+ * Sans formule paie, le client gère ses salariés en autonomie.
+ */
+export function ajoutParValidation(entreprise: { demo?: boolean; abonnementPaieId?: string | null } | null | undefined): boolean {
+  return passeParValidation(entreprise);
 }
 
 /** Le client voit l'onglet Paie seulement s'il a une formule paie (et le module activé) */

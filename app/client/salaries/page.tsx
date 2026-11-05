@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function ClientSalaries({
   searchParams,
 }: {
-  searchParams: Promise<{ onglet?: string }>;
+  searchParams: Promise<{ onglet?: string; etablissement?: string; service?: string }>;
 }) {
   await connection();
 
@@ -22,7 +22,9 @@ export default async function ClientSalaries({
   if (session.role !== "CLIENT") redirect("/admin/dashboard");
   if (!session.entreprise?.permissions.includes("salaries")) redirect("/client/dashboard");
 
-  const { onglet = "actifs" } = await searchParams;
+  const { onglet = "actifs", etablissement = "", service = "" } = await searchParams;
+  const filtreOrga = { ...(etablissement ? { etablissement } : {}), ...(service ? { service } : {}) };
+  const suffixe = `${etablissement ? `&etablissement=${encodeURIComponent(etablissement)}` : ""}${service ? `&service=${encodeURIComponent(service)}` : ""}`;
 
   const maintenant = new Date();
   const debutMois = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1);
@@ -32,10 +34,15 @@ export default async function ClientSalaries({
 
 
   // Requêtes lancées en même temps
+  const [etablissements, services] = await Promise.all([
+    prisma.etablissement.findMany({ where: { entrepriseId: session.entrepriseId! }, select: { nom: true }, orderBy: { nom: "asc" } }),
+    prisma.service.findMany({ where: { entrepriseId: session.entrepriseId! }, select: { nom: true }, orderBy: { nom: "asc" } }),
+  ]);
   const [salariesActifs, salariesAVenir, salariesAnciens] = await Promise.all([
     prisma.salarie.findMany({
       where: {
         entrepriseId,
+        ...filtreOrga,
         statut: "Actif",
         dateDebut: { lte: finMois },
         OR: [{ dateFin: null }, { dateFin: { gte: debutMois } }],
@@ -45,6 +52,7 @@ export default async function ClientSalaries({
     prisma.salarie.findMany({
       where: {
         entrepriseId,
+        ...filtreOrga,
         statut: "Actif",
         dateDebut: { gt: finMois },
       },
@@ -53,6 +61,7 @@ export default async function ClientSalaries({
     prisma.salarie.findMany({
       where: {
         entrepriseId,
+        ...filtreOrga,
         dateFin: { lt: debutMois },
       },
       orderBy: { dateFin: "desc" },
@@ -83,7 +92,7 @@ export default async function ClientSalaries({
 
           <div className="bg-white rounded-xl shadow p-8 flex justify-between items-center mb-6">
             <div>
-              <h1 className="text-3xl font-bold">👥 Salariés</h1>
+              <h1 className="text-3xl font-bold">👥 Liste des salariés</h1>
               <p className="text-gray-500 mt-2">{session.entreprise?.nom}</p>
             </div>
             <div className="flex gap-3">
@@ -105,15 +114,32 @@ export default async function ClientSalaries({
             </div>
           </div>
 
+          {/* Filtres établissement / service */}
+          {(etablissements.length > 0 || services.length > 0) && (
+            <form method="get" className="bg-white rounded-xl shadow p-4 mb-6 flex gap-3 items-center flex-wrap">
+              <input type="hidden" name="onglet" value={onglet} />
+              <select name="etablissement" defaultValue={etablissement} className="border rounded-lg px-3 py-2 text-sm" aria-label="Établissement">
+                <option value="">Tous les établissements</option>
+                {etablissements.map((e) => <option key={e.nom} value={e.nom}>{e.nom}</option>)}
+              </select>
+              <select name="service" defaultValue={service} className="border rounded-lg px-3 py-2 text-sm" aria-label="Service">
+                <option value="">Tous les services</option>
+                {services.map((x) => <option key={x.nom} value={x.nom}>{x.nom}</option>)}
+              </select>
+              <button type="submit" className="bg-black text-white px-4 py-2 rounded-lg text-sm font-semibold">Filtrer</button>
+              {(etablissement || service) && <Link href={`/client/salaries?onglet=${onglet}`} className="text-sm text-gray-500">✕ Réinitialiser</Link>}
+            </form>
+          )}
+
           {/* Onglets */}
           <div className="flex gap-2 mb-6">
-            <Link href="/client/salaries?onglet=actifs" className={classeOnglet("actifs")}>
+            <Link href={`/client/salaries?onglet=actifs${suffixe}`} className={classeOnglet("actifs")}>
               ✅ Actifs ({salariesActifs.length})
             </Link>
-            <Link href="/client/salaries?onglet=avenir" className={classeOnglet("avenir")}>
+            <Link href={`/client/salaries?onglet=avenir${suffixe}`} className={classeOnglet("avenir")}>
               🔜 À venir ({salariesAVenir.length})
             </Link>
-            <Link href="/client/salaries?onglet=anciens" className={classeOnglet("anciens")}>
+            <Link href={`/client/salaries?onglet=anciens${suffixe}`} className={classeOnglet("anciens")}>
               🗂️ Sorties ({salariesAnciens.length})
             </Link>
           </div>

@@ -45,6 +45,10 @@ export function champsSalarie(d: Record<string, unknown>) {
     conventionCollective: texte(d.conventionCollective),
     categorie: texte(d.categorie),
     coefficient: texte(d.coefficient),
+    position: texte(d.position),
+    iban: texte(d.iban),
+    roleRH: ["SALARIE", "MANAGER", "DIRIGEANT"].includes(String(d.roleRH)) ? String(d.roleRH) : "SALARIE",
+    managerId: texte(d.managerId),
     salaireMensuel: nombre(d.salaireMensuel),
     salaireAnnuel: nombre(d.salaireAnnuel),
     primes: nombre(d.primes),
@@ -67,7 +71,7 @@ async function resumer(type: TypeDemande, donnees: Record<string, unknown>, sala
   // Modification : on liste ce qui change
   if (!avant) return `Modifier ${nom}`;
   if (donnees.partiel) {
-    const lib: Record<string, string> = { poste: "poste", salaireMensuel: "salaire mensuel", salaireAnnuel: "salaire annuel" };
+    const lib: Record<string, string> = { poste: "poste", salaireMensuel: "salaire mensuel", salaireAnnuel: "salaire annuel", coefficient: "coefficient", iban: "RIB (IBAN)" };
     const ch = Object.keys(lib)
       .filter((k) => k in donnees)
       .map((k) => `${lib[k]} : ${(avant as Record<string, unknown>)[k] ?? "—"} → ${donnees[k] ?? "—"}`);
@@ -171,6 +175,9 @@ export async function appliquerDemande(demandeId: string): Promise<{ erreur?: st
         const v = donnees[k] === null || donnees[k] === "" ? null : Number(donnees[k]);
         maj[k] = v === null || Number.isFinite(v) ? v : null;
       }
+    }
+    for (const k of ["coefficient", "iban"]) {
+      if (k in donnees) maj[k] = donnees[k] === null || donnees[k] === "" ? null : String(donnees[k]).trim();
     }
     await prisma.salarie.update({ where: { id: salarie.id }, data: maj });
   } else if (d.type === "MODIFICATION") {

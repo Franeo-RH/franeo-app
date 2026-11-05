@@ -25,7 +25,7 @@ export default async function FicheSalarieAdmin({
 
   const salarie = await prisma.salarie.findUnique({
     where: { id },
-    include: { entreprise: true, compte: { select: { actif: true } }, rappels: { orderBy: { dateEcheance: "asc" } } },
+    include: { managerFiche: { select: { prenom: true, nom: true } }, entreprise: true, compte: { select: { actif: true } }, rappels: { orderBy: { dateEcheance: "asc" } } },
   });
 
   if (!salarie) redirect("/admin/salaries");
@@ -107,7 +107,10 @@ export default async function FicheSalarieAdmin({
                 <Info label="Date début" value={salarie.dateDebut ? new Date(salarie.dateDebut).toLocaleDateString("fr-FR") : null} />
                 <Info label="Date fin" value={salarie.dateFin ? new Date(salarie.dateFin).toLocaleDateString("fr-FR") : null} />
                 <Info label="Heures hebdo" value={salarie.heuresHebdomadaires ? `${salarie.heuresHebdomadaires}h` : null} />
-                <Info label="Manager" value={salarie.manager} />
+                <Info label="Rôle" value={({ SALARIE: "Salarié", MANAGER: "Manager", DIRIGEANT: "Dirigeant" } as Record<string, string>)[salarie.roleRH] ?? salarie.roleRH} />
+                <Info label="Manager (N+1)" value={salarie.managerFiche ? `${salarie.managerFiche.prenom} ${salarie.managerFiche.nom}` : salarie.manager} />
+                <Info label="Service" value={salarie.service} />
+                <Info label="Établissement" value={salarie.etablissement} />
               </div>
             </div>
 

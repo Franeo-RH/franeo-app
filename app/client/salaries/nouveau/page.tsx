@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import { ChampsRoleRH, ChoixOrganisation, type RoleRH } from "@/components/ChampsRoleRH";
 import ModaleSurcout from "@/components/ModaleSurcout";
 import type { Surcout } from "@/lib/surcout";
 import { TYPES_RAPPEL, formaterDateFR } from "@/lib/rappels";
@@ -22,6 +23,7 @@ export default function NouveauSalarie() {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [demo, setDemo] = useState(false);
 
+  const [rh, setRh] = useState<RoleRH>({ roleRH: "SALARIE", managerId: "", voitSalairesEquipe: false, saisieVariables: false });
   const [form, setForm] = useState({
     matricule: "",
     nom: "", prenom: "", email: "", telephone: "",
@@ -29,7 +31,7 @@ export default function NouveauSalarie() {
     numeroSecuriteSociale: "", rue: "", codePostal: "", ville: "", pays: "",
     poste: "", typeContrat: "", dateDebut: "", dateFin: "",
     heuresHebdomadaires: "", manager: "", etablissement: "", service: "", soldeConges: "", conventionCollective: "",
-    categorie: "", coefficient: "",
+    categorie: "", coefficient: "", position: "", iban: "",
     salaireMensuel: "", salaireAnnuel: "", primes: "", avantages: "",
   });
 
@@ -68,7 +70,7 @@ export default function NouveauSalarie() {
     const res = await fetch("/api/salaries", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, rappels, accepteSurcout }),
+      body: JSON.stringify({ ...form, ...(demo ? {} : rh), rappels, accepteSurcout }),
     });
     // Supplément : on demande l'accord du client
     if (res.status === 402) {
@@ -111,8 +113,8 @@ export default function NouveauSalarie() {
         <Sidebar role="CLIENT" />
         <main className="flex-1 p-10">
           <div className="bg-white rounded-xl shadow p-8 mb-6">
-            <h1 className="text-3xl font-bold">{demo ? "➕ Ajouter un salarié" : "➕ Demander l'ajout d'un salarié"}</h1>
-            {!demo && <p className="text-gray-500 mt-1">Votre demande est validée par FRANEO RH. Une fois validée, le salarié est créé et la facturation se met à jour automatiquement.</p>}
+            <h1 className="text-3xl font-bold">➕ Ajouter un salarié</h1>
+            {!demo && <p className="text-gray-500 mt-1">Avec une formule paie, l'ajout est validé par FRANEO RH avant la création du salarié. Sans formule paie, le salarié est créé tout de suite.</p>}
             {demo && (
               <p className="text-sm text-blue-600 mt-2">
                 🧪 Version démo : seuls le prénom, le poste, les dates de début et de fin et le salaire sont modifiables. Maximum 30 salariés.
@@ -174,12 +176,14 @@ export default function NouveauSalarie() {
                 {champ("Date de début", "dateDebut", "date", true)}
                 {champ("Date de fin", "dateFin", "date", true)}
                 {champ("Heures hebdomadaires", "heuresHebdomadaires", "number")}
-                {champ("Manager", "manager")}
-                {champ("Établissement", "etablissement")}
-                {champ("Service", "service")}
+                
+                {demo ? <Verrou label="Établissement" /> : <ChoixOrganisation type="etablissement" valeur={form.etablissement} onChange={(v) => setForm({ ...form, etablissement: v })} />}
+                {demo ? <Verrou label="Service" /> : <ChoixOrganisation type="service" valeur={form.service} onChange={(v) => setForm({ ...form, service: v })} />}
                 {champ("Convention collective", "conventionCollective")}
                 {champ("Catégorie", "categorie")}
                 {champ("Coefficient", "coefficient")}
+                  {champ("Position", "position")}
+                  {!demo && <ChampsRoleRH valeur={rh} onChange={setRh} />}
               </div>
             )}
 
@@ -189,6 +193,7 @@ export default function NouveauSalarie() {
                 {champ("Salaire annuel (€)", "salaireAnnuel", "number", true)}
                 {champ("Primes (€)", "primes", "number")}
                 {champ("Avantages", "avantages")}
+                  {champ("RIB (IBAN)", "iban")}
               </div>
             )}
 

@@ -7,58 +7,15 @@ import Sidebar from "@/components/Sidebar";
 import BoutonDemandeEvolutionPaie from "@/components/BoutonDemandeEvolutionPaie";
 import MentionsFacturation from "@/components/MentionsFacturation";
 import OngletsAbonnements from "@/components/OngletsAbonnements";
+import Link from "next/link";
+import { detailPaie, GRILLE_PAIE } from "@/lib/grille";
 
 export const dynamic = "force-dynamic";
 
-const FORMULES_DETAIL: Record<string, string[]> = {
-  ESSENTIELLE: [
-    "Application Franeo (ordinateur + téléphone) et assistant Buddy",
-    "10 bulletins inclus · 20 € le bulletin en plus",
-    "Bulletins, cotisations & DSN",
-    "Absences, congés, primes",
-    "Régularisations, rappels, simulations & saisies sur salaire inclus",
-    "1 ticket RH par mois · 40 € le ticket en plus",
-    "€ Reprise du dossier 10 €/salarié",
-    "€ Arrivée 20 € · Sortie 20 €",
-    "€ Bulletin rectificatif 15 € · Attestation maladie 15 €",
-    "€ Espace salarié (absences & heures en ligne) 1 €/salarié/mois",
-  ],
-  SERENITE: [
-    "✦ Tout le Pack Essentielle, plus :",
-    "20 bulletins inclus · 19 € le bulletin en plus",
-    "Relance des variables",
-    "Suivi des échéances : périodes d'essai, CDD, visites médicales",
-    "Veille paie",
-    "Suivi des IJSS (attestations maladie incluses)",
-    "3 tickets RH par mois · 30 € le ticket en plus",
-    "€ Reprise du dossier 5 €/salarié",
-    "€ Arrivée 20 € · Sortie 20 €",
-    "€ Bulletin rectificatif 15 €",
-    "€ Espace salarié (absences & heures en ligne) 1 €/salarié/mois",
-  ],
-  PREMIUM: [
-    "✦ Tout le Pack Sérénité, plus :",
-    "35 bulletins inclus · 18 € le bulletin en plus",
-    "Arrivées, sorties & bulletins rectificatifs inclus",
-    "Conseil paie",
-    "Rendez-vous trimestriel",
-    "Reprise du dossier offerte",
-    "Espace salarié inclus",
-    "6 tickets RH par mois · 20 € le ticket en plus",
-    "€ Recouvrement IJSS 20 €/dossier · Rupture conventionnelle 90 €",
-  ],
-  ENTREPRISE: [
-    "✦ Tout le Pack Premium, plus :",
-    "50 bulletins inclus · 17 € le bulletin en plus",
-    "Rendez-vous mensuel",
-    "Recouvrement des IJSS inclus",
-    "Ruptures conventionnelles incluses",
-    "Assistance en cas de contrôle URSSAF incluse",
-    "Reprise du dossier & paramétrage mutuelle / prévoyance offerts",
-    "Espace salarié inclus",
-    "10 tickets RH par mois · 20 € le ticket en plus",
-  ],
-};
+// Contenu des formules : lib/grille.ts (grille de novembre 2026)
+const FORMULES_DETAIL: Record<string, string[]> = Object.fromEntries(
+  GRILLE_PAIE.map((g): [string, string[]] => [g.code, [...g.features, ...g.options.map((o) => `€ ${o}`)]])
+);
 
 
 export default async function ClientAbonnementPaie() {
@@ -111,7 +68,7 @@ export default async function ClientAbonnementPaie() {
           )}
 
           <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-            {formules.map((f) => {
+            {formules.filter((f) => GRILLE_PAIE.some((g) => g.code === f.code)).map((f) => {
               const estActuelle = f.id === entreprise.abonnementPaieId;
               const estDemandee = f.id === demandeEnAttente?.nouvelleFormuleId;
               const features = FORMULES_DETAIL[f.code] || [];
@@ -120,19 +77,18 @@ export default async function ClientAbonnementPaie() {
                 <div
                   key={f.id}
                   className={`bg-white rounded-xl shadow p-6 flex flex-col gap-4 ${
-                    estActuelle ? "border-2 border-orange-500" : ""
+                    estActuelle ? "border-2 border-orange-500" : detailPaie(f.code)?.recommande ? "border-2 border-black" : ""
                   }`}
                 >
                   <div>
-                    <h2 className="text-xl font-bold">{f.nom}</h2>
+                    {detailPaie(f.code)?.recommande && <span className="inline-block bg-black text-white text-xs font-bold px-2 py-1 rounded-full mb-2">⭐ Recommandée</span>}
+                    <h2 className="text-xl font-bold">Paie {f.nom}</h2>
                     <p className="text-3xl font-bold text-orange-500 mt-2">
                       {f.prixMensuel} €
                       <span className="text-gray-400 text-sm font-normal">/mois</span>
                     </p>
                     <p className="text-gray-500 text-sm mt-1">
-                      {f.bulletinsInclus} bulletins inclus · {f.prixBulletinSupp} €/bulletin supp.
-                      <br />
-                      {f.ticketsRHInclus} ticket(s) RH/mois · {f.prixTicketSupp} €/ticket supp.
+                      Jusqu&apos;à {f.bulletinsInclus} salariés · {f.prixBulletinSupp} €/bulletin supp.
                     </p>
                   </div>
 
@@ -176,6 +132,14 @@ export default async function ClientAbonnementPaie() {
                 </div>
               );
             })}
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-6 mt-6 flex justify-between items-center gap-3 flex-wrap">
+            <div>
+              <h2 className="text-xl font-bold">Plus de 100 salariés ?</h2>
+              <p className="text-gray-500">Devis personnalisé.</p>
+            </div>
+            <Link href="/client/entreprise/devis?type=AUTRE" className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold">Demander un devis</Link>
           </div>
 
           <p className="text-center text-gray-400 text-sm mt-8">

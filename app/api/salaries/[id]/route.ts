@@ -51,7 +51,8 @@ export async function PUT(
     if (!aDroit(session.entreprise?.permissions, "salaries.modifier")) {
       return NextResponse.json({ erreur: "Vous n'avez pas le droit de modifier les salariés. Contactez votre gestionnaire." }, { status: 403 });
     }
-    // Client « paie » : seuls le POSTE et le SALAIRE passent par une demande validée par le gestionnaire.
+    // Client « paie » : poste, salaire, coefficient et RIB passent par une demande validée par FRANEO RH.
+    // Sans formule paie : gestion autonome, tout est enregistré tout de suite.
     // Tout le reste de la fiche est enregistré tout de suite.
     if (passeParValidation(session.entreprise)) {
       const num = (v: unknown) => (v === null || v === undefined || v === "" ? null : parseFloat(String(v)));
@@ -59,6 +60,8 @@ export async function PUT(
       if (data.poste !== undefined && String(data.poste ?? "").trim() !== (salarie.poste ?? "")) sensibles.poste = String(data.poste ?? "").trim();
       if (data.salaireMensuel !== undefined && num(data.salaireMensuel) !== salarie.salaireMensuel) sensibles.salaireMensuel = num(data.salaireMensuel);
       if (data.salaireAnnuel !== undefined && num(data.salaireAnnuel) !== salarie.salaireAnnuel) sensibles.salaireAnnuel = num(data.salaireAnnuel);
+      if (data.coefficient !== undefined && (String(data.coefficient ?? "").trim() || null) !== salarie.coefficient) sensibles.coefficient = String(data.coefficient ?? "").trim() || null;
+      if (data.iban !== undefined && (String(data.iban ?? "").replace(/\s/g, "") || null) !== (salarie.iban ? salarie.iban.replace(/\s/g, "") : null)) sensibles.iban = String(data.iban ?? "").trim() || null;
 
       if (Object.keys(sensibles).length > 0) {
         await creerDemande({ entrepriseId: salarie.entrepriseId, type: "MODIFICATION", salarieId: id, donnees: { partiel: true, ...sensibles }, auteur: `${session.prenom} (${session.email})` });
@@ -68,6 +71,8 @@ export async function PUT(
       data.poste = salarie.poste;
       data.salaireMensuel = salarie.salaireMensuel;
       data.salaireAnnuel = salarie.salaireAnnuel;
+      data.coefficient = salarie.coefficient;
+      data.iban = salarie.iban;
     }
   }
 
@@ -129,6 +134,12 @@ export async function PUT(
         conventionCollective: data.conventionCollective || null,
         categorie: data.categorie || null,
         coefficient: data.coefficient || null,
+        ...(data.position !== undefined ? { position: data.position || null } : {}),
+        ...(data.iban !== undefined ? { iban: data.iban || null } : {}),
+        ...(["SALARIE", "MANAGER", "DIRIGEANT"].includes(data.roleRH) ? { roleRH: data.roleRH } : {}),
+        ...(data.managerId !== undefined ? { managerId: data.managerId && data.managerId !== id ? String(data.managerId) : null } : {}),
+        ...(data.voitSalairesEquipe !== undefined ? { voitSalairesEquipe: data.voitSalairesEquipe === true } : {}),
+        ...(data.saisieVariables !== undefined ? { saisieVariables: data.saisieVariables === true } : {}),
         salaireMensuel: data.salaireMensuel ? parseFloat(data.salaireMensuel) : null,
         salaireAnnuel: data.salaireAnnuel ? parseFloat(data.salaireAnnuel) : null,
         primes: data.primes ? parseFloat(data.primes) : null,
@@ -138,7 +149,7 @@ export async function PUT(
 
     if (demandeEnvoyee) {
       return NextResponse.json(
-        { succes: true, updated, demande: true, message: "Modifications enregistrées. Le changement de poste ou de salaire a été envoyé à votre gestionnaire pour validation." },
+        { succes: true, updated, demande: true, message: "Modifications enregistrées. Le changement de poste, salaire, coefficient ou RIB a été envoyé à FRANEO RH pour validation." },
         { status: 202 }
       );
     }

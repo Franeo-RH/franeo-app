@@ -97,7 +97,7 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
     : [
         { href: "/client/dashboard", label: "Dashboard", icon: "/DASHBOARD-LOGO.png", visible: true },
         { href: "/client/entreprise", label: "Mon entreprise", icon: "/ENTREPRISE-LOGO.png", visible: a("entreprise"), actifSur: ["/client/abonnement-paie"] },
-        { href: "/client/salaries", label: "Salariés", icon: "/SALARIE-LOGO.png", visible: a("salaries") || a("absences") },
+        { href: "/client/salaries/tableau-de-bord", label: "Gestion RH", icon: "/SALARIE-LOGO.png", visible: a("salaries") || a("absences"), actifSur: ["/client/salaries"] },
         { href: "/client/paie", label: "Paie", icon: "/PAIE-LOGO.png", visible: moi ? moi.aPaie : a("paie") },
         { href: "/client/indicateurs", label: "Indicateurs RH", icon: "/INDICATEURS-LOGO.png", visible: a("indicateurs-rh") },
         { href: "/client/tickets", label: "Tickets RH", icon: "/TICKET-LOGO.png", visible: a("tickets") },

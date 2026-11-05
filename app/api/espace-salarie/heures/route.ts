@@ -57,6 +57,7 @@ export async function PUT(request: NextRequest) {
   }
 
   const envoyer = corps?.envoyer === true;
+  const commentaire = typeof corps?.commentaire === "string" && corps.commentaire.trim() ? corps.commentaire.trim().slice(0, 1000) : null;
   if (envoyer && lignes.length === 0) return NextResponse.json({ erreur: "Le relevé est vide : saisissez au moins un jour avant de l'envoyer." }, { status: 400 });
 
   const entrepriseId = s.utilisateur.entrepriseId!;
@@ -70,7 +71,7 @@ export async function PUT(request: NextRequest) {
     if (lignes.length) await tx.releveJour.createMany({ data: lignes.map((l) => ({ ...l, releveId: r.id })) });
     return tx.releveMois.update({
       where: { id: r.id },
-      data: envoyer ? { statut: "Envoyé", envoyeAt: new Date(), motifRefus: null } : { statut: "Brouillon" },
+      data: envoyer ? { statut: "Envoyé", envoyeAt: new Date(), motifRefus: null, commentaire } : { statut: "Brouillon", commentaire },
     });
   });
 
@@ -84,7 +85,7 @@ export async function PUT(request: NextRequest) {
         `${s.salarie.prenom} ${s.salarie.nom} a envoyé son relevé de ${NOMS_MOIS[mois - 1]} ${annee}.`,
         `Total : ${fmtH(totH)}${totS > 0 ? `, dont ${fmtH(totS)} supplémentaire(s)` : ""}.`,
       ],
-      lien: "/client/paie/releves",
+      lien: "/client/salaries/releves",
     });
   }
 

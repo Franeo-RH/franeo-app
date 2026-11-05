@@ -10,6 +10,7 @@ import BandeauCommunications from "@/components/BandeauCommunications";
 import BandeauDemo from "@/components/BandeauDemo";
 import BoutonTheme from "@/components/BoutonTheme";
 import ReleveHeuresSalarie from "@/components/ReleveHeuresSalarie";
+import EspaceSalarieRH from "@/components/EspaceSalarieRH";
 import { libelleRappel, typeDe } from "@/lib/rappels";
 import { BoutonAnnulerAbsence, BoutonDeconnexionSalarie, FormulaireAbsenceSalarie } from "@/components/EspaceSalarieActions";
 
@@ -108,13 +109,15 @@ export default async function EspaceSalarie() {
 
         {voit.communications && <BandeauCommunications communications={communications} />}
 
+        <EspaceSalarieRH avecPaie={!!s.utilisateur.entreprise?.abonnementPaieId} />
+
         {voit.absences && (<section style={carte} aria-labelledby="t-demande">
           <h1 id="t-demande" style={{ margin: "0 0 12px", fontSize: "18px" }}>📅 Demander une absence</h1>
           <FormulaireAbsenceSalarie />
         </section>)}
 
         {voit.heures && (<section style={carte} aria-labelledby="t-heures">
-          <h2 id="t-heures" style={{ margin: "0 0 12px", fontSize: "18px" }}>⏱️ Mon relevé d&apos;heures</h2>
+          <h2 id="t-heures" style={{ margin: "0 0 12px", fontSize: "18px" }}>⏱️ Mon relevé mensuel (heures et heures supp.)</h2>
           <ReleveHeuresSalarie />
         </section>)}
 
@@ -155,7 +158,7 @@ export default async function EspaceSalarie() {
         )}
 
         <p style={{ textAlign: "center", fontSize: "12px", color: "#6b7280", margin: "4px 0 16px" }}>
-          Vos demandes sont validées par votre employeur. Pour toute question sur votre paie, adressez-vous à lui.
+          Vos demandes sont validées par votre manager ou votre employeur. Pour toute question sur votre paie, adressez-vous à lui.
         </p>
       </main>
     </div>

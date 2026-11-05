@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { journaliser } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
@@ -80,5 +81,6 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  await journaliser(entrepriseId, session.role === "ADMIN" ? "FRANEO RH" : session.prenom, "Saisie absence", `${type} du ${debut.toLocaleDateString("fr-FR")} au ${fin.toLocaleDateString("fr-FR")}`);
   return NextResponse.json({ succes: true, absence });
 }

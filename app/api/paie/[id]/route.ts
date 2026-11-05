@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { journaliser } from "@/lib/journal";
 
 export async function PUT(
   request: NextRequest,
@@ -22,6 +23,7 @@ export async function PUT(
     },
   });
 
+  await journaliser(variable.entrepriseId, "FRANEO RH", "Statut variable", `${variable.type} ${variable.valeur} — ${variable.mois}/${variable.annee} : ${statut}`);
   return NextResponse.json({ succes: true, variable });
 }
 
@@ -52,6 +54,7 @@ export async function DELETE(
   }
 
   await prisma.variablePaie.delete({ where: { id } });
+  await journaliser(variable.entrepriseId, session.role === "ADMIN" ? "FRANEO RH" : session.prenom, "Suppression variable", `${variable.type} ${variable.valeur} — ${variable.mois}/${variable.annee}`);
 
   return NextResponse.json({ succes: true });
 }

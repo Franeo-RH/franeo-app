@@ -51,6 +51,9 @@ model Entreprise {
   // Indicateurs RH : budgets annuels (facultatifs)
   budgetPrimesAnnuel    Float?
   budgetFormationAnnuel Float?
+  // Convention collective et secteur d'activité (saisis par le client)
+  ccn               String?
+  secteur           String?
 
   createdAt         DateTime           @default(now())
 
@@ -75,6 +78,13 @@ model Entreprise {
   devis             Devis[]
   questionsRH       QuestionRH[]
   formations        Formation[]
+  etablissements    Etablissement[]
+  services          Service[]
+  notesFrais        NoteFrais[]
+  questionsInternes QuestionInterne[]
+  demandesServices  DemandeService[]
+  journal           JournalPaie[]
+  clotures          ClotureMois[]
 }
 
 model Facturation {
@@ -212,6 +222,17 @@ model Salarie {
   conventionCollective  String?
   categorie             String?
   coefficient           String?
+  position              String?
+  iban                  String?
+  // Gestion RH : SALARIE | MANAGER | DIRIGEANT, et N+1 (fiche du manager)
+  roleRH                String         @default("SALARIE")
+  managerId             String?
+  managerFiche          Salarie?       @relation("Hierarchie", fields: [managerId], references: [id], onDelete: SetNull)
+  equipe                Salarie[]      @relation("Hierarchie")
+  // Droits du manager, cochés dans sa fiche
+  voitSalairesEquipe    Boolean        @default(false)
+  saisieVariables       Boolean        @default(false)
+  notesFrais            NoteFrais[]
 
   salaireMensuel        Float?
   salaireAnnuel         Float?
@@ -567,6 +588,11 @@ model ReleveMois {
   valideAt     DateTime?
   // variable de paie « heures supplémentaires » créée à la validation
   variableId   String?
+  // commentaire du salarié sur son relevé
+  commentaire  String?
+  valideePar   String?
+  // l'admin peut bloquer l'annulation d'un relevé validé (paie déjà faite)
+  annulationBloquee Boolean   @default(false)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   jours        ReleveJour[]
@@ -687,4 +713,126 @@ model DemandeInscription {
   traiteeAt    DateTime?
 
   @@index([statut])
+}
+
+
+// Établissement de l'entreprise (au moins un, avec adresse ; ajout gratuit)
+model Etablissement {
+  id           String     @id @default(cuid())
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  nom          String
+  rue          String?
+  codePostal   String?
+  ville        String?
+  siret        String?
+  createdAt    DateTime   @default(now())
+
+  @@index([entrepriseId])
+}
+
+// Service de l'entreprise (onglet Services / organigramme)
+model Service {
+  id           String     @id @default(cuid())
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  nom          String
+  ordre        Int        @default(0)
+  createdAt    DateTime   @default(now())
+
+  @@unique([entrepriseId, nom])
+}
+
+// Note de frais déclarée par un salarié (montant + motif, sans justificatif stocké)
+// statut : En attente -> Validé / Refusé
+model NoteFrais {
+  id           String     @id @default(cuid())
+  salarieId    String
+  salarie      Salarie    @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  date         DateTime
+  montant      Float
+  motif        String
+  statut       String     @default("En attente")
+  motifRefus   String?
+  traitePar    String?
+  variableId   String?
+  createdAt    DateTime   @default(now())
+
+  @@index([entrepriseId, statut])
+}
+
+// Question d'un salarié à son N+1 (peut être reroutée au N+1 du manager ou à FRANEO RH)
+// statut : OUVERTE -> REPONDUE -> CLOSE ; destinataire : FRANEO si rerouté chez FRANEO RH
+model QuestionInterne {
+  id             String     @id @default(cuid())
+  entrepriseId   String
+  entreprise     Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  auteurId       String
+  destinataireId String?
+  versFraneo     Boolean    @default(false)
+  sujet          String
+  statut         String     @default("OUVERTE")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  messages       MessageInterne[]
+
+  @@index([entrepriseId])
+}
+
+model MessageInterne {
+  id         String          @id @default(cuid())
+  questionId String
+  question   QuestionInterne @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  auteur     String
+  contenu    String
+  createdAt  DateTime        @default(now())
+}
+
+// Demandes du client : accès à une autre app Franeo, audit RH, formation, autre besoin
+// type : APP | AUDIT | FORMATION | AUTRE ; statut : EN_ATTENTE -> EN_COURS -> TRAITEE / REFUSEE
+model DemandeService {
+  id           String     @id @default(cuid())
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  type         String
+  app          String?
+  options      String[]
+  message      String?
+  remise       Float      @default(0)
+  auteur       String?
+  statut       String     @default("EN_ATTENTE")
+  reponse      String?
+  createdAt    DateTime   @default(now())
+  traiteeAt    DateTime?
+
+  @@index([entrepriseId, statut])
+}
+
+// Journal des saisies et modifications de paie (date et heure)
+model JournalPaie {
+  id           String     @id @default(cuid())
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  auteur       String
+  action       String
+  detail       String
+  createdAt    DateTime   @default(now())
+
+  @@index([entrepriseId, createdAt])
+}
+
+// Clôture du mois demandée par le client ; statut : DEMANDE_CLOTURE | CLOTURE | DEMANDE_DECLOTURE
+model ClotureMois {
+  id           String     @id @default(cuid())
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  mois         Int
+  annee        Int
+  statut       String
+  auteur       String?
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([entrepriseId, annee, mois])
 }

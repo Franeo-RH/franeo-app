@@ -123,7 +123,7 @@ export default async function ClientMouvements() {
                                 <div key={s.id} className="flex items-start gap-2">
                                   <span className="w-2 h-2 rounded-full bg-green-500 mt-1.5 flex-shrink-0"></span>
                                   <div>
-                                    <p className="font-semibold text-sm">{s.prenom} {s.nom}</p>
+                                    <Link href={`/client/salaries/${s.id}`} className="font-semibold text-sm hover:underline hover:text-orange-500 block">{s.prenom} {s.nom}</Link>
                                     <p className="text-xs text-gray-400">{s.poste}</p>
                                     <p className="text-xs text-green-600">le {new Date(s.dateDebut!).toLocaleDateString("fr-FR")}</p>
                                   </div>
@@ -165,7 +165,7 @@ export default async function ClientMouvements() {
                                 <div key={s.id} className="flex items-start gap-2">
                                   <span className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0"></span>
                                   <div>
-                                    <p className="font-semibold text-sm">{s.prenom} {s.nom}</p>
+                                    <Link href={`/client/salaries/${s.id}`} className="font-semibold text-sm hover:underline hover:text-orange-500 block">{s.prenom} {s.nom}</Link>
                                     <p className="text-xs text-gray-400">{s.poste}</p>
                                     <p className="text-xs text-red-600">le {new Date(s.dateFin!).toLocaleDateString("fr-FR")}</p>
                                   </div>

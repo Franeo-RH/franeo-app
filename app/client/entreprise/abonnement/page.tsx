@@ -7,6 +7,8 @@ import Sidebar from "@/components/Sidebar";
 import BoutonDemandeEvolution from "@/components/BoutonDemandeEvolution";
 import MentionsFacturation from "@/components/MentionsFacturation";
 import OngletsAbonnements from "@/components/OngletsAbonnements";
+import Link from "next/link";
+import { detailRH } from "@/lib/grille";
 
 export default async function AbonnementClient() {
   await connection();
@@ -56,17 +58,18 @@ export default async function AbonnementClient() {
             </div>
           )}
 
-          <div className="grid grid-cols-4 gap-6">
+          <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
             {abonnements.map((a) => (
               <div
                 key={a.id}
                 className={`bg-white rounded-xl shadow p-6 flex flex-col gap-4 ${
                   a.id === entreprise.abonnementId
                     ? "border-2 border-orange-500"
-                    : ""
+                    : detailRH(a.nom)?.recommande ? "border-2 border-black" : ""
                 }`}
               >
                 <div>
+                  {detailRH(a.nom)?.recommande && <span className="inline-block bg-black text-white text-xs font-bold px-2 py-1 rounded-full mb-2">⭐ Recommandée</span>}
                   <h2 className="text-xl font-bold">{a.nom}</h2>
                   <p className="text-3xl font-bold text-orange-500 mt-2">
                     {a.prixMensuel} €
@@ -79,6 +82,7 @@ export default async function AbonnementClient() {
                   </p>
                 </div>
 
+                {detailRH(a.nom)?.message && <p className="text-sm italic text-gray-600">{detailRH(a.nom)?.message}</p>}
                 <ul className="flex flex-col gap-2 flex-1">
                   {a.features.map((f, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
@@ -101,6 +105,14 @@ export default async function AbonnementClient() {
                 )}
               </div>
             ))}
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-6 mt-6 flex justify-between items-center gap-3 flex-wrap">
+            <div>
+              <h2 className="text-xl font-bold">Plus de 100 salariés ?</h2>
+              <p className="text-gray-500">Devis personnalisé, adapté à votre organisation.</p>
+            </div>
+            <Link href="/client/entreprise/devis?type=AUTRE" className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold">Demander un devis</Link>
           </div>
 
           <MentionsFacturation />

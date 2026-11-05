@@ -61,6 +61,7 @@ export default async function ClientFacturation() {
               <h1 className="text-3xl font-bold">🧾 Mes factures</h1>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 <BoutonExport type="client-factures" label="📊 Exporter Excel" />
+                <a href="/api/facturation/recap" className="bg-black text-white px-4 py-2 rounded-lg font-semibold text-sm">📥 Télécharger le récapitulatif de mes factures</a>
               </div>
             </div>
             <p className="text-gray-500 mt-1">Historique de facturation — {anneeActuelle}</p>

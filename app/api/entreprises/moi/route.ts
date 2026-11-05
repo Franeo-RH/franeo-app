@@ -40,6 +40,8 @@ export async function PUT(request: NextRequest) {
       banque: data.banque || null,
       iban: data.iban || null,
       bic: data.bic || null,
+      ...(data.ccn !== undefined ? { ccn: data.ccn ? String(data.ccn).slice(0, 160) : null } : {}),
+      ...(data.secteur !== undefined ? { secteur: data.secteur ? String(data.secteur).slice(0, 120) : null } : {}),
     },
   });
 

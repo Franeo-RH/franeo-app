@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import Link from "next/link";
 import BoutonExport from "@/components/BoutonExport";
 import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
@@ -122,7 +123,7 @@ export default async function MouvementsPersonnel() {
                                 <div key={s.id} className="flex items-start gap-2">
                                   <span className="w-2 h-2 rounded-full bg-green-500 mt-1.5 flex-shrink-0"></span>
                                   <div>
-                                    <p className="font-semibold text-sm">{s.prenom} {s.nom}</p>
+                                    <Link href={`/admin/salaries/${s.id}`} className="font-semibold text-sm hover:underline hover:text-orange-500 block">{s.prenom} {s.nom}</Link>
                                     <p className="text-xs text-gray-400">{s.poste} — {s.entreprise.nom}</p>
                                     <p className="text-xs text-green-600">le {new Date(s.dateDebut!).toLocaleDateString("fr-FR")}</p>
                                     {s.typeContrat && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{s.typeContrat}</span>}
@@ -165,7 +166,7 @@ export default async function MouvementsPersonnel() {
                                 <div key={s.id} className="flex items-start gap-2">
                                   <span className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0"></span>
                                   <div>
-                                    <p className="font-semibold text-sm">{s.prenom} {s.nom}</p>
+                                    <Link href={`/admin/salaries/${s.id}`} className="font-semibold text-sm hover:underline hover:text-orange-500 block">{s.prenom} {s.nom}</Link>
                                     <p className="text-xs text-gray-400">{s.poste} — {s.entreprise.nom}</p>
                                     <p className="text-xs text-red-600">le {new Date(s.dateFin!).toLocaleDateString("fr-FR")}</p>
                                     {s.typeContrat && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{s.typeContrat}</span>}

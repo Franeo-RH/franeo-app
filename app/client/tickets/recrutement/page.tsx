@@ -59,7 +59,7 @@ export default function DemandeRecrutement() {
       return;
     }
 
-    router.push("/client/tickets?recrutement=ok");
+    router.push("/client/tickets/historique?recrutement=ok");
   }
 
   return (

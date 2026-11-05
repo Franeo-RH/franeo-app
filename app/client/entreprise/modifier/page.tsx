@@ -20,6 +20,8 @@ export default function ModifierEntrepriseClient() {
     email: "",
     telephone: "",
     siteWeb: "",
+    ccn: "",
+    secteur: "",
     rue: "",
     codePostal: "",
     ville: "",
@@ -39,6 +41,8 @@ export default function ModifierEntrepriseClient() {
           email: data.email || "",
           telephone: data.telephone || "",
           siteWeb: data.siteWeb || "",
+          ccn: data.ccn || "",
+          secteur: data.secteur || "",
           rue: data.rue || "",
           codePostal: data.codePostal || "",
           ville: data.ville || "",
@@ -120,6 +124,8 @@ export default function ModifierEntrepriseClient() {
                 <Field label="Email" name="email" value={form.email} onChange={handleChange} type="email" />
                 <Field label="Téléphone" name="telephone" value={form.telephone} onChange={handleChange} />
                 <Field label="Site web" name="siteWeb" value={form.siteWeb} onChange={handleChange} />
+                <Field label="Convention collective (CCN) applicable" name="ccn" value={form.ccn} onChange={handleChange} />
+                <Field label="Secteur d'activité" name="secteur" value={form.secteur} onChange={handleChange} />
                 <Field label="Rue" name="rue" value={form.rue} onChange={handleChange} />
                 <Field label="Code postal" name="codePostal" value={form.codePostal} onChange={handleChange} />
                 <Field label="Ville" name="ville" value={form.ville} onChange={handleChange} />

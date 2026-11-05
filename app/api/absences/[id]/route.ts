@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { journaliser } from "@/lib/journal";
+import { moisVerrouille } from "@/lib/decisions";
 import { aDroit } from "@/lib/droits";
 
 const STATUTS = ["En attente", "Validé", "Refusé"];
@@ -52,13 +54,18 @@ export async function DELETE(
   const { id } = await params;
 
   // Sécurité : un client ne peut supprimer que les absences de son entreprise
-  const absence = await prisma.absence.findUnique({ where: { id }, select: { entrepriseId: true } });
+  const absence = await prisma.absence.findUnique({ where: { id }, select: { entrepriseId: true, salarieId: true, dateDebut: true, dateFin: true, type: true } });
   if (!absence) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
   if (session.role !== "ADMIN" && absence.entrepriseId !== session.entrepriseId) {
     return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   }
+  // Relevé du mois validé : plus aucune suppression possible, il faut d'abord annuler le relevé
+  if (session.role !== "ADMIN" && (await moisVerrouille(absence.salarieId, absence.dateDebut, absence.dateFin))) {
+    return NextResponse.json({ erreur: "Le relevé de ce mois est validé : annulez d'abord le relevé (Gestion RH › Relevés) pour supprimer cette absence." }, { status: 400 });
+  }
 
   await prisma.absence.delete({ where: { id } });
+  await journaliser(absence.entrepriseId, session.role === "ADMIN" ? "FRANEO RH" : session.prenom, "Suppression absence", `${absence.type} du ${absence.dateDebut.toLocaleDateString("fr-FR")} au ${absence.dateFin.toLocaleDateString("fr-FR")}`);
 
   return NextResponse.json({ succes: true });
 }

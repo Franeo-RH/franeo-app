@@ -6,7 +6,7 @@ import { REPONSE_TICKET, STATUTS_QUESTION, type QuestionVue } from "@/lib/questi
 import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
 /** Demandes RH ponctuelles : formulaire (client) + liste avec échanges (client et admin) */
-export default function ListeQuestionsRH({ admin = false }: { admin?: boolean }) {
+export default function ListeQuestionsRH({ admin = false, mode = "liste" }: { admin?: boolean; mode?: "liste" | "nouvelle" }) {
   const [questions, setQuestions] = useState<QuestionVue[]>([]);
   const [statut, setStatut] = useState(admin ? "OUVERTE" : "");
   const [entrepriseId, setEntrepriseId] = useState("");
@@ -49,7 +49,8 @@ export default function ListeQuestionsRH({ admin = false }: { admin?: boolean })
   return (
     <div className="flex flex-col gap-6">
       <div className="bg-white rounded-xl shadow p-6">
-        <h1 className="text-3xl font-bold">💬 Demandes RH ponctuelles</h1>
+        <h1 className="text-3xl font-bold">{admin ? "💬 Demandes RH ponctuelles" : mode === "nouvelle" ? "➕ Nouvelle demande ponctuelle" : "💬 Mes demandes ponctuelles"}</h1>
+        {!admin && mode === "liste" && <a href="/client/tickets/questions/nouvelle" className="inline-block mt-3 bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold">➕ Nouvelle demande ponctuelle</a>}
         {admin && <div className="flex gap-2 flex-wrap mt-3"><BoutonExportComplet jeu="questions" label="📥 Export complet (questions + échanges)" /></div>}
         <p className="text-gray-500 mt-1">
           {admin
@@ -70,7 +71,7 @@ export default function ListeQuestionsRH({ admin = false }: { admin?: boolean })
         )}
       </div>
 
-      {!admin && (
+      {!admin && mode === "nouvelle" && (
         <form onSubmit={poser} className="bg-white rounded-xl shadow p-6 flex flex-col gap-3">
           <h2 className="text-xl font-bold">➕ Poser une question</h2>
           <input value={nouvelle.sujet} onChange={(e) => setNouvelle({ ...nouvelle, sujet: e.target.value })} maxLength={120} placeholder="Sujet (ex : jour férié, durée du préavis…)" className="border rounded-lg px-4 py-3" aria-label="Sujet" />
@@ -84,7 +85,7 @@ export default function ListeQuestionsRH({ admin = false }: { admin?: boolean })
         </form>
       )}
 
-      <div className="bg-white rounded-xl shadow p-4">
+      {(admin || mode === "liste" || retour?.ok) && <div className="bg-white rounded-xl shadow p-4">
         {questions.length === 0 ? <p className="text-gray-500 p-4 text-center">Aucune demande{admin && statut ? " avec ce filtre" : ""}.</p> : questions.map((q) => {
           const st = STATUTS_QUESTION[q.statut] || STATUTS_QUESTION.OUVERTE;
           const dernier = q.messages[q.messages.length - 1];
@@ -128,7 +129,7 @@ export default function ListeQuestionsRH({ admin = false }: { admin?: boolean })
             </div>
           );
         })}
-      </div>
+      </div>}
     </div>
   );
 }

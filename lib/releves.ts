@@ -23,6 +23,9 @@ export async function chargerReleve(salarieId: string, mois: number, annee: numb
     statut: releve?.statut ?? "Brouillon",
     motifRefus: releve?.motifRefus ?? null,
     envoyeAt: releve?.envoyeAt ?? null,
+    commentaire: releve?.commentaire ?? null,
+    valideePar: releve?.valideePar ?? null,
+    annulationBloquee: releve?.annulationBloquee ?? false,
     jours: (releve?.jours ?? []).map((j) => ({ date: isoJour(j.date), heures: j.heures, heuresSupp: j.heuresSupp, commentaire: j.commentaire, teletravail: j.teletravail })),
     absences: absences.map((a) => ({ type: a.type, dateDebut: isoJour(a.dateDebut), dateFin: isoJour(a.dateFin), statut: a.statut })),
   };
