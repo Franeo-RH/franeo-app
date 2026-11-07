@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ajusterAccesFormule } from "@/lib/acces-formule";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
@@ -20,6 +21,7 @@ export async function PUT(
       where: { id: entrepriseId },
       data: { abonnementId },
     });
+    await ajusterAccesFormule(entrepriseId);
 
     // Supprimer la demande
     await prisma.demandeEvolution.delete({

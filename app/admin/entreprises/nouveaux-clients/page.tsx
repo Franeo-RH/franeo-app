@@ -84,7 +84,7 @@ export default function NouveauxClients() {
                 {d.statut === "NOUVELLE" && (
                   <div className="mt-4 flex gap-2 flex-wrap items-center">
                     <select className={champ} value={c.packId} onChange={(e) => setChoix({ ...choix, [d.id]: { ...c, packId: e.target.value } })} aria-label="Pack RH">
-                      <option value="">Pack RH : aucun (accès de base gratuit)</option>
+                      <option value="">Pack RH : à choisir</option>
                       {packs.map((p) => <option key={p.id} value={p.id}>{p.nom} — {p.prixMensuel} €</option>)}
                     </select>
                     <select className={champ} value={c.formulePaieId} onChange={(e) => setChoix({ ...choix, [d.id]: { ...c, formulePaieId: e.target.value } })} aria-label="Formule paie">

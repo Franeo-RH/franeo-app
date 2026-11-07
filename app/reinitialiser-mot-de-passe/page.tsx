@@ -128,8 +128,8 @@ export default function ReinitialiserMotDePasse() {
           <Image
             src="/FRANEO-Logo-Orange.png"
             alt="Franeo"
-            width={150}
-            height={50}
+            width={98}
+            height={120}
             style={{ objectFit: "contain" }}
           />
         </div>

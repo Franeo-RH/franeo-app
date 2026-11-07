@@ -109,9 +109,9 @@ export default async function TableauDeBordRH() {
             </div>
             <div className="bg-white rounded-xl shadow p-5 flex flex-col gap-2 text-sm">
               <h2 className="font-bold mb-1">🏢 Organisation</h2>
-              <p>👑 Dirigeants : <strong>{dirigeants}</strong></p>
-              <p>🧑‍💼 Managers : <strong>{managers}</strong></p>
-              <p>👤 Salariés sans manager : <strong>{sansManager}</strong>{sansManager > 0 && <Link href="/client/salaries/services" className="text-orange-500 ml-2">attribuer →</Link>}</p>
+              <p>Dirigeants : <strong>{dirigeants}</strong></p>
+              <p>Managers : <strong>{managers}</strong></p>
+              <p>Salariés sans manager : <strong>{sansManager}</strong>{sansManager > 0 && <Link href="/client/salaries/services" className="text-orange-500 ml-2">attribuer →</Link>}</p>
               <h3 className="font-bold mt-3">📍 Par établissement</h3>
               {parEtab.map(([nom, n]) => <p key={nom}>{nom} : <strong>{n}</strong></p>)}
               <h3 className="font-bold mt-3">📄 Par contrat</h3>

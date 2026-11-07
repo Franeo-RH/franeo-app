@@ -14,6 +14,17 @@ export default function ListeQuestionsRH({ admin = false, mode = "liste" }: { ad
   const [ouverte, setOuverte] = useState<string | null>(null);
   const [nouvelle, setNouvelle] = useState({ sujet: "", contenu: "" });
   const [envoi, setEnvoi] = useState(false);
+  const [fichiers, setFichiers] = useState<File[]>([]);
+
+  async function joindre(questionId: string, liste: File[]) {
+    const erreurs: string[] = [];
+    for (const f of liste) {
+      const fd = new FormData(); fd.append("fichier", f);
+      const r = await fetch(`/api/questions-rh/${questionId}/pj`, { method: "POST", body: fd });
+      if (!r.ok) erreurs.push(`${f.name} : ${(await r.json().catch(() => ({}))).erreur || "erreur"}`);
+    }
+    return erreurs;
+  }
   const [retour, setRetour] = useState<{ ok: boolean; texte: string } | null>(null);
 
   const charger = useCallback(async () => {
@@ -35,7 +46,9 @@ export default function ListeQuestionsRH({ admin = false, mode = "liste" }: { ad
     const d = await res.json().catch(() => ({}));
     setEnvoi(false);
     if (!res.ok) { setRetour({ ok: false, texte: `❌ ${d.erreur || "Erreur"}` }); return; }
-    setRetour({ ok: true, texte: "✅ Question envoyée : la réponse arrivera ici." });
+    const erreursPJ = d.question?.id && fichiers.length ? await joindre(d.question.id, fichiers) : [];
+    setFichiers([]);
+    setRetour(erreursPJ.length ? { ok: false, texte: `Question envoyée, mais pièce(s) jointe(s) refusée(s) : ${erreursPJ.join(" ; ")}` } : { ok: true, texte: "✅ Question envoyée : la réponse arrivera ici." });
     setNouvelle({ sujet: "", contenu: "" });
     setOuverte(d.question?.id ?? null);
     charger();
@@ -76,6 +89,9 @@ export default function ListeQuestionsRH({ admin = false, mode = "liste" }: { ad
           <h2 className="text-xl font-bold">➕ Poser une question</h2>
           <input value={nouvelle.sujet} onChange={(e) => setNouvelle({ ...nouvelle, sujet: e.target.value })} maxLength={120} placeholder="Sujet (ex : jour férié, durée du préavis…)" className="border rounded-lg px-4 py-3" aria-label="Sujet" />
           <textarea value={nouvelle.contenu} onChange={(e) => setNouvelle({ ...nouvelle, contenu: e.target.value })} required maxLength={3000} rows={3} placeholder="Votre question…" className="border rounded-lg px-4 py-3" aria-label="Question" />
+          <label className="text-sm font-semibold">📎 Pièces jointes (facultatif, 5 fichiers, 4 Mo chacun)
+            <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.txt,.csv" onChange={(e) => setFichiers(Array.from(e.target.files || []).slice(0, 5))} className="block mt-1 font-normal" />
+          </label>
           <div className="flex justify-between items-center gap-3 flex-wrap">
             <p className="text-sm font-semibold" style={{ color: retour?.ok ? "#15803d" : "#b91c1c" }}>{retour?.texte}</p>
             <button type="submit" disabled={envoi || !nouvelle.contenu.trim()} style={{ background: "#f97316", color: "#ffffff", border: "none", borderRadius: "10px", padding: "12px 20px", fontWeight: 700, cursor: "pointer", opacity: envoi || !nouvelle.contenu.trim() ? 0.5 : 1 }}>
@@ -116,6 +132,18 @@ export default function ListeQuestionsRH({ admin = false, mode = "liste" }: { ad
                       return res.ok;
                     }}
                   />
+                  {(q.piecesJointes?.length ?? 0) > 0 && (
+                    <div className="flex gap-2 flex-wrap mt-2">
+                      {q.piecesJointes!.map((p) => (
+                        <a key={p.id} href={`/api/pj/${p.id}`} className="text-xs border rounded-full px-3 py-1 bg-gray-50 hover:bg-orange-50">📎 {p.nom} <span className="text-gray-400">({p.role === "ADMIN" ? "FRANEO RH" : p.auteur})</span></a>
+                      ))}
+                    </div>
+                  )}
+                  {q.statut !== "CLOSE" && (
+                    <label className="text-xs text-gray-600 mt-2 inline-flex items-center gap-2 cursor-pointer">📎 Joindre un fichier
+                      <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.txt,.csv" onChange={async (e) => { const f = Array.from(e.target.files || []); if (f.length) { const err = await joindre(q.id, f); if (err.length) alert(err.join("\n")); charger(); } e.target.value = ""; }} />
+                    </label>
+                  )}
                   <div className="flex gap-3 mt-2">
                     {q.statut !== "CLOSE"
                       ? <button type="button" onClick={() => changerStatut(q.id, "CLOSE")} className="text-sm text-gray-500 underline">Clore la demande</button>

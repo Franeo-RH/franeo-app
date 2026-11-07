@@ -28,7 +28,7 @@ type FAQ = {
 
 export default function ClientFAQ() {
   const [faqs, setFaqs] = useState<FAQ[]>([]);
-  const [moduleActif, setModuleActif] = useState("Général");
+  const [moduleActif, setModuleActif] = useState("Tout");
   const [ouvert, setOuvert] = useState<string | null>(null);
   const [prenom, setPrenom] = useState("");
   const [permissions, setPermissions] = useState<string[]>([]);
@@ -41,7 +41,7 @@ export default function ClientFAQ() {
     });
   }, []);
 
-  const faqsFiltrees = faqs.filter(f => f.module === moduleActif);
+  const faqsFiltrees = moduleActif === "Tout" ? faqs : faqs.filter(f => f.module === moduleActif);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -57,8 +57,8 @@ export default function ClientFAQ() {
 
           {/* Onglets modules */}
           <div className="flex gap-2 mb-6 flex-wrap">
-            {MODULES.map(m => {
-              const count = faqs.filter(f => f.module === m).length;
+            {["Tout", ...MODULES].map(m => {
+              const count = m === "Tout" ? faqs.length : faqs.filter(f => f.module === m).length;
               if (count === 0) return null;
               return (
                 <button
@@ -66,7 +66,7 @@ export default function ClientFAQ() {
                   onClick={() => { setModuleActif(m); setOuvert(null); }}
                   className={`px-4 py-2 rounded-lg font-semibold transition ${moduleActif === m ? "bg-orange-500 text-white" : "bg-white text-black hover:bg-gray-100"}`}
                 >
-                  {m}
+                  {m === "Tout" ? `📚 Tout (${count})` : m}
                 </button>
               );
             })}
@@ -85,7 +85,7 @@ export default function ClientFAQ() {
                     onClick={() => setOuvert(ouvert === faq.id ? null : faq.id)}
                     className="w-full flex justify-between items-center p-6 text-left hover:bg-gray-50 transition"
                   >
-                    <span className="font-semibold text-lg">{faq.entrepriseId ? "⭐ " : ""}{faq.question}</span>
+                    <span className="font-semibold text-lg">{faq.entrepriseId ? "⭐ " : ""}{faq.question}{moduleActif === "Tout" && <span className="block text-xs font-normal text-gray-400 mt-1">{faq.module}</span>}</span>
                     <span className="text-orange-500 text-xl ml-4">
                       {ouvert === faq.id ? "−" : "+"}
                     </span>

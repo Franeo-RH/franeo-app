@@ -62,7 +62,7 @@ export default function AdminFAQ() {
   function handleAnnuler() {
     setAfficherFormulaire(false);
     setFaqEnEdition(null);
-    setForm({ module: moduleActif, question: "", reponse: "", ordre: 0, entrepriseId: "" });
+    setForm({ module: moduleActif === "Tout" ? "Général" : moduleActif, question: "", reponse: "", ordre: 0, entrepriseId: "" });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -100,7 +100,7 @@ export default function AdminFAQ() {
   }
 
   const parEntreprise = (f: FAQ) => filtreEntreprise === "" || (filtreEntreprise === "tous" ? !f.entrepriseId : f.entrepriseId === filtreEntreprise);
-  const faqsFiltrees = faqs.filter(f => f.module === moduleActif && parEntreprise(f));
+  const faqsFiltrees = faqs.filter(f => (moduleActif === "Tout" || f.module === moduleActif) && parEntreprise(f));
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -115,7 +115,7 @@ export default function AdminFAQ() {
               <p className="text-gray-500 mt-1">Gérez les questions fréquentes</p>
             </div>
             <button
-              onClick={() => { setAfficherFormulaire(!afficherFormulaire); setFaqEnEdition(null); setForm({ module: moduleActif, question: "", reponse: "", ordre: 0, entrepriseId: "" }); }}
+              onClick={() => { setAfficherFormulaire(!afficherFormulaire); setFaqEnEdition(null); setForm({ module: moduleActif === "Tout" ? "Général" : moduleActif, question: "", reponse: "", ordre: 0, entrepriseId: "" }); }}
               className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition"
             >
               {afficherFormulaire ? "← Annuler" : "➕ Ajouter une question"}
@@ -182,13 +182,13 @@ export default function AdminFAQ() {
 
           {/* Onglets modules */}
           <div className="flex gap-2 mb-6 flex-wrap">
-            {MODULES.map(m => (
+            {["Tout", ...MODULES].map(m => (
               <button
                 key={m}
                 onClick={() => setModuleActif(m)}
                 className={`px-4 py-2 rounded-lg font-semibold transition ${moduleActif === m ? "bg-orange-500 text-white" : "bg-white text-black hover:bg-gray-100"}`}
               >
-                {m} <span className="text-xs ml-1 opacity-70">({faqs.filter(f => f.module === m && parEntreprise(f)).length})</span>
+                {m} <span className="text-xs ml-1 opacity-70">({faqs.filter(f => (m === "Tout" || f.module === m) && parEntreprise(f)).length})</span>
               </button>
             ))}
           </div>

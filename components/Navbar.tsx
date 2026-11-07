@@ -89,7 +89,6 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
         { href: "/admin/entreprises", label: "Entreprises", icon: "/ENTREPRISE-LOGO.png", visible: true, actifSur: ["/admin/abonnement-paie", "/admin/abonnements-rh"] },
         { href: "/admin/salaries", label: "Salariés", icon: "/SALARIE-LOGO.png", visible: true },
         { href: "/admin/paie", label: "Paie", icon: "/PAIE-LOGO.png", visible: true },
-        { href: "/admin/indicateurs", label: "Indicateurs RH", icon: "/INDICATEURS-LOGO.png", visible: true },
         { href: "/admin/tickets", label: "Tickets RH", icon: "/TICKET-LOGO.png", visible: true, actifSur: ["/admin/recrutement", "/admin/entreprises/tickets"] },
         { href: "/admin/communication", label: "Communication", icon: "/COMMUNICATION-LOGO.png", visible: true, actifSur: ["/admin/actualites", "/admin/faq"] },
         { href: "/admin/helpdesk", label: "Helpdesk", icon: "/HELPDESK-LOGO.png", visible: true },
@@ -99,7 +98,6 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
         { href: "/client/entreprise", label: "Mon entreprise", icon: "/ENTREPRISE-LOGO.png", visible: a("entreprise"), actifSur: ["/client/abonnement-paie"] },
         { href: "/client/salaries/tableau-de-bord", label: "Gestion RH", icon: "/SALARIE-LOGO.png", visible: a("salaries") || a("absences"), actifSur: ["/client/salaries"] },
         { href: "/client/paie", label: "Paie", icon: "/PAIE-LOGO.png", visible: moi ? moi.aPaie : a("paie") },
-        { href: "/client/indicateurs", label: "Indicateurs RH", icon: "/INDICATEURS-LOGO.png", visible: a("indicateurs-rh") },
         { href: "/client/tickets", label: "Tickets RH", icon: "/TICKET-LOGO.png", visible: a("tickets") },
         { href: "/client/actualites", label: "Communication", icon: "/COMMUNICATION-LOGO.png", visible: true, actifSur: ["/client/faq"] },
         { href: "/client/helpdesk", label: "Helpdesk", icon: "/HELPDESK-LOGO.png", visible: true },
@@ -129,7 +127,7 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
     <nav className="fr-nav">
       <div className="fr-nav-barre">
         <Link href={role === "ADMIN" ? "/admin/dashboard" : "/client/dashboard"} className="fr-nav-logo" aria-label="Accueil Franeo">
-          <Image src="/FRANEO-Logo-Orange.png" alt="Franeo" width={90} height={30} style={{ objectFit: "contain" }} priority />
+          <Image src="/FRANEO-Logo-Orange.png" alt="Franeo RH" width={41} height={50} style={{ objectFit: "contain" }} priority />
         </Link>
 
         {/* Ordinateur : onglets centrés */}

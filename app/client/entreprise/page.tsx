@@ -82,7 +82,7 @@ export default async function EntrepriseClient() {
             <div className="bg-white rounded-xl shadow p-6">
               <h2 className="text-lg font-bold mb-4">💳 Abonnements Franeo</h2>
               <div className="flex flex-col gap-3">
-                <Info label="Formule RH" value={entreprise.abonnement ? `${entreprise.abonnement.nom} — ${entreprise.abonnement.prixMensuel} €/mois` : "Accès de base (gratuit)"} />
+                <Info label="Formule RH" value={entreprise.abonnement ? `${entreprise.abonnement.nom} — ${entreprise.abonnement.prixMensuel} €/mois` : "Aucune formule RH"} />
                 <Info label="Tickets RH inclus / mois" value={entreprise.abonnement?.ticketsRH.toString()} />
                 <Info label="Formule paie" value={entreprise.abonnementPaie ? `Paie ${entreprise.abonnementPaie.nom} — ${entreprise.abonnementPaie.prixMensuel} €/mois` : "—"} />
               </div>

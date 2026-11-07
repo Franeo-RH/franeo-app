@@ -33,12 +33,12 @@ export const APPS_FRANEO: AppFraneo[] = [
   },
   {
     code: "OPTIMZ",
-    nom: "Franeo'ptimz",
+    nom: "Franeo Optimiz",
     description: "Pilotage des contrats fournisseurs, échéances et économies.",
     url: "https://optimz.franeo-rh.com/dashboard",
     couleur: "#2a6fd6",
     fond: "#eaf2fd",
-    logo: "/apps/optimz.png",
+    logo: "/apps/optimiz.png",
     formules: [
       { nom: "Essential", prix: 39, unite: "/mois", details: ["Jusqu'à 10 contrats", "Alertes d'échéances"] },
       { nom: "Business", prix: 99, unite: "/mois", details: ["Contrats illimités", "Comparateur et détection d'opportunités", "Score sur 100 et rapport mensuel", "Calculateur ROI"] },
@@ -65,12 +65,12 @@ export const APPS_FRANEO: AppFraneo[] = [
   },
   {
     code: "DATA",
-    nom: "Franeo Data",
+    nom: "Franeo Analytics",
     description: "Vos exports Excel transformés en tableaux de bord (paie, RH, compta, ADV).",
     url: "https://data.franeo-rh.com/login",
     couleur: "#dc2018",
     fond: "#fdecec",
-    logo: "/apps/data.png",
+    logo: "/apps/analytics.png",
     formules: [
       { nom: "Essential", prix: 39, unite: "/mois", details: ["Tableaux de bord mensuels", "Imports Excel"] },
       { nom: "Business", prix: 99, unite: "/mois", details: ["Tous les services (paie, RH, compta, ADV)", "Indicateurs avancés"] },

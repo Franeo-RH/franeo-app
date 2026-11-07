@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ajusterAccesFormule } from "@/lib/acces-formule";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { notifierClients } from "@/lib/notifications";
@@ -27,6 +28,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (abonnementPaieId && !paie) return NextResponse.json({ erreur: "Formule paie introuvable" }, { status: 400 });
 
   await prisma.entreprise.update({ where: { id }, data: { abonnementId, abonnementPaieId } });
+  await ajusterAccesFormule(id);
 
   const changements: string[] = [];
   if (avant.abonnementId !== abonnementId) changements.push(`Pack RH : ${avant.abonnement?.nom ?? "aucun"} → ${rh?.nom ?? "aucun"}`);

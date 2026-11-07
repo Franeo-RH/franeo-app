@@ -48,6 +48,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/salaries/nouveau", label: "➕ Ajouter un salarié" },
         { href: "/admin/salaries/acces", label: "📱 Gestion des accès" },
         { href: "/admin/salaries/absences", label: "🏖️ Absences" },
+        { href: "/admin/salaries/contrats", label: "📝 Contrats générés" },
       ] };
     }
     if (dans("/admin/paie")) {
@@ -100,6 +101,8 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
       { href: "/client/salaries/tableau-de-bord", label: "📊 Tableau de bord" },
       { href: "/client/salaries", label: "👥 Liste des salariés" },
       { href: "/client/salaries/services", label: "🧩 Services" },
+      { href: "/client/salaries/documents", label: "📁 Documents" },
+      { href: "/client/salaries/contrats", label: "📝 Contrats" },
       { href: "/client/salaries/releves", label: "⏱️ Relevés" },
       { href: "/client/salaries/absences", label: "🏖️ Absences" },
       { href: "/client/salaries/frais", label: "🧾 Notes de frais" },

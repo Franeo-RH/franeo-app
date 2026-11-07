@@ -117,6 +117,16 @@ export default function AbsencesClient() {
     }
   }
 
+  async function toutValider() {
+    const n = absences.filter((a) => a.statut === "En attente" && a.declareeParSalarie).length;
+    if (n === 0) { alert("Aucune demande d'absence en attente."); return; }
+    if (!confirm(`Valider les ${n} demande(s) d'absence en attente ?`)) return;
+    const res = await fetch("/api/absences/valider-tout", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) { alert(d.erreur || "Erreur"); return; }
+    fetch("/api/absences").then(r => r.json()).then(setAbsences);
+  }
+
   async function handleSupprimer(id: string) {
     const confirmation = confirm("Supprimer cette absence ?");
     if (!confirmation) return;
@@ -142,6 +152,7 @@ export default function AbsencesClient() {
               <h1 className="text-3xl font-bold">🏖️ Absences</h1>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 <BoutonExport type="client-absences" label="📊 Exporter Excel" params={{ toutes: "1" }} />
+                <button type="button" onClick={toutValider} className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-green-700 transition">✅ Tout valider</button>
               </div>
             </div>
             <button

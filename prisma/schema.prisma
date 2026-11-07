@@ -85,6 +85,9 @@ model Entreprise {
   demandesServices  DemandeService[]
   journal           JournalPaie[]
   clotures          ClotureMois[]
+  trames            TrameContrat[]
+  contrats          DemandeContrat[]
+  piecesJointes     PieceJointe[]
 }
 
 model Facturation {
@@ -264,8 +267,14 @@ model Document {
   id          String   @id @default(cuid())
   nom         String
   type        String
-  url         String
+  url         String   @default("")
   dateAjout   DateTime @default(now())
+  // Fichier déposé par le client (stocké dans la base), éventuellement lié à une échéance
+  contenu     Bytes?
+  mime        String?
+  taille      Int?
+  rappelId    String?
+  auteur      String?
 
   salarieId   String
   salarie     Salarie  @relation(fields: [salarieId], references: [id], onDelete: Cascade)
@@ -662,6 +671,7 @@ model QuestionRH {
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   messages     MessageQuestionRH[]
+  piecesJointes PieceJointe[]
 
   @@index([entrepriseId, statut])
 }
@@ -835,4 +845,54 @@ model ClotureMois {
   updatedAt    DateTime   @updatedAt
 
   @@unique([entrepriseId, annee, mois])
+}
+
+
+// Pièce jointe d'une demande RH ponctuelle (conseil RH) — fichier stocké dans la base (4 Mo max)
+model PieceJointe {
+  id           String     @id @default(cuid())
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  questionId   String
+  question     QuestionRH @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  nom          String
+  mime         String
+  taille       Int
+  contenu      Bytes
+  auteur       String
+  role         String
+  createdAt    DateTime   @default(now())
+
+  @@index([questionId])
+}
+
+// Modèle de contrat Word (.docx) déposé par le client, avec ses champs {{...}}
+model TrameContrat {
+  id           String     @id @default(cuid())
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  nom          String
+  champs       String[]
+  fichier      Bytes
+  taille       Int
+  createdAt    DateTime   @default(now())
+
+  @@index([entrepriseId])
+}
+
+// Contrat généré par le client depuis un modèle (historique, consultable par FRANEO RH)
+model DemandeContrat {
+  id           String     @id @default(cuid())
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  salarieId    String?
+  trameNom     String?
+  typeContrat  String
+  intitule     String
+  donnees      Json
+  auteur       String
+  verification Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+
+  @@index([entrepriseId, createdAt])
 }

@@ -97,6 +97,8 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
   await prisma.absence.deleteMany({ where: { entrepriseId } });
   await prisma.utilisateur.deleteMany({ where: { OR: [{ email: EMAIL_DEMO_SALARIE }, { email: EMAIL_DEMO_MANAGER }, { role: "SALARIE", entrepriseId }] } });
   await prisma.questionInterne.deleteMany({ where: { entrepriseId } });
+  await prisma.trameContrat.deleteMany({ where: { entrepriseId } });
+  await prisma.demandeContrat.deleteMany({ where: { entrepriseId } });
   await prisma.journalPaie.deleteMany({ where: { entrepriseId } });
   await prisma.clotureMois.deleteMany({ where: { entrepriseId } });
   await prisma.demandeService.deleteMany({ where: { entrepriseId } });

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { LIBELLES_ABSENCE } from "@/lib/espace-salarie";
 import { fmtH, NOMS_MOIS } from "@/lib/heures";
+import RelevesEquipe from "@/components/RelevesEquipe";
 
 const carte: React.CSSProperties = { background: "#ffffff", borderRadius: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", padding: "18px" };
 const champ: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: "1px solid #d1d5db", borderRadius: "10px", padding: "11px", fontSize: "16px", background: "#ffffff", marginTop: "4px" };
@@ -248,7 +249,7 @@ export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve }:
   const questionsEnAttente = recues.filter((q) => q.statut === "OUVERTE" && !q.versFraneo).length;
   const onglets: { id: string; label: string; icone: string; badge?: number; contenu: React.ReactNode }[] = [
     { id: "accueil", label: "Accueil", icone: "🏠", contenu: <>{accueil}{blocOrga}</> },
-    ...(valideur ? [{ id: "equipe", label: "Mon équipe", icone: "✅", badge: nbAValider, contenu: <>{blocValidation}{blocVariables}</> }] : []),
+    ...(valideur ? [{ id: "equipe", label: "Mon équipe", icone: "✅", badge: nbAValider, contenu: <>{blocValidation}<RelevesEquipe />{blocVariables}</> }] : []),
     ...(absences ? [{ id: "absences", label: "Absences", icone: "🏖️", contenu: absences }] : []),
     ...(releve ? [{ id: "releve", label: "Relevé mensuel", icone: "⏱️", contenu: releve }] : []),
     { id: "frais", label: "Notes de frais", icone: "🧾", contenu: blocFrais },
@@ -264,7 +265,7 @@ export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve }:
   return (
     <div className="fr-es">
       <nav className="fr-es-nav" aria-label="Rubriques de l'espace salarié">
-        <p className="fr-es-nav-titre">{eq ? (eq.role === "DIRIGEANT" ? "👑 Dirigeant" : eq.role === "MANAGER" ? "🧑‍💼 Manager" : "👤 Salarié") : "Mon espace"}</p>
+        <p className="fr-es-nav-titre">{eq ? (eq.role === "DIRIGEANT" ? "Dirigeant" : eq.role === "MANAGER" ? "Manager" : "Salarié") : "Mon espace"}</p>
         {onglets.map((o) => (
           <button key={o.id} type="button" onClick={() => choisir(o.id)} className={`fr-es-lien${o.id === courant.id ? " fr-actif" : ""}`} aria-current={o.id === courant.id ? "page" : undefined}>
             <span aria-hidden="true">{o.icone}</span>

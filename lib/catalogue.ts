@@ -184,9 +184,9 @@ export const OFFRES: Offre[] = [
   { code: "APP_EBAUCHE", famille: "Franeo Digital", categorie: "Application", libelle: "Application · première ébauche", prix: 50 },
   { code: "APP_DEV", famille: "Franeo Digital", categorie: "Application", libelle: "Application · développement", prix: 150 },
   { code: "APP_MAJ", famille: "Franeo Digital", categorie: "Application", libelle: "Application · mise à jour", prix: 50, unite: "demande" },
-  // Franeo'ptimz
-  { code: "OPTIMZ_COMPLET", famille: "Franeo'ptimz", categorie: "Franeo'ptimz", libelle: "Optimisation des achats · accompagnement complet", prix: 700, note: "400 € au lancement + 300 € à la réussite, puis commission de 5 à 10 % sur les économies des 2 premières années" },
-  { code: "OPTIMZ_SUCCES", famille: "Franeo'ptimz", categorie: "Franeo'ptimz", libelle: "Optimisation des achats · au succès", prix: null, note: "Aucun frais initial, 25 % des économies vérifiées des 2 premières années" },
+  // Franeo Optimiz
+  { code: "OPTIMZ_COMPLET", famille: "Franeo Optimiz", categorie: "Franeo Optimiz", libelle: "Optimisation des achats · accompagnement complet", prix: 700, note: "400 € au lancement + 300 € à la réussite, puis commission de 5 à 10 % sur les économies des 2 premières années" },
+  { code: "OPTIMZ_SUCCES", famille: "Franeo Optimiz", categorie: "Franeo Optimiz", libelle: "Optimisation des achats · au succès", prix: null, note: "Aucun frais initial, 25 % des économies vérifiées des 2 premières années" },
   // Paramétrages
   { code: "MUTUELLE", famille: "Paie", categorie: "Paramétrages", libelle: "Paramétrage mutuelle ou prévoyance", prix: 50, unite: "contrat", note: "Offert en formule Paie Entreprise" },
 ];

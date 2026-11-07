@@ -92,7 +92,7 @@ export default async function EspaceSalarie() {
       {s.utilisateur.entreprise?.demo && <BandeauDemo />}
       <header style={{ background: "#000000", color: "#ffffff", padding: "calc(12px + env(safe-area-inset-top)) 16px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <Image src="/FRANEO-Logo-Orange.png" alt="Franeo" width={70} height={24} style={{ objectFit: "contain" }} />
+          <Image src="/Icone.png" alt="Franeo" width={30} height={32} style={{ objectFit: "contain" }} />
           <span style={{ fontSize: "14px", color: "#d1d5db" }}>Espace salarié</span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>

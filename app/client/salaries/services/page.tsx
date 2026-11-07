@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import CadreClient from "@/components/CadreClient";
+import IconePersonne from "@/components/IconePersonne";
 
 type S = { id: string; prenom: string; nom: string; poste: string; service: string | null; roleRH: string; managerId: string | null; salaireMensuel: number | null };
 type Orga = { salaries: S[]; services: { id: string; nom: string }[] };
 
-const ICONES: Record<string, string> = { DIRIGEANT: "👑", MANAGER: "🧑‍💼", SALARIE: "👤" };
+const ROLES: Record<string, string> = { DIRIGEANT: "Dirigeant", MANAGER: "Manager", SALARIE: "" };
 
 /** Onglet Services : organigramme modifiable en glissant les noms d'une colonne à l'autre */
 export default function PageServices() {
@@ -45,7 +46,7 @@ export default function PageServices() {
     ? [
         ...salaries.filter((s) => s.roleRH !== "SALARIE" || salaries.some((x) => x.managerId === s.id))
           .sort((a, b) => (a.roleRH === "DIRIGEANT" ? -1 : 0) - (b.roleRH === "DIRIGEANT" ? -1 : 0))
-          .map((m) => ({ cle: m.id, titre: `${ICONES[m.roleRH] || ""} ${m.prenom} ${m.nom}`, sous: m.poste })),
+          .map((m) => ({ cle: m.id, titre: `${m.prenom} ${m.nom}`, sous: [ROLES[m.roleRH], m.poste].filter(Boolean).join(" · ") })),
         { cle: "_aucun", titre: "Sans manager", sous: "rattachés à la direction" },
       ]
     : [...(orga?.services || []).map((sv) => ({ cle: sv.nom, titre: sv.nom, supprimerId: sv.id })), { cle: "_aucun", titre: "Sans service" }];
@@ -58,8 +59,8 @@ export default function PageServices() {
         <h1 className="text-3xl font-bold">🧩 Services & organigramme</h1>
         <p className="text-gray-500 mt-1">Glissez un nom d&apos;une colonne à l&apos;autre pour changer son manager (N+1) ou son service. Chaque manager valide ensuite les relevés, absences et frais de son équipe.</p>
         <div className="flex gap-2 mt-4 flex-wrap items-center">
-          <button type="button" onClick={() => setVue("managers")} className={`px-4 py-2 rounded-lg font-semibold ${vue === "managers" ? "bg-orange-500 text-white" : "bg-gray-100"}`}>🧑‍💼 Par manager</button>
-          <button type="button" onClick={() => setVue("services")} className={`px-4 py-2 rounded-lg font-semibold ${vue === "services" ? "bg-orange-500 text-white" : "bg-gray-100"}`}>🧩 Par service</button>
+          <button type="button" onClick={() => setVue("managers")} className={`px-4 py-2 rounded-lg font-semibold ${vue === "managers" ? "bg-orange-500 text-white" : "bg-gray-100"}`}>Par manager</button>
+          <button type="button" onClick={() => setVue("services")} className={`px-4 py-2 rounded-lg font-semibold ${vue === "services" ? "bg-orange-500 text-white" : "bg-gray-100"}`}>Par service</button>
           <form onSubmit={ajouterService} className="flex gap-2 ml-auto">
             <input value={nouveau} onChange={(e) => setNouveau(e.target.value)} placeholder="Nouveau service" className="border rounded-lg px-3 py-2" aria-label="Nom du service" />
             <button type="submit" disabled={!nouveau.trim()} className="bg-black text-white px-4 py-2 rounded-lg font-semibold">➕ Ajouter</button>
@@ -82,7 +83,7 @@ export default function PageServices() {
             >
               <div className="flex justify-between items-start gap-2">
                 <div>
-                  <p className="font-bold">{c.titre}</p>
+                  <p className="font-bold flex items-center gap-2">{c.cle !== "_aucun" && vue === "managers" && <IconePersonne taille={18} />}{c.titre}</p>
                   {c.sous && <p className="text-xs text-gray-500">{c.sous}</p>}
                 </div>
                 {c.supprimerId && (
@@ -97,7 +98,7 @@ export default function PageServices() {
                   className="border rounded-lg px-3 py-2 text-sm bg-gray-50 cursor-grab"
                   style={{ opacity: glisse === s.id ? 0.4 : 1 }}
                 >
-                  <span className="font-semibold">{ICONES[s.roleRH] || "👤"} {s.prenom} {s.nom}</span>
+                  <span className="font-semibold flex items-center gap-2"><IconePersonne /> {s.prenom} {s.nom}</span>
                   <span className="block text-xs text-gray-500">{s.poste}{vue === "managers" && s.service ? ` · ${s.service}` : ""}</span>
                   {/* Sur téléphone (pas de glisser-déposer) : liste déroulante */}
                   <select

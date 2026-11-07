@@ -57,7 +57,7 @@ export default async function ClientTickets() {
               </div>
               <p className="text-gray-500 mt-1">
                 {sansAbonnement
-                  ? `Accès de base gratuit : chaque ticket RH est facturé ${PRIX_TICKET_SANS_ABONNEMENT} € (accord demandé avant l'envoi). Les questions simples restent gratuites dans « Demande RH ponctuelle ».`
+                  ? `Formule RH Basic : chaque ticket RH est facturé ${PRIX_TICKET_SANS_ABONNEMENT} € (accord demandé avant l'envoi).`
                   : `${ticketsRestants} ticket(s) restant(s) sur ${ticketsInclus} ce mois-ci`}
               </p>
             </div>

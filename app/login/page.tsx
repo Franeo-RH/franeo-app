@@ -72,7 +72,7 @@ export default function LoginPage() {
     <main className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="bg-white rounded-xl shadow p-10 w-full max-w-md">
         <div className="flex justify-center mb-6">
-          <Image src="/FRANEO-Logo-Orange.png" alt="Franeo" width={160} height={60} style={{ objectFit: "contain" }} />
+          <Image src="/FRANEO-Logo-Orange.png" alt="Franeo RH" width={114} height={140} style={{ objectFit: "contain" }} priority />
         </div>
 
         <p className="text-gray-500 text-center mb-8">Gérez vos ressources humaines simplement et efficacement.</p>
@@ -126,7 +126,7 @@ export default function LoginPage() {
         </div>
 
         <div role="tablist" aria-label="Type de démo" style={{ display: "flex", background: "#f3f4f6", borderRadius: "10px", padding: "4px", marginBottom: "10px" }}>
-          {([["client", "🏢 Client"], ["salarie", "📱 Salarié"], ["manager", "🧑‍💼 Manager"]] as const).map(([val, lib]) => (
+          {([["client", "🏢 Dirigeant"], ["salarie", "📱 Salarié"], ["manager", "🧑‍💼 Manager"]] as const).map(([val, lib]) => (
             <button
               key={val}
               type="button"

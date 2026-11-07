@@ -26,9 +26,9 @@ export function ChampsRoleRH({ valeur, onChange, exclureId }: { valeur: RoleRH; 
       <div>
         <label className={lbl}>Rôle dans l&apos;entreprise</label>
         <select value={valeur.roleRH} onChange={(e) => onChange({ ...valeur, roleRH: e.target.value })} className={chp}>
-          <option value="SALARIE">👤 Salarié</option>
-          <option value="MANAGER">🧑‍💼 Manager</option>
-          <option value="DIRIGEANT">👑 Dirigeant</option>
+          <option value="SALARIE">Salarié</option>
+          <option value="MANAGER">Manager</option>
+          <option value="DIRIGEANT">Dirigeant</option>
         </select>
       </div>
       <div>

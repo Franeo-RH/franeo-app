@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { ACTIONS, MODULES } from "@/lib/droits";
+import { ACCES_FORMULES, ACTIONS, MODULES } from "@/lib/droits";
 
-const AUTORISES = new Set<string>([...MODULES.map((m) => m.id), ...ACTIONS.map((a) => `-${a.id}`)]);
+const AUTORISES = new Set<string>([...MODULES.map((m) => m.id), ...ACTIONS.map((a) => `-${a.id}`), ...ACCES_FORMULES.map((f) => `@acces:${f.id}`)]);
 
 // Accès & droits d'un client (modules visibles + actions retirées)
 export async function PUT(

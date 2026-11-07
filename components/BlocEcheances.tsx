@@ -29,11 +29,11 @@ export default function BlocEcheances({
       {affichees.length === 0 ? (
         <p className="text-gray-400 text-sm">Aucune échéance à surveiller dans les 60 prochains jours. 🎉</p>
       ) : (
-        <ul className="grid grid-cols-2 gap-x-6 overflow-y-auto pr-1">
+        <ul className="overflow-y-auto pr-1" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(380px, 100%), 1fr))", columnGap: "24px" }}>
           {affichees.map((e) => (
             <li key={e.cle} className="border-b last:border-b-0">
               <Link href={`${base}/${e.salarieId}`} className="flex items-center justify-between gap-2 py-1.5 text-xs hover:bg-gray-50">
-                <span className="truncate">
+                <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
                   {e.icone} <strong>{e.label}</strong> — {e.salarie}
                   {role === "ADMIN" && <span className="text-gray-400"> ({e.entreprise})</span>}
                 </span>

@@ -13,4 +13,5 @@ export type QuestionVue = {
   id: string; sujet: string; statut: string; auteur: string; createdAt: string; updatedAt: string;
   entreprise?: { nom: string };
   messages: { id: string; role: string; auteur: string; contenu: string; createdAt: string; versTicket: boolean }[];
+  piecesJointes?: { id: string; nom: string; taille: number; auteur: string; role: string; createdAt: string }[];
 };

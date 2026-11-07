@@ -8,7 +8,7 @@ import BoutonDemandeEvolutionPaie from "@/components/BoutonDemandeEvolutionPaie"
 import MentionsFacturation from "@/components/MentionsFacturation";
 import OngletsAbonnements from "@/components/OngletsAbonnements";
 import Link from "next/link";
-import { detailPaie, GRILLE_PAIE } from "@/lib/grille";
+import { detailPaie, GRILLE_PAIE, MENTION_VISITE_MEDICALE } from "@/lib/grille";
 
 export const dynamic = "force-dynamic";
 
@@ -133,6 +133,8 @@ export default async function ClientAbonnementPaie() {
               );
             })}
           </div>
+
+          <p className="text-sm text-gray-600 mt-6 bg-white rounded-xl shadow p-4">🩺 {MENTION_VISITE_MEDICALE}</p>
 
           <div className="bg-white rounded-xl shadow p-6 mt-6 flex justify-between items-center gap-3 flex-wrap">
             <div>

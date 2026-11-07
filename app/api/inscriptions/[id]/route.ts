@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { niveauRH, permissionsFormule } from "@/lib/droits";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
@@ -26,8 +27,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ erreur: `Un compte existe déjà avec l'email ${d.email}.` }, { status: 409 });
   }
 
+  // L'app n'est pas accessible gratuitement : une formule RH ou paie est obligatoire
+  if (!b.packId && !b.formulePaieId) return NextResponse.json({ erreur: "Choisissez une formule RH ou une formule paie : l'application n'est pas accessible sans abonnement." }, { status: 400 });
+  const pack = b.packId ? await prisma.abonnement.findUnique({ where: { id: String(b.packId) }, select: { nom: true } }) : null;
+  const niveau = niveauRH({ abonnement: pack });
+  const acces = ["", "BASIC", "ESSENTIEL", "SERENITE", "PREMIUM"][niveau] || "BASIC";
+
   const entreprise = await prisma.entreprise.create({
     data: {
+      permissions: permissionsFormule(acces, [], !!b.formulePaieId),
       nom: d.societe,
       email: d.email,
       telephone: d.telephone,

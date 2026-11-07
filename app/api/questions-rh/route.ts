@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     },
     orderBy: { updatedAt: "desc" },
     take: 200,
-    include: { entreprise: { select: { nom: true } }, messages: { orderBy: { createdAt: "asc" } } },
+    include: { entreprise: { select: { nom: true } }, messages: { orderBy: { createdAt: "asc" } }, piecesJointes: { select: { id: true, nom: true, taille: true, auteur: true, role: true, createdAt: true }, orderBy: { createdAt: "asc" } } },
   });
   return NextResponse.json(questions);
 }

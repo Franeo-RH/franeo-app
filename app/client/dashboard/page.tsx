@@ -111,24 +111,28 @@ export default async function ClientDashboard() {
           ))}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "0.75rem" }}>
+        {/* Toutes les données sur une seule ligne */}
+        <div className="fr-grille-tuiles" style={{ display: "grid", gridTemplateColumns: `repeat(${tuiles.length}, minmax(0, 1fr))`, gap: "0.6rem" }}>
           {tuiles.map((x) => (
             <Link key={x.label} href={x.href} className="bg-white rounded-2xl shadow p-3 text-center hover:shadow-md transition">
-              <p className="text-2xl">{x.icone}</p>
-              <p className={`text-2xl font-bold leading-tight ${x.couleur}`}>{x.n}</p>
-              <p className="text-gray-400 text-[11px] font-semibold uppercase">{x.label}</p>
+              <p className="text-xl">{x.icone}</p>
+              <p className={`text-xl font-bold leading-tight ${x.couleur}`} style={{ whiteSpace: "nowrap" }}>{x.n}</p>
+              <p className="text-gray-400 text-[10px] font-semibold uppercase leading-tight">{x.label}</p>
             </Link>
           ))}
         </div>
+
+        {/* Échéances urgentes et dépassées : sur toute la largeur */}
+        {peut("salaries.echeances") && <BlocEcheances echeances={urgentes} role="CLIENT" max={8} />}
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
           {/* Mes abonnements */}
           <Link href="/client/entreprise/abonnement" className="bg-white rounded-2xl shadow p-4 hover:shadow-md transition flex flex-col gap-3">
             <h2 className="text-sm font-bold">💳 Mes abonnements</h2>
             {!abo && !paie && (
-              <div className="rounded-xl px-4 py-3" style={{ background: "#f3f4f6" }}>
-                <p className="text-lg font-bold">Accès de base · gratuit</p>
-                <p className="text-gray-600 text-xs mt-1">Ticket RH à {PRIX_TICKET_SANS_ABONNEMENT} € l&apos;unité ({ticketsMois} ce mois-ci).</p>
+              <div className="rounded-xl px-4 py-3" style={{ background: "#fff7ed" }}>
+                <p className="text-lg font-bold">Aucune formule active</p>
+                <p className="text-gray-600 text-xs mt-1">Choisissez une formule pour utiliser l&apos;application.</p>
               </div>
             )}
             {abo && (
@@ -144,13 +148,6 @@ export default async function ClientDashboard() {
               </div>
             )}
           </Link>
-
-          {/* Échéances urgentes et dépassées */}
-          <div className="flex flex-col" style={{ maxHeight: "260px" }}>
-            {peut("salaries.echeances")
-              ? <BlocEcheances echeances={urgentes} role="CLIENT" max={6} />
-              : <div className="bg-white rounded-2xl shadow p-4 text-sm text-gray-500">Échéances non disponibles pour votre compte.</div>}
-          </div>
 
           <div className="flex flex-col gap-3">
             {avecPaie && peut("paie.cloture") && <BoutonCloture mois={mois} annee={annee} />}

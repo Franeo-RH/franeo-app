@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ACTIONS, MODULES, PROFILS_DROITS } from "@/lib/droits";
+import { ACCES_FORMULES, accesChoisi, ACTIONS, MODULES, permissionsFormule } from "@/lib/droits";
 
 /** Bloc « Accès & droits » de la fiche client : modules visibles et actions autorisées */
 export default function GestionDroits({
@@ -18,26 +18,30 @@ export default function GestionDroits({
   const [perms, setPerms] = useState<string[]>(permissions);
   const [etat, setEtat] = useState<"" | "chargement" | "ok" | "erreur">("");
 
+  const choix = accesChoisi(perms) ?? "PERSO";
+  // Toute case modifiée à la main fait passer en « Personnalisé »
+  const perso = (p: string[]) => [...p.filter((x) => !x.startsWith("@acces:")), "@acces:PERSO"];
   const moduleActif = (m: string) => perms.includes(m);
   const actionActive = (a: string) => !perms.includes(`-${a}`);
 
   function basculerModule(m: string) {
     setEtat("");
-    setPerms((p) => (p.includes(m) ? p.filter((x) => x !== m) : [...p, m]));
+    setPerms((p) => perso(p.includes(m) ? p.filter((x) => x !== m) : [...p, m]));
   }
   function basculerAction(a: string) {
     setEtat("");
-    setPerms((p) => (p.includes(`-${a}`) ? p.filter((x) => x !== `-${a}`) : [...p, `-${a}`]));
+    setPerms((p) => perso(p.includes(`-${a}`) ? p.filter((x) => x !== `-${a}`) : [...p, `-${a}`]));
   }
 
-  function appliquerProfil(retirer: readonly string[]) {
+  function appliquerAcces(id: string) {
     setEtat("");
-    setPerms((p) => [...p.filter((x) => !x.startsWith("-")), ...retirer.map((a) => `-${a}`)]);
+    if (id === "PERSO") setPerms((p) => perso(p));
+    else setPerms((p) => permissionsFormule(id, p, clientPaie));
   }
   function toutModule(m: string, autoriser: boolean) {
     setEtat("");
     const ids = ACTIONS.filter((a) => a.module === m).map((a) => `-${a.id}`);
-    setPerms((p) => (autoriser ? p.filter((x) => !ids.includes(x)) : [...p.filter((x) => !ids.includes(x)), ...ids]));
+    setPerms((p) => perso(autoriser ? p.filter((x) => !ids.includes(x)) : [...p.filter((x) => !ids.includes(x)), ...ids]));
   }
 
   async function enregistrer() {
@@ -66,14 +70,22 @@ export default function GestionDroits({
         </p>
       )}
 
-      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center", marginBottom: "14px" }}>
-        <span style={{ fontSize: "13px", fontWeight: 700 }}>Profil rapide :</span>
-        {PROFILS_DROITS.map((p) => (
-          <button key={p.id} type="button" onClick={() => appliquerProfil(p.retirer)} style={{ background: "#ffffff", border: "1px solid #d1d5db", borderRadius: "999px", padding: "5px 12px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
-            {p.label}
+      <p style={{ fontSize: "13px", fontWeight: 700, margin: "0 0 8px" }}>Accès selon la formule :</p>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "8px", marginBottom: "12px" }}>
+        {ACCES_FORMULES.map((f) => (
+          <button key={f.id} type="button" onClick={() => appliquerAcces(f.id)} title={f.detail}
+            style={{ textAlign: "left", background: choix === f.id ? "#f97316" : "#ffffff", color: choix === f.id ? "#ffffff" : "#111827", border: `2px solid ${choix === f.id ? "#f97316" : "#e5e7eb"}`, borderRadius: "12px", padding: "10px 12px", cursor: "pointer" }}>
+            <span style={{ display: "block", fontWeight: 800, fontSize: "14px" }}>{f.id === "PERSO" ? "⚙️ " : "📦 "}Accès {f.label}</span>
+            <span style={{ display: "block", fontSize: "11px", opacity: 0.85, marginTop: "2px" }}>{f.detail}</span>
           </button>
         ))}
       </div>
+      <div style={{ marginBottom: "14px", padding: "10px 12px", border: "1px solid #e5e7eb", borderRadius: "12px", background: "#f9fafb" }}>
+        {case_(moduleActif("espace-salaries"), () => { setEtat(""); setPerms((p) => (p.includes("espace-salaries") ? p.filter((x) => x !== "espace-salaries") : [...p, "espace-salaries"])); }, "📱 Option espace salarié (Basic : 3 €/salarié/mois ; Essentiel et + : 15 €/mois jusqu'à 25 salariés) — demandes d'absence, relevés d'heures, communication salariés")}
+      </div>
+      {choix !== "PERSO" && (
+        <p style={{ fontSize: "13px", color: "#6b7280", margin: "0 0 10px" }}>Le détail ci-dessous est réglé par la formule. Modifier une case passe en accès personnalisé.</p>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px" }}>
         {[...MODULES, { id: "global", label: "🌐 Partout" }].map((m) => {

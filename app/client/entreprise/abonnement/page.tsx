@@ -8,7 +8,7 @@ import BoutonDemandeEvolution from "@/components/BoutonDemandeEvolution";
 import MentionsFacturation from "@/components/MentionsFacturation";
 import OngletsAbonnements from "@/components/OngletsAbonnements";
 import Link from "next/link";
-import { detailRH } from "@/lib/grille";
+import { detailRH, MENTION_VISITE_MEDICALE } from "@/lib/grille";
 
 export default async function AbonnementClient() {
   await connection();
@@ -106,6 +106,8 @@ export default async function AbonnementClient() {
               </div>
             ))}
           </div>
+
+          <p className="text-sm text-gray-600 mt-6 bg-white rounded-xl shadow p-4">🩺 {MENTION_VISITE_MEDICALE}</p>
 
           <div className="bg-white rounded-xl shadow p-6 mt-6 flex justify-between items-center gap-3 flex-wrap">
             <div>

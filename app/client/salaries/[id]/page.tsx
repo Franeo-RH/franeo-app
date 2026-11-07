@@ -84,6 +84,9 @@ export default async function FicheSalarie({
                   ✏️ Modifier
                 </Link>
               )}
+              {aDroit(session.entreprise?.permissions, "rh.documents") && (
+                <Link href={`/client/salaries/documents?salarie=${salarie.id}`} className="bg-white border px-5 py-2 rounded-lg font-semibold hover:bg-gray-100 transition">📁 Documents</Link>
+              )}
               {peutSupprimer && <BoutonSupprimer id={salarie.id} redirectUrl="/client/salaries" />}
               <Link
                 href="/client/salaries"
