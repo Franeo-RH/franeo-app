@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { LIBELLES_ABSENCE } from "@/lib/espace-salarie";
 import { fmtH, NOMS_MOIS } from "@/lib/heures";
 import RelevesEquipe from "@/components/RelevesEquipe";
+import BoutonTheme from "@/components/BoutonTheme";
+import Image from "next/image";
 
 const carte: React.CSSProperties = { background: "#ffffff", borderRadius: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", padding: "18px" };
 const champ: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: "1px solid #d1d5db", borderRadius: "10px", padding: "11px", fontSize: "16px", background: "#ffffff", marginTop: "4px" };
@@ -32,8 +34,9 @@ type Question = { id: string; sujet: string; statut: string; versFraneo: boolean
 type Frais = { id: string; date: string; montant: number; motif: string; statut: string; motifRefus: string | null };
 
 /** Espace salarié : organisation, notes de frais, questions au N+1 et, pour les managers et dirigeants, la validation de l'équipe */
-export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve }: { avecPaie: boolean; accueil: React.ReactNode; absences?: React.ReactNode; releve?: React.ReactNode }) {
+export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, prenom }: { avecPaie: boolean; accueil: React.ReactNode; absences?: React.ReactNode; releve?: React.ReactNode; prenom: string }) {
   const [onglet, setOnglet] = useState("accueil");
+  const [menu, setMenu] = useState(false);
   useEffect(() => { try { const o = sessionStorage.getItem("fr-onglet-salarie"); if (o) setOnglet(o); } catch {} }, []);
   const [eq, setEq] = useState<Equipe | null>(null);
   const [frais, setFrais] = useState<Frais[]>([]);
@@ -247,36 +250,112 @@ export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve }:
 
   const nbAValider = eq ? eq.releves.length + eq.absences.length + eq.frais.length : 0;
   const questionsEnAttente = recues.filter((q) => q.statut === "OUVERTE" && !q.versFraneo).length;
-  const onglets: { id: string; label: string; icone: string; badge?: number; contenu: React.ReactNode }[] = [
-    { id: "accueil", label: "Accueil", icone: "🏠", contenu: <>{accueil}{blocOrga}</> },
-    ...(valideur ? [{ id: "equipe", label: "Mon équipe", icone: "✅", badge: nbAValider, contenu: <>{blocValidation}<RelevesEquipe />{blocVariables}</> }] : []),
-    ...(absences ? [{ id: "absences", label: "Absences", icone: "🏖️", contenu: absences }] : []),
-    ...(releve ? [{ id: "releve", label: "Relevé mensuel", icone: "⏱️", contenu: releve }] : []),
-    { id: "frais", label: "Notes de frais", icone: "🧾", contenu: blocFrais },
-    { id: "questions", label: "Questions", icone: "💬", badge: questionsEnAttente, contenu: blocQuestions },
+
+  // Même logique que le reste du site : des onglets en haut (avec leurs logos), des rubriques dans la barre latérale
+  type Rubrique = { id: string; label: string; icone: string; badge?: number; contenu: React.ReactNode };
+  type Module = { id: string; label: string; logo: string; badge?: number; rubriques: Rubrique[] };
+  const modules: Module[] = [
+    { id: "accueil", label: "Dashboard", logo: "/DASHBOARD-LOGO.png", rubriques: [{ id: "accueil", label: "Tableau de bord", icone: "📊", contenu: <>{accueil}{blocOrga}</> }] },
+    ...(valideur ? [{
+      id: "equipe", label: "Mon équipe", logo: "/SALARIE-LOGO.png", badge: nbAValider, rubriques: [
+        { id: "valider", label: "À valider", icone: "✅", badge: nbAValider, contenu: blocValidation },
+        { id: "rma", label: "Relevés de l'équipe", icone: "⏱️", contenu: <RelevesEquipe /> },
+        ...(eq?.peutSaisirVariables && avecPaie ? [{ id: "variables", label: "Saisir une variable", icone: "✏️", contenu: blocVariables }] : []),
+      ],
+    }] : []),
+    ...(absences || releve ? [{
+      id: "temps", label: "Mon temps", logo: "/PAIE-LOGO.png", rubriques: [
+        ...(absences ? [{ id: "absences", label: "Absences", icone: "🏖️", contenu: absences }] : []),
+        ...(releve ? [{ id: "releve", label: "Relevé mensuel", icone: "⏱️", contenu: releve }] : []),
+      ],
+    }] : []),
+    { id: "frais", label: "Notes de frais", logo: "/ENTREPRISE-LOGO.png", rubriques: [{ id: "frais", label: "Mes notes de frais", icone: "🧾", contenu: blocFrais }] },
+    { id: "questions", label: "Questions", logo: "/HELPDESK-LOGO.png", badge: questionsEnAttente, rubriques: [{ id: "questions", label: "Mes questions", icone: "💬", badge: questionsEnAttente, contenu: blocQuestions }] },
   ];
-  const courant = onglets.find((o) => o.id === onglet) ?? onglets[0];
+  const moduleCourant = modules.find((m) => m.rubriques.some((r) => r.id === onglet)) ?? modules[0];
+  const courant = moduleCourant.rubriques.find((r) => r.id === onglet) ?? moduleCourant.rubriques[0];
   function choisir(id: string) {
     setOnglet(id);
+    setMenu(false);
     try { sessionStorage.setItem("fr-onglet-salarie", id); } catch {}
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+  async function deconnexion() {
+    try { const cles = await caches.keys(); await Promise.all(cles.filter((k) => k.startsWith("franeo-pages")).map((k) => caches.delete(k))); } catch {}
+    await fetch("/api/logout", { method: "POST" });
+    window.location.href = "/login";
+  }
+  const role = eq ? (eq.role === "DIRIGEANT" ? "Dirigeant" : eq.role === "MANAGER" ? "Manager" : "Salarié") : "Espace salarié";
+  const profil = (
+    <>
+      <span className="fr-nav-petit">{role}</span>
+      <BoutonTheme className="fr-nav-theme" />
+      <button type="button" onClick={deconnexion} className="fr-nav-deco">Déconnexion</button>
+    </>
+  );
 
   return (
-    <div className="fr-es">
-      <nav className="fr-es-nav" aria-label="Rubriques de l'espace salarié">
-        <p className="fr-es-nav-titre">{eq ? (eq.role === "DIRIGEANT" ? "Dirigeant" : eq.role === "MANAGER" ? "Manager" : "Salarié") : "Mon espace"}</p>
-        {onglets.map((o) => (
-          <button key={o.id} type="button" onClick={() => choisir(o.id)} className={`fr-es-lien${o.id === courant.id ? " fr-actif" : ""}`} aria-current={o.id === courant.id ? "page" : undefined}>
-            <span aria-hidden="true">{o.icone}</span>
-            <span className="fr-es-lien-texte">{o.label}</span>
-            {!!o.badge && <span className="fr-es-badge">{o.badge}</span>}
+    <div className="min-h-screen bg-gray-100">
+      <nav className="fr-nav">
+        <div className="fr-nav-barre">
+          <button type="button" onClick={() => choisir("accueil")} className="fr-nav-logo" aria-label="Accueil" style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+            <Image src="/FRANEO-Logo-Orange.png" alt="Franeo RH" width={41} height={50} style={{ objectFit: "contain" }} priority />
           </button>
-        ))}
+          <div className="fr-nav-liens">
+            {modules.map((m) => (
+              <button key={m.id} type="button" onClick={() => choisir(m.rubriques[0].id)} className={`fr-nav-lien${m.id === moduleCourant.id ? " fr-actif" : ""}`} style={{ border: "none", cursor: "pointer", position: "relative" }}>
+                <Image src={m.logo} alt="" width={18} height={18} className="invert" style={{ objectFit: "contain" }} />
+                <span>{m.label}</span>
+                {!!m.badge && <span className="fr-side-badge" style={{ position: "absolute", top: 2, right: 4 }}>{m.badge}</span>}
+              </button>
+            ))}
+          </div>
+          <div className="fr-nav-profil">
+            <span className="fr-nav-prenom">{prenom}</span>
+            {profil}
+          </div>
+          <button type="button" className="fr-burger" aria-label={menu ? "Fermer le menu" : "Ouvrir le menu"} aria-expanded={menu} onClick={() => setMenu((o) => !o)}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              {menu ? (<><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></>) : (<><line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" /></>)}
+            </svg>
+          </button>
+        </div>
+        {menu && (
+          <div className="fr-menu-mobile">
+            <div className="fr-menu-grille">
+              {modules.map((m) => (
+                <button key={m.id} type="button" onClick={() => choisir(m.rubriques[0].id)} className={`fr-menu-lien${m.id === moduleCourant.id ? " fr-actif" : ""}`} style={{ border: "none", cursor: "pointer" }}>
+                  <Image src={m.logo} alt="" width={22} height={22} className="invert" style={{ objectFit: "contain" }} />
+                  <span>{m.label}{m.badge ? ` (${m.badge})` : ""}</span>
+                </button>
+              ))}
+            </div>
+            <div className="fr-menu-pied">
+              <span>👤 {prenom}</span>
+              <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>{profil}</div>
+            </div>
+          </div>
+        )}
       </nav>
-      <div className="fr-es-contenu">
-        <h1 className="fr-es-titre">{courant.icone} {courant.label}</h1>
-        {courant.contenu}
+
+      <div className="flex">
+        <aside className="fr-sidebar" aria-label={moduleCourant.label}>
+          <p className="fr-side-titre">{moduleCourant.label}</p>
+          {moduleCourant.rubriques.map((r) => (
+            <button key={r.id} type="button" onClick={() => choisir(r.id)} className={`fr-side-lien${r.id === courant.id ? " fr-actif" : ""}`} aria-current={r.id === courant.id ? "page" : undefined} style={{ border: "none", background: r.id === courant.id ? undefined : "none", width: "100%", textAlign: "left", cursor: "pointer" }}>
+              <span className="fr-side-icone" aria-hidden="true">{r.icone}</span>
+              <span className="fr-side-texte">{r.label}</span>
+              {!!r.badge && <span className="fr-side-badge">{r.badge}</span>}
+            </button>
+          ))}
+        </aside>
+        <main className="flex-1 p-4 md:p-8 flex flex-col gap-4" style={{ minWidth: 0, maxWidth: "900px" }}>
+          <div className="bg-white rounded-xl shadow p-6">
+            <h1 className="text-3xl font-bold">{courant.icone} {courant.label}</h1>
+          </div>
+          {courant.contenu}
+          <p className="text-center text-xs text-gray-500 mt-2">Vos demandes sont validées par votre manager ou votre employeur. Pour toute question sur votre paie, adressez-vous à lui.</p>
+        </main>
       </div>
     </div>
   );

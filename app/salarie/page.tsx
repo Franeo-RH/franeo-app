@@ -1,6 +1,5 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
-import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { getSessionSalarie } from "@/lib/session";
 import { LIBELLES_ABSENCE } from "@/lib/espace-salarie";
@@ -8,11 +7,10 @@ import { aDroit } from "@/lib/droits";
 import { communicationsNonLues } from "@/lib/communications";
 import BandeauCommunications from "@/components/BandeauCommunications";
 import BandeauDemo from "@/components/BandeauDemo";
-import BoutonTheme from "@/components/BoutonTheme";
 import ReleveHeuresSalarie from "@/components/ReleveHeuresSalarie";
 import EspaceSalarieRH from "@/components/EspaceSalarieRH";
 import { libelleRappel, typeDe } from "@/lib/rappels";
-import { BoutonAnnulerAbsence, BoutonDeconnexionSalarie, FormulaireAbsenceSalarie } from "@/components/EspaceSalarieActions";
+import { BoutonAnnulerAbsence, FormulaireAbsenceSalarie } from "@/components/EspaceSalarieActions";
 
 export const dynamic = "force-dynamic";
 
@@ -88,21 +86,11 @@ export default async function EspaceSalarie() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f3f4f6", fontFamily: "Arial, Helvetica, sans-serif", color: "#111827" }}>
+    <div className="min-h-screen bg-gray-100">
       {s.utilisateur.entreprise?.demo && <BandeauDemo />}
-      <header style={{ background: "#000000", color: "#ffffff", padding: "calc(12px + env(safe-area-inset-top)) 16px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <Image src="/Icone.png" alt="Franeo" width={30} height={32} style={{ objectFit: "contain" }} />
-          <span style={{ fontSize: "14px", color: "#d1d5db" }}>Espace salarié</span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
-          <BoutonTheme style={{ background: "none", border: "none", color: "#d1d5db", fontSize: "13px", fontWeight: 600, cursor: "pointer", padding: 0 }} />
-          <BoutonDeconnexionSalarie />
-        </div>
-      </header>
 
-      <main className="fr-es-page">
         <EspaceSalarieRH
+          prenom={s.salarie.prenom}
           avecPaie={!!s.utilisateur.entreprise?.abonnementPaieId}
           accueil={
             <>
@@ -167,10 +155,6 @@ export default async function EspaceSalarie() {
             </section>
           ) : undefined}
         />
-        <p style={{ textAlign: "center", fontSize: "12px", color: "#6b7280", margin: "16px 0" }}>
-          Vos demandes sont validées par votre manager ou votre employeur. Pour toute question sur votre paie, adressez-vous à lui.
-        </p>
-      </main>
     </div>
   );
 }
