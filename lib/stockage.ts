@@ -6,6 +6,9 @@ import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } fro
 
 let client: S3Client | null = null;
 
+/** Erreur d'envoi vers OVH, avec un message lisible pour l'utilisateur */
+export class ErreurStockage extends Error {}
+
 export function stockageOVH(): boolean {
   return !!(process.env.OVH_S3_ENDPOINT && process.env.OVH_S3_BUCKET && process.env.OVH_S3_ACCESS_KEY && process.env.OVH_S3_SECRET_KEY);
 }
@@ -16,6 +19,9 @@ function s3() {
       endpoint: process.env.OVH_S3_ENDPOINT,
       region: process.env.OVH_S3_REGION || "gra",
       forcePathStyle: true,
+      // OVH n'accepte pas les sommes de contrôle ajoutées par défaut par les versions récentes du SDK
+      requestChecksumCalculation: "WHEN_REQUIRED",
+      responseChecksumValidation: "WHEN_REQUIRED",
       credentials: { accessKeyId: process.env.OVH_S3_ACCESS_KEY!, secretAccessKey: process.env.OVH_S3_SECRET_KEY! },
     });
   }
@@ -30,7 +36,13 @@ export async function enregistrerFichier(dossier: string, nom: string, mime: str
   if (!stockageOVH()) return { cle: null, contenu };
   const extension = (nom.match(/\.[A-Za-z0-9]{1,6}$/)?.[0] || "").toLowerCase();
   const cle = `${dossier}/${randomUUID()}${extension}`;
-  await s3().send(new PutObjectCommand({ Bucket: process.env.OVH_S3_BUCKET, Key: cle, Body: contenu, ContentType: mime || "application/octet-stream" }));
+  try {
+    await s3().send(new PutObjectCommand({ Bucket: process.env.OVH_S3_BUCKET, Key: cle, Body: contenu, ContentType: mime || "application/octet-stream" }));
+  } catch (e) {
+    const err = e as { name?: string; message?: string; $metadata?: { httpStatusCode?: number } };
+    console.error("Envoi OVH impossible :", err?.name, err?.$metadata?.httpStatusCode, err?.message);
+    throw new ErreurStockage(`Stockage OVH indisponible (${err?.name || "erreur"}${err?.$metadata?.httpStatusCode ? ` ${err.$metadata.httpStatusCode}` : ""}) : vérifiez les variables OVH_S3_* sur Vercel.`);
+  }
   return { cle, contenu: null };
 }
 

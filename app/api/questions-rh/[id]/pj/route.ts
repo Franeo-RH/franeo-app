@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { enregistrerFichier } from "@/lib/stockage";
+import { enregistrerFichier, ErreurStockage } from "@/lib/stockage";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { lireFichier } from "@/lib/fichiers";
@@ -16,7 +16,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const form = await request.formData().catch(() => null);
   const lu = await lireFichier(form?.get("fichier") ?? null);
   if ("erreur" in lu) return NextResponse.json({ erreur: lu.erreur }, { status: 400 });
-  const stocke = await enregistrerFichier(`pieces-jointes/${q.entrepriseId}`, lu.fichier.nom, lu.fichier.mime, lu.fichier.contenu);
+  let stocke: { cle: string | null; contenu: Buffer | null };
+  try {
+    stocke = await enregistrerFichier(`pieces-jointes/${q.entrepriseId}`, lu.fichier.nom, lu.fichier.mime, lu.fichier.contenu);
+  } catch (e) {
+    return NextResponse.json({ erreur: e instanceof ErreurStockage ? e.message : "Envoi du fichier impossible." }, { status: 502 });
+  }
   const pj = await prisma.pieceJointe.create({
     data: {
       entrepriseId: q.entrepriseId, questionId: id, nom: lu.fichier.nom, mime: lu.fichier.mime, taille: lu.fichier.taille, contenu: stocke.contenu, cle: stocke.cle,

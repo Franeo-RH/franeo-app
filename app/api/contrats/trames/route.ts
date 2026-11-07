@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { enregistrerFichier } from "@/lib/stockage";
+import { enregistrerFichier, ErreurStockage } from "@/lib/stockage";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aAccesContrats } from "@/lib/droits";
@@ -32,7 +32,12 @@ export async function POST(request: NextRequest) {
   const nom = String(form?.get("nom") || lu.fichier.nom.replace(/\.docx$/i, "")).slice(0, 120);
   const n = await prisma.trameContrat.count({ where: { entrepriseId: session.entrepriseId! } });
   if (n >= 30) return NextResponse.json({ erreur: "30 modèles maximum : supprimez-en un." }, { status: 400 });
-  const stocke = await enregistrerFichier(`contrats/${session.entrepriseId}`, lu.fichier.nom, lu.fichier.mime, lu.fichier.contenu);
+  let stocke: { cle: string | null; contenu: Buffer | null };
+  try {
+    stocke = await enregistrerFichier(`contrats/${session.entrepriseId}`, lu.fichier.nom, lu.fichier.mime, lu.fichier.contenu);
+  } catch (e) {
+    return NextResponse.json({ erreur: e instanceof ErreurStockage ? e.message : "Envoi du fichier impossible." }, { status: 502 });
+  }
   const t = await prisma.trameContrat.create({ data: { entrepriseId: session.entrepriseId!, nom, champs, fichier: stocke.contenu, cle: stocke.cle, taille: lu.fichier.taille }, select: { id: true } });
   return NextResponse.json({ succes: true, id: t.id });
 }

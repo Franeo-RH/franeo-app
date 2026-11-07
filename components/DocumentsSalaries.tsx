@@ -45,15 +45,22 @@ export default function DocumentsSalaries({ salarieInitial }: { salarieInitial?:
 
   async function deposer(e: React.FormEvent) {
     e.preventDefault();
-    if (!fichier) return;
+    if (!salarieId) { setMsg({ ok: false, t: "Choisissez d'abord un salarié." }); return; }
+    if (!fichier) { setMsg({ ok: false, t: "Choisissez d'abord un fichier (bouton « Choisir un fichier »)." }); return; }
+    if (fichier.size > 4 * 1024 * 1024) { setMsg({ ok: false, t: "Fichier trop lourd : 4 Mo maximum." }); return; }
     setEnvoi(true); setMsg(null);
     const fd = new FormData();
     fd.append("salarieId", salarieId); fd.append("fichier", fichier); fd.append("type", rappelId ? (rappels.find((r) => r.id === rappelId)?.type || type) : type);
     if (rappelId) { fd.append("rappelId", rappelId); if (traiter) fd.append("traiter", "1"); }
-    const res = await fetch("/api/documents", { method: "POST", body: fd });
+    let res: Response;
+    try {
+      res = await fetch("/api/documents", { method: "POST", body: fd });
+    } catch {
+      setEnvoi(false); setMsg({ ok: false, t: "Connexion impossible : vérifiez votre réseau et réessayez." }); return;
+    }
     const d = await res.json().catch(() => ({}));
     setEnvoi(false);
-    setMsg(res.ok ? { ok: true, t: "✅ Document déposé" } : { ok: false, t: d.erreur || "Erreur" });
+    setMsg(res.ok ? { ok: true, t: "✅ Document déposé" } : { ok: false, t: d.erreur || (res.status === 413 ? "Fichier trop lourd : 4 Mo maximum." : res.status === 403 ? "Votre compte n'a pas accès aux documents : contactez FRANEO RH." : `Erreur ${res.status} : réessayez ou contactez FRANEO RH.`) });
     if (res.ok) { setFichier(null); (e.target as HTMLFormElement).reset(); charger(); }
   }
   async function supprimer(id: string) {
@@ -79,7 +86,7 @@ export default function DocumentsSalaries({ salarieInitial }: { salarieInitial?:
         <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
           <form onSubmit={deposer} className="bg-white rounded-xl shadow p-6 flex flex-col gap-3">
             <h2 className="text-lg font-bold">➕ Déposer un document</h2>
-            <input type="file" required accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.txt,.csv" onChange={(e) => setFichier(e.target.files?.[0] || null)} aria-label="Fichier" />
+            <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.txt,.csv" onChange={(e) => setFichier(e.target.files?.[0] || null)} aria-label="Fichier" />
             <label className="text-sm font-semibold">Lier à une échéance
               <select value={rappelId} onChange={(e) => setRappelId(e.target.value)} className="border rounded-lg px-3 py-2 w-full mt-1 font-normal">
                 <option value="">— Aucune —</option>
@@ -97,7 +104,7 @@ export default function DocumentsSalaries({ salarieInitial }: { salarieInitial?:
                 </select>
               </label>
             )}
-            <button type="submit" disabled={envoi || !fichier} className="bg-orange-500 text-white rounded-lg px-4 py-2 font-semibold" style={{ opacity: envoi || !fichier ? 0.6 : 1 }}>{envoi ? "Envoi…" : "Déposer"}</button>
+            <button type="submit" disabled={envoi} className="bg-orange-500 text-white rounded-lg px-4 py-2 font-semibold" style={{ opacity: envoi ? 0.6 : 1, cursor: "pointer" }}>{envoi ? "Envoi…" : "Déposer"}</button>
             {msg && <p className="text-sm font-semibold" style={{ color: msg.ok ? "#15803d" : "#b91c1c" }}>{msg.t}</p>}
             <p className="text-xs text-gray-400">Documents confidentiels : visibles uniquement par vous et FRANEO RH, jamais par le salarié. Ne déposez pas d&apos;arrêt de travail ni de document médical détaillé.</p>
           </form>

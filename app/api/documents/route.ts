@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { enregistrerFichier } from "@/lib/stockage";
+import { enregistrerFichier, ErreurStockage } from "@/lib/stockage";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
@@ -43,7 +43,12 @@ export async function POST(request: NextRequest) {
     if (!r || r.salarieId !== salarie.id) return NextResponse.json({ erreur: "Échéance introuvable" }, { status: 400 });
   }
   const type = String(form.get("type") || "AUTRE").slice(0, 40);
-  const stocke = await enregistrerFichier(`documents/${salarie.entrepriseId}`, lu.fichier.nom, lu.fichier.mime, lu.fichier.contenu);
+  let stocke: { cle: string | null; contenu: Buffer | null };
+  try {
+    stocke = await enregistrerFichier(`documents/${salarie.entrepriseId}`, lu.fichier.nom, lu.fichier.mime, lu.fichier.contenu);
+  } catch (e) {
+    return NextResponse.json({ erreur: e instanceof ErreurStockage ? e.message : "Envoi du fichier impossible." }, { status: 502 });
+  }
   const doc = await prisma.document.create({
     data: {
       salarieId: salarie.id, nom: lu.fichier.nom, type, contenu: stocke.contenu, cle: stocke.cle, mime: lu.fichier.mime, taille: lu.fichier.taille,
