@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { libelleRappel, TYPES_RAPPEL, typeDe } from "@/lib/rappels";
+import ChoixFichier from "@/components/ChoixFichier";
 
 type S = { id: string; prenom: string; nom: string; statut?: string };
 type Doc = { id: string; nom: string; type: string; dateAjout: string; mime: string | null; taille: number | null; rappelId: string | null; auteur: string | null };
@@ -61,7 +62,7 @@ export default function DocumentsSalaries({ salarieInitial }: { salarieInitial?:
     const d = await res.json().catch(() => ({}));
     setEnvoi(false);
     setMsg(res.ok ? { ok: true, t: "✅ Document déposé" } : { ok: false, t: d.erreur || (res.status === 413 ? "Fichier trop lourd : 4 Mo maximum." : res.status === 403 ? "Votre compte n'a pas accès aux documents : contactez FRANEO RH." : `Erreur ${res.status} : réessayez ou contactez FRANEO RH.`) });
-    if (res.ok) { setFichier(null); (e.target as HTMLFormElement).reset(); charger(); }
+    if (res.ok) { setFichier(null); charger(); }
   }
   async function supprimer(id: string) {
     if (!confirm("Supprimer ce document ?")) return;
@@ -86,7 +87,7 @@ export default function DocumentsSalaries({ salarieInitial }: { salarieInitial?:
         <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
           <form onSubmit={deposer} className="bg-white rounded-xl shadow p-6 flex flex-col gap-3">
             <h2 className="text-lg font-bold">➕ Déposer un document</h2>
-            <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.txt,.csv" onChange={(e) => setFichier(e.target.files?.[0] || null)} aria-label="Fichier" />
+            <ChoixFichier accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.txt,.csv" fichiers={fichier ? [fichier] : []} onChange={(l) => { setFichier(l[0] || null); setMsg(null); }} texte="1. Choisir le document" />
             <label className="text-sm font-semibold">Lier à une échéance
               <select value={rappelId} onChange={(e) => setRappelId(e.target.value)} className="border rounded-lg px-3 py-2 w-full mt-1 font-normal">
                 <option value="">— Aucune —</option>
@@ -104,7 +105,7 @@ export default function DocumentsSalaries({ salarieInitial }: { salarieInitial?:
                 </select>
               </label>
             )}
-            <button type="submit" disabled={envoi} className="bg-orange-500 text-white rounded-lg px-4 py-2 font-semibold" style={{ opacity: envoi ? 0.6 : 1, cursor: "pointer" }}>{envoi ? "Envoi…" : "Déposer"}</button>
+            <button type="submit" disabled={envoi} className="bg-orange-500 text-white rounded-lg px-4 py-2 font-semibold" style={{ opacity: envoi ? 0.6 : 1, cursor: "pointer" }}>{envoi ? "Envoi…" : "2. Déposer le document"}</button>
             {msg && <p className="text-sm font-semibold" style={{ color: msg.ok ? "#15803d" : "#b91c1c" }}>{msg.t}</p>}
             <p className="text-xs text-gray-400">Documents confidentiels : visibles uniquement par vous et FRANEO RH, jamais par le salarié. Ne déposez pas d&apos;arrêt de travail ni de document médical détaillé.</p>
           </form>

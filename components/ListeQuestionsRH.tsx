@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import FilMessages from "@/components/FilMessages";
+import ChoixFichier from "@/components/ChoixFichier";
 import { REPONSE_TICKET, STATUTS_QUESTION, type QuestionVue } from "@/lib/questions-rh";
 import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
@@ -89,9 +90,9 @@ export default function ListeQuestionsRH({ admin = false, mode = "liste" }: { ad
           <h2 className="text-xl font-bold">➕ Poser une question</h2>
           <input value={nouvelle.sujet} onChange={(e) => setNouvelle({ ...nouvelle, sujet: e.target.value })} maxLength={120} placeholder="Sujet (ex : jour férié, durée du préavis…)" className="border rounded-lg px-4 py-3" aria-label="Sujet" />
           <textarea value={nouvelle.contenu} onChange={(e) => setNouvelle({ ...nouvelle, contenu: e.target.value })} required maxLength={3000} rows={3} placeholder="Votre question…" className="border rounded-lg px-4 py-3" aria-label="Question" />
-          <label className="text-sm font-semibold">📎 Pièces jointes (facultatif, 5 fichiers, 4 Mo chacun)
-            <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.txt,.csv" onChange={(e) => setFichiers(Array.from(e.target.files || []).slice(0, 5))} className="block mt-1 font-normal" />
-          </label>
+          <div className="text-sm font-semibold">Pièces jointes (facultatif, 5 fichiers, 4 Mo chacun)
+            <div className="mt-1 font-normal"><ChoixFichier multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.txt,.csv" fichiers={fichiers} onChange={(l) => setFichiers(l.slice(0, 5))} texte="Ajouter des pièces jointes" /></div>
+          </div>
           <div className="flex justify-between items-center gap-3 flex-wrap">
             <p className="text-sm font-semibold" style={{ color: retour?.ok ? "#15803d" : "#b91c1c" }}>{retour?.texte}</p>
             <button type="submit" disabled={envoi || !nouvelle.contenu.trim()} style={{ background: "#f97316", color: "#ffffff", border: "none", borderRadius: "10px", padding: "12px 20px", fontWeight: 700, cursor: "pointer", opacity: envoi || !nouvelle.contenu.trim() ? 0.5 : 1 }}>
@@ -140,7 +141,7 @@ export default function ListeQuestionsRH({ admin = false, mode = "liste" }: { ad
                     </div>
                   )}
                   {q.statut !== "CLOSE" && (
-                    <label className="text-xs text-gray-600 mt-2 inline-flex items-center gap-2 cursor-pointer">📎 Joindre un fichier
+                    <label className="text-sm font-semibold mt-2 inline-flex items-center gap-2 cursor-pointer border-2 border-orange-300 text-orange-700 bg-orange-50 rounded-lg px-3 py-1">📎 Joindre un fichier
                       <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.doc,.docx,.xls,.xlsx,.txt,.csv" onChange={async (e) => { const f = Array.from(e.target.files || []); if (f.length) { const err = await joindre(q.id, f); if (err.length) alert(err.join("\n")); charger(); } e.target.value = ""; }} />
                     </label>
                   )}

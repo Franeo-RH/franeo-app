@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import ChoixFichier from "@/components/ChoixFichier";
 import { CHAMPS_CONTRAT, champsDuTexte, formaterValeur, GROUPES_CONTRAT, libelleChamp, type ChampContrat } from "@/lib/contrats";
 
 type Trame = { id: string; nom: string; champs: string[]; taille: number; createdAt: string };
@@ -188,7 +189,7 @@ export default function ContratsClient() {
 
           <div className={`${carte} flex flex-col gap-3`}>
             <h2 className="text-lg font-bold">➕ Importer mon modèle Word</h2>
-            <input type="file" accept=".docx" disabled={occupe} onChange={(e) => { const f = e.target.files?.[0]; if (f) deposerModele(f); e.target.value = ""; }} aria-label="Modèle Word" />
+            <ChoixFichier accept=".docx" disabled={occupe} fichiers={[]} onChange={(l) => { if (l[0]) deposerModele(l[0]); }} texte="Choisir mon modèle Word (.docx)" />
             <button type="button" onClick={() => setAide(!aide)} className="text-sm text-orange-600 font-semibold text-left">{aide ? "▾" : "▸"} Comment préparer mon modèle ?</button>
             {aide && (
               <div className="text-sm text-gray-700 flex flex-col gap-2">
