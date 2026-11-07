@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { lireFichierStocke, supprimerFichierStocke } from "@/lib/stockage";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
@@ -17,9 +18,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params;
   const { session, doc } = await charger(id);
   if (!session) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
-  if (!doc || !doc.contenu) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
+  const contenu = doc ? await lireFichierStocke(doc) : null;
+  if (!doc || !contenu) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
   const enLigne = request.nextUrl.searchParams.get("voir") === "1" && /^(application\/pdf|image\/)/.test(doc.mime || "");
-  return telecharger(doc.contenu, doc.nom, doc.mime || "application/octet-stream", enLigne);
+  return telecharger(contenu, doc.nom, doc.mime || "application/octet-stream", enLigne);
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -28,5 +30,6 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   if (!session) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   if (!doc) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
   await prisma.document.delete({ where: { id } });
+  await supprimerFichierStocke(doc.cle);
   return NextResponse.json({ succes: true });
 }

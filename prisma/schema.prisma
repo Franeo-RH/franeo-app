@@ -271,6 +271,8 @@ model Document {
   dateAjout   DateTime @default(now())
   // Fichier déposé par le client (stocké dans la base), éventuellement lié à une échéance
   contenu     Bytes?
+  // clé du fichier sur OVH Object Storage (si le stockage OVH est configuré)
+  cle         String?
   mime        String?
   taille      Int?
   rappelId    String?
@@ -858,7 +860,8 @@ model PieceJointe {
   nom          String
   mime         String
   taille       Int
-  contenu      Bytes
+  contenu      Bytes?
+  cle          String?
   auteur       String
   role         String
   createdAt    DateTime   @default(now())
@@ -873,7 +876,8 @@ model TrameContrat {
   entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
   nom          String
   champs       String[]
-  fichier      Bytes
+  fichier      Bytes?
+  cle          String?
   taille       Int
   createdAt    DateTime   @default(now())
 
