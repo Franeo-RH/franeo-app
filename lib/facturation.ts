@@ -3,6 +3,7 @@
 // aux estimations des dashboards et à la page « Prestations supplémentaires ». Une seule règle, partout.
 
 import { prisma } from "@/lib/prisma";
+import { PRIX_OPTION_PROJETS } from "@/lib/projets-constantes";
 import { categorieRecrutement, LANCEMENT_RECRUTEMENT } from "@/lib/recrutement";
 
 type FormuleRH = { nom: string; prixMensuel: number; salariesInclus: number; prixSalarieSupp: number; ticketsRH: number; prixTicketSupp: number } | null;
@@ -52,7 +53,7 @@ export async function ticketsDuMoisParEntreprise(mois: number, annee: number, en
 
 export type ResultatFacture = { montant: number; details: string[] };
 
-export type CategorieLigne = "ABONNEMENT" | "SALARIES" | "BULLETINS" | "ARRIVEES" | "SORTIES" | "ESPACE_SALARIE" | "PRESTATION" | "TICKETS" | "RECRUTEMENT";
+export type CategorieLigne = "ABONNEMENT" | "OPTION" | "SALARIES" | "BULLETINS" | "ARRIVEES" | "SORTIES" | "ESPACE_SALARIE" | "PRESTATION" | "TICKETS" | "RECRUTEMENT";
 
 export type LigneFacture = {
   categorie: CategorieLigne;
@@ -67,6 +68,7 @@ export type LigneFacture = {
 
 export const LIBELLES_CATEGORIE: Record<CategorieLigne, string> = {
   ABONNEMENT: "Abonnement",
+  OPTION: "Option",
   SALARIES: "Salariés supplémentaires",
   BULLETINS: "Bulletins supplémentaires",
   ARRIVEES: "Arrivées",
@@ -146,6 +148,11 @@ export async function lignesFacture(entrepriseId: string, mois: number, annee: n
   }
 
   // Espace salarié : inclus dans toutes les formules (plus de supplément)
+
+  // ── Options ──
+  if ((entreprise.permissions || []).includes("projets") && !entreprise.demo) {
+    ajouter({ categorie: "OPTION", libelle: "Option Projets, planning & rentabilité", quantite: 1, prixUnitaire: PRIX_OPTION_PROJETS });
+  }
 
   // ── Prestations commandées dans le mois (non annulées) ──
   for (const pr of prestations) {

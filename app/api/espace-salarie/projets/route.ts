@@ -27,5 +27,23 @@ export async function GET() {
     responsable: a.projet.responsable ? `${a.projet.responsable.prenom} ${a.projet.responsable.nom}` : null,
     heuresMois: arrondi(mesHeures.filter((h) => h.projetId === a.projet.id).reduce((t, h) => t + h.heures, 0), 1),
   }));
-  return NextResponse.json({ projets, semaines });
+  // Planning prévisionnel de la semaine en cours, jour par jour (du lundi au vendredi), avec les absences
+  const vendredi = new Date(l0.getTime() + 4 * 86400000 + 86399000);
+  const absences = await prisma.absence.findMany({
+    where: { salarieId: s.salarie.id, statut: { not: "Refusé" }, dateDebut: { lte: vendredi }, dateFin: { gte: l0 } },
+    select: { type: true, statut: true, dateDebut: true, dateFin: true },
+  });
+  const semaine = Array.from({ length: 5 }, (_, k) => {
+    const j = new Date(l0.getTime() + k * 86400000), iso = jourISO(j);
+    const abs = absences.find((x) => jourISO(x.dateDebut) <= iso && iso <= jourISO(x.dateFin));
+    return {
+      jour: iso,
+      absence: abs ? { type: abs.type, enAttente: /attente/i.test(abs.statut) } : null,
+      projets: affectations
+        .filter((a) => jourISO(a.du) <= iso && iso <= jourISO(a.au))
+        .map((a) => ({ nom: a.projet.nom, code: a.projet.code, couleur: a.projet.couleur, heures: arrondi(a.heuresSemaine / 5, 1), role: a.role })),
+    };
+  });
+
+  return NextResponse.json({ projets, semaines, semaine });
 }

@@ -12,7 +12,7 @@ export const MODULES = [
   { id: "helpdesk", label: "🆘 Helpdesk" },
   { id: "entreprise", label: "🏢 Mon entreprise (infos, abonnements, factures)" },
   { id: "espace-salaries", label: "📱 Espace salarié (inclus dans toutes les formules)" },
-  { id: "projets", label: "📐 Projets, planning & rentabilité (option · 🚧 en cours de développement)" },
+  { id: "projets", label: "📐 Projets, planning & rentabilité (option 29 € HT/mois · 🚧 en cours de développement)" },
 ] as const;
 
 export const ACTIONS = [

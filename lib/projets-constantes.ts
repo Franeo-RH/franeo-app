@@ -1,5 +1,8 @@
 // Constantes de l'option Projets, utilisables côté navigateur (sans accès à la base)
 
+/** Prix de l'option Projets, planning & rentabilité (HT, par mois et par entreprise) */
+export const PRIX_OPTION_PROJETS = 29;
+
 export const STATUTS_PROJET = {
   PREVU: { label: "Prévu", couleur: "#6b7280" },
   EN_COURS: { label: "En cours", couleur: "#2563eb" },

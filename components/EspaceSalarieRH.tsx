@@ -7,6 +7,7 @@ import RelevesEquipe from "@/components/RelevesEquipe";
 import BadgeSalarie from "@/components/BadgeSalarie";
 import HistoriqueBadge from "@/components/HistoriqueBadge";
 import MesProjetsSalarie from "@/components/MesProjetsSalarie";
+import PlanningSemaineSalarie from "@/components/PlanningSemaineSalarie";
 import EtiquettesTableaux from "@/components/EtiquettesTableaux";
 import TableauPresences from "@/components/TableauPresences";
 import BoutonTheme from "@/components/BoutonTheme";
@@ -260,7 +261,7 @@ export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, p
   type Rubrique = { id: string; label: string; icone: string; badge?: number; contenu: React.ReactNode };
   type Module = { id: string; label: string; logo: string; badge?: number; rubriques: Rubrique[] };
   const modules: Module[] = [
-    { id: "accueil", label: "Dashboard", logo: "/DASHBOARD-LOGO.png", rubriques: [{ id: "accueil", label: "Tableau de bord", icone: "📊", contenu: <>{avecBadge && <BadgeSalarie compact />}{accueil}{avecBadge && <HistoriqueBadge />}{blocOrga}</> }] },
+    { id: "accueil", label: "Dashboard", logo: "/DASHBOARD-LOGO.png", rubriques: [{ id: "accueil", label: "Tableau de bord", icone: "📊", contenu: <>{avecBadge && <BadgeSalarie compact />}{avecProjets && <PlanningSemaineSalarie />}{accueil}{avecBadge && <HistoriqueBadge />}{blocOrga}</> }] },
     ...(avecBadge ? [{ id: "badge", label: "Badge", logo: "/TICKET-LOGO.png", rubriques: [{ id: "badge", label: "Pointer", icone: "📍", contenu: <BadgeSalarie /> }, { id: "badge-historique", label: "Mon historique", icone: "🕓", contenu: <HistoriqueBadge /> }, ...(avecProjets ? [{ id: "badge-projets", label: "Mes projets", icone: "📐", contenu: <MesProjetsSalarie /> }] : [])] }] : []),
     ...(valideur ? [{
       id: "equipe", label: "Mon équipe", logo: "/SALARIE-LOGO.png", badge: nbAValider, rubriques: [

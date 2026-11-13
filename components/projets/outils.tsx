@@ -14,7 +14,7 @@ export const couleurMarge = (t: number | null | undefined) => (t == null ? "#6b7
 export function BandeauDev() {
   return (
     <div className="rounded-xl p-4 text-sm" style={{ background: "#fff7ed", border: "1px solid #fdba74", color: "#9a3412" }}>
-      🚧 <strong>Option Projets, planning & rentabilité : en cours de développement.</strong> Les calculs sont des estimations de pilotage (coût horaire chargé = salaire × charges, ou coût standard). Vos retours nous aident à finaliser le module : écrivez-nous depuis le Helpdesk.
+      🚧 <strong>Option Projets, planning & rentabilité (29 € HT/mois) : en cours de développement.</strong> Les calculs sont des estimations de pilotage (coût horaire chargé = salaire × charges, ou coût standard). Vos retours nous aident à finaliser le module : écrivez-nous depuis le Helpdesk.
     </div>
   );
 }
