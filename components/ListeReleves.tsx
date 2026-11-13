@@ -1,5 +1,6 @@
 "use client";
 
+import { telechargerExcel } from "@/components/telechargerExcel";
 import { useCallback, useEffect, useState } from "react";
 import CalendrierReleve from "@/components/CalendrierReleve";
 import { fmtH, NOMS_MOIS, STATUTS_RELEVE, type AbsenceReleve, type JourReleve } from "@/lib/heures";
@@ -81,11 +82,7 @@ export default function ListeReleves({ admin = false }: { admin?: boolean }) {
         String(r.jours.reduce((a, j) => a + (j.heures || 0), 0)).replace(".", ","), String(r.jours.reduce((a, j) => a + j.heuresSupp, 0)).replace(".", ","),
         r.commentaire || "", r.valideePar || ""]);
     }
-    const csv = "\ufeff" + lignes.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    a.download = "releves.csv";
-    a.click();
+    void telechargerExcel("releves-heures", lignes[0].map(String), lignes.slice(1));
   }
 
   const btn = (fond: string): React.CSSProperties => ({ background: fond, color: "#ffffff", border: "none", borderRadius: "8px", padding: "8px 14px", fontSize: "14px", fontWeight: 700, cursor: "pointer", opacity: occupe ? 0.6 : 1 });

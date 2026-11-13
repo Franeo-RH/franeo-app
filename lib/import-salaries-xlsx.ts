@@ -31,7 +31,9 @@ export async function lireFichierExcel(contenu: ArrayBuffer | Buffer): Promise<u
     for (let c = 1; c <= nbCol; c++) cellules.push(valeurCellule(row.getCell(c).value));
     lignes.push(cellules);
   }
-  return lignes;
+  // Modèles avec en-tête FRANEO RH (logos) : on commence à la ligne des titres de colonnes
+  const debut = lignes.findIndex((l) => l.filter((v) => v !== null && v !== undefined && String(v).trim() !== "").length >= 2);
+  return debut > 0 ? lignes.slice(debut) : lignes;
 }
 
 const VERT = "FF1F6F5C";

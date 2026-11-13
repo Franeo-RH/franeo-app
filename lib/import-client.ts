@@ -2,6 +2,7 @@
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { permissionsFormule, niveauRH } from "@/lib/droits";
+import { indexLigneTitres } from "@/lib/excel-marque";
 
 const ENTREPRISE: [string, string][] = [
   ["Nom de l'entreprise *", "Ma Société SAS"], ["SIRET", "12345678900012"], ["E-mail", "contact@masociete.fr"], ["Téléphone", "03 83 00 00 00"],
@@ -76,12 +77,14 @@ export async function importerClient(contenu: ArrayBuffer): Promise<{ crees: num
   });
 
   // Salariés
-  const lignes = XLSX.utils.sheet_to_json<Record<string, unknown>>(feuille("Salariés", 1), { defval: "" });
+  const fs = feuille("Salariés", 1);
+  const debut = indexLigneTitres(XLSX.utils.sheet_to_json<unknown[]>(fs, { header: 1, defval: "" }));
+  const lignes = XLSX.utils.sheet_to_json<Record<string, unknown>>(fs, { defval: "", range: debut });
   const col = (l: Record<string, unknown>, debut: string) => { const k = Object.keys(l).find((x) => norm(x).startsWith(norm(debut))); return k ? l[k] : ""; };
   const matricules = new Set<string>();
   let crees = 0;
   for (const [i, l] of lignes.entries()) {
-    const n = i + 2;
+    const n = i + debut + 2;
     const nomS = txt(col(l, "Nom")), prenom = txt(col(l, "Prénom")), poste = txt(col(l, "Poste"));
     if (!nomS && !prenom) continue;
     if (!nomS || !prenom || !poste) { erreurs.push({ ligne: n, raison: "Nom, prénom et poste sont obligatoires" }); continue; }

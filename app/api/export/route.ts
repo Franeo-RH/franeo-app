@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { brander, reponseExcel } from "@/lib/excel-marque";
 import * as XLSX from "xlsx";
 import { quotaTickets, ticketsDuMois, ticketsDuMoisParEntreprise } from "@/lib/facturation";
 import { aDroit } from "@/lib/droits";
@@ -295,12 +296,7 @@ export async function GET(request: NextRequest) {
     }
 
     const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="paie-historique.xlsx"`,
-      },
-    });
+    return reponseExcel(await brander(buffer, { entrepriseId: (session as { entrepriseId?: string | null }).entrepriseId ?? null }), "paie-historique");
 
     } else if (type === "tickets-facturation" && session.role === "ADMIN") {
   const entreprises = await prisma.entreprise.findMany({
@@ -574,11 +570,5 @@ export async function GET(request: NextRequest) {
   const ws = XLSX.utils.json_to_sheet(data);
   XLSX.utils.book_append_sheet(wb, ws, "Export");
   const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-
-  return new NextResponse(buffer, {
-    headers: {
-      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="${nomFichier}.xlsx"`,
-    },
-  });
+  return reponseExcel(await brander(buffer, { entrepriseId: (session as { entrepriseId?: string | null }).entrepriseId ?? null }), nomFichier);
 }

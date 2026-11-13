@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { excelDepuisLignes, reponseExcel } from "@/lib/excel-marque";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
@@ -27,8 +28,7 @@ export async function GET(request: NextRequest) {
       `${x.salarie.prenom} ${x.salarie.nom}`, TYPES_POINTAGE[x.type as keyof typeof TYPES_POINTAGE]?.label ?? x.type,
       x.adresse ?? "",
     ])];
-    const csv = "﻿" + lignes.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
-    return new NextResponse(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="pointages-${p.get("du")}-${p.get("au")}.csv"` } });
+    return reponseExcel(await excelDepuisLignes("Pointages", lignes, { entrepriseId: session.entrepriseId }), `pointages-${p.get("du")}-${p.get("au")}`);
   }
 
   const aujourdhui = jourParis();

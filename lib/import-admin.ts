@@ -2,6 +2,7 @@
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { TYPES_RAPPEL } from "@/lib/rappels";
+import { indexLigneTitres } from "@/lib/excel-marque";
 
 export const MODELES_IMPORT: Record<string, { titre: string; colonnes: string[]; exemple: (string | number)[] }> = {
   absences: {
@@ -64,14 +65,16 @@ export function modeleXlsx(jeu: string): Buffer {
 export async function importer(jeu: string, contenu: ArrayBuffer): Promise<{ crees: number; erreurs: { ligne: number; raison: string }[] }> {
   const wb = XLSX.read(contenu, { type: "array", cellDates: true });
   const ws = wb.Sheets[wb.SheetNames[0]];
-  const lignes = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
+  // La ligne des titres est retrouvée automatiquement (les modèles commencent par l'en-tête FRANEO RH)
+  const debut = indexLigneTitres(XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" }));
+  const lignes = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "", range: debut });
   const entreprises = await prisma.entreprise.findMany({ where: { demo: false }, select: { id: true, nom: true } });
   const salaries = await prisma.salarie.findMany({ where: { entreprise: { demo: false } }, select: { id: true, entrepriseId: true, nom: true, prenom: true, matricule: true } });
 
   const erreurs: { ligne: number; raison: string }[] = [];
   let crees = 0;
   for (const [i, l] of lignes.entries()) {
-    const n = i + 2;
+    const n = i + debut + 2;
     const ent = entreprises.find((e) => norm(e.nom) === norm(l["Entreprise"]));
     if (!ent) { erreurs.push({ ligne: n, raison: `Entreprise « ${l["Entreprise"]} » introuvable` }); continue; }
     const sal = salaries.find((s) => s.entrepriseId === ent.id && l["Matricule"] && norm(s.matricule) === norm(l["Matricule"]))

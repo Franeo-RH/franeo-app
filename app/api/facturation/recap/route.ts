@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { excelDepuisLignes, reponseExcel } from "@/lib/excel-marque";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
@@ -23,8 +24,5 @@ export async function GET(request: NextRequest) {
   const paye = f.filter((x) => x.statut === "Payé").reduce((a, x) => a + x.montant, 0);
   lignes.push([], ["Total facturé", "", total.toFixed(2).replace(".", ",")], ["Dont payé", "", paye.toFixed(2).replace(".", ",")], ["Reste à payer", "", (total - paye).toFixed(2).replace(".", ",")]);
   lignes.push([], [`${session.entreprise?.nom ?? ""} — récapitulatif édité le ${new Date().toLocaleDateString("fr-FR")} — TVA non applicable, art. 293 B du CGI`]);
-  const csv = "﻿" + lignes.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
-  return new NextResponse(csv, {
-    headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="recapitulatif-factures${annee ? `-${annee}` : ""}.csv"` },
-  });
+  return reponseExcel(await excelDepuisLignes("Factures", lignes, { entrepriseId: session.entrepriseId }), `recapitulatif-factures${annee ? `-${annee}` : ""}`);
 }

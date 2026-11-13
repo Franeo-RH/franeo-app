@@ -108,9 +108,16 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
           ))}
         </div>
 
-        <div className="fr-nav-profil">
-          <span className="fr-nav-prenom">{nom || " "}</span>
-          {profil}
+        <div className="fr-nav-droite">
+          <div className="fr-nav-profil">
+            <span className="fr-nav-prenom">{nom || " "}</span>
+            {profil}
+          </div>
+          {/* Logo du client (Mon entreprise › Logo) */}
+          {role === "CLIENT" && moi?.logoVersion && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={`/api/entreprises/logo?v=${moi.logoVersion}`} alt="Logo de l'entreprise" className="fr-nav-logo-client" />
+          )}
         </div>
 
         {/* Téléphone : bouton menu */}

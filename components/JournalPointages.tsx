@@ -1,5 +1,6 @@
 "use client";
 
+import { telechargerExcel } from "@/components/telechargerExcel";
 import { useCallback, useEffect, useState } from "react";
 
 type E = { id: string; at: string; jour: string; type: string; adresse: string | null; salarie: { prenom: string; nom: string }; entreprise: string };
@@ -31,8 +32,7 @@ export default function JournalPointages({ admin = false }: { admin?: boolean })
       e.jour.split("-").reverse().join("/"), new Date(e.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), ...(admin ? [e.entreprise] : []),
       `${e.salarie.prenom} ${e.salarie.nom}`, (LIB[e.type] || e.type).replace(/^\S+ /, ""), e.adresse ?? "",
     ])];
-    const csv = "﻿" + l.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); a.download = `journal-pointages-${du}-${au}.csv`; a.click();
+    void telechargerExcel(`journal-pointages-${du}-${au}`, l[0].map(String), l.slice(1));
   }
   const chp = "border rounded-lg px-3 py-2 text-sm";
 

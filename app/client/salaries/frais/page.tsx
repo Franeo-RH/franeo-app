@@ -1,5 +1,6 @@
 "use client";
 
+import { telechargerExcel } from "@/components/telechargerExcel";
 import { useCallback, useEffect, useState } from "react";
 import CadreClient from "@/components/CadreClient";
 
@@ -31,8 +32,7 @@ export default function PageFrais() {
   }
   function extraire() {
     const l = [["Salarié", "Date", "Montant (€)", "Motif", "Statut", "Traité par"], ...liste.map((f) => [`${f.salarie.prenom} ${f.salarie.nom}`, new Date(f.date).toLocaleDateString("fr-FR"), String(f.montant).replace(".", ","), f.motif, f.statut, f.traitePar || ""])];
-    const csv = "﻿" + l.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); a.download = "notes-de-frais.csv"; a.click();
+    void telechargerExcel("notes-de-frais", l[0].map(String), l.slice(1));
   }
   const total = liste.reduce((a, f) => a + f.montant, 0);
 

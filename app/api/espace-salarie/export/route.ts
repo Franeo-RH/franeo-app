@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { excelDepuisLignes, reponseExcel } from "@/lib/excel-marque";
 import { prisma } from "@/lib/prisma";
 import { getSessionSalarie } from "@/lib/session";
 import { contexteHierarchie } from "@/lib/hierarchie";
@@ -35,7 +36,6 @@ export async function GET(request: NextRequest) {
     lignes = [["Salarié", "Type", "Du", "Au", "Statut", "Commentaire"]];
     for (const x of a) lignes.push([`${x.salarie.prenom} ${x.salarie.nom}`, LIBELLES_ABSENCE[x.type] || x.type, fr(x.dateDebut), fr(x.dateFin), x.statut, x.commentaire]);
   }
-  return new NextResponse(csv(lignes), {
-    headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="equipe-${type}.csv"` },
-  });
+  void csv;
+  return reponseExcel(await excelDepuisLignes(`Équipe ${type}`, lignes, { entrepriseId: s.utilisateur.entrepriseId }), `equipe-${type}`);
 }

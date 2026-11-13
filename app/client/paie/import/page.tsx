@@ -1,5 +1,6 @@
 "use client";
 
+import { telechargerExcel } from "@/components/telechargerExcel";
 import { useState } from "react";
 import CadreClient from "@/components/CadreClient";
 import { NOMS_MOIS } from "@/lib/heures";
@@ -35,7 +36,11 @@ export default function ImportVariables() {
   async function lireFichier(f: File) {
     const XLSX = await import("xlsx");
     const wb = XLSX.read(await f.arrayBuffer());
-    const brut = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    // Les modèles commencent par l'en-tête FRANEO RH : on part de la ligne des titres de colonnes
+    const tout = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" });
+    const debut = Math.max(0, tout.findIndex((r) => r.filter((v) => String(v ?? "").trim() !== "").length >= 2));
+    const brut = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "", range: debut });
     const l = normaliser(brut);
     setLignes(l); setApercu(null); setMsg({ ok: true, t: `${l.length} ligne(s) lue(s) dans ${f.name}` });
   }
@@ -47,10 +52,7 @@ export default function ImportVariables() {
     setLignes(l); setApercu(null); setMsg({ ok: true, t: `${l.length} ligne(s) lue(s)` });
   }
   async function modele() {
-    const XLSX = await import("xlsx");
-    const ws = XLSX.utils.aoa_to_sheet([["Matricule", "Nom", "Prénom", "Type", "Valeur", "Commentaire"], ["001", "DUPONT", "Marie", "HS", 4, "Inventaire"], ["", "MARTIN", "Paul", "PRIME", 150, "Prime exceptionnelle"]]);
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Variables");
-    XLSX.writeFile(wb, "modele-import-variables.xlsx");
+    await telechargerExcel("modele-import-variables", ["Matricule", "Nom", "Prénom", "Type", "Valeur", "Commentaire"], [["001", "DUPONT", "Marie", "HS", 4, "Inventaire"], ["", "MARTIN", "Paul", "PRIME", 150, "Prime exceptionnelle"]]);
   }
   async function envoyer(valider: boolean) {
     setOccupe(true);

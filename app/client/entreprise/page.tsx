@@ -7,6 +7,7 @@ import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import GestionEtablissements from "@/components/GestionEtablissements";
 import AvantagesEntreprise from "@/components/AvantagesEntreprise";
+import LogoEntreprise from "@/components/LogoEntreprise";
 import { aDroit } from "@/lib/droits";
 
 export default async function EntrepriseClient() {
@@ -93,6 +94,7 @@ export default async function EntrepriseClient() {
             </div>
 
             <GestionEtablissements modifiable={aDroit(session.entreprise?.permissions, "entreprise.modifier")} />
+            <LogoEntreprise modifiable={aDroit(session.entreprise?.permissions, "entreprise.modifier")} />
             <AvantagesEntreprise modifiable={aDroit(session.entreprise?.permissions, "entreprise.modifier")} />
           </div>
 

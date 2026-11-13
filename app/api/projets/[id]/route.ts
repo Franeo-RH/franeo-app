@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { excelDepuisLignes, reponseExcel } from "@/lib/excel-marque";
 import { prisma } from "@/lib/prisma";
 import { accesProjets, lire, lireProjet } from "@/lib/projets-serveur";
 import { retirerJoursAbsence } from "@/lib/projets-planning";
@@ -23,13 +24,13 @@ export async function GET(request: NextRequest, { params }: Ctx) {
     const noms = new Map(p.synthese.parSalarie.map((l) => [l.salarieId, { nom: l.salarie, cout: l.coutHoraire }]));
     const lignes = (await heuresDatees([id])).sort((x, y) => x.jour.localeCompare(y.jour));
     const entete = ["Date", "Salarié", "Heures", "Source", "Commentaire", ...(a.voitCouts ? ["Coût (€)"] : [])];
-    const csv = "\uFEFF" + [entete, ...lignes.map((l) => {
+    const tableau = [entete, ...lignes.map((l) => {
       const n = noms.get(l.salarieId);
       return [l.jour.split("-").reverse().join("/"), n?.nom ?? "", String(l.heures).replace(".", ","), l.source, l.commentaire ?? "",
         ...(a.voitCouts ? [n?.cout ? String(Math.round(l.heures * n.cout * 100) / 100).replace(".", ",") : ""] : [])];
-    })].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
+    })];
     const nomFichier = (p.code || p.nom).replace(/[^a-z0-9-]+/gi, "-").slice(0, 40);
-    return new NextResponse(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="temps-${nomFichier}.csv"` } });
+    return reponseExcel(await excelDepuisLignes(`Temps ${p.nom}`, tableau, { entrepriseId: a.entrepriseId }), `temps-${nomFichier}`);
   }
 
   const [salaries, entreprise, fraisLibres] = await Promise.all([

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { getSession } from "@/lib/session";
+import { brander, reponseExcel } from "@/lib/excel-marque";
 import { feuilles, JEUX } from "@/lib/export-complet";
 
 export const dynamic = "force-dynamic";
@@ -29,10 +30,5 @@ export async function GET(request: NextRequest) {
   }
   const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
   const date = new Date().toISOString().slice(0, 10);
-  return new NextResponse(buffer, {
-    headers: {
-      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="franeo-${jeu}-${date}.xlsx"`,
-    },
-  });
+  return reponseExcel(await brander(buffer, { entrepriseId: p.get("entrepriseId") || p.get("entreprise") }), `franeo-${jeu}-${date}`);
 }

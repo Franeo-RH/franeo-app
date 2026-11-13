@@ -49,6 +49,7 @@ model Entreprise {
 
   permissions       String[]           @default(["salaries", "paie", "tickets", "absences", "entreprise", "helpdesk"])
   // Indicateurs RH : budgets annuels (facultatifs)
+  logoClient        LogoEntreprise?
   // Avantages versés chaque mois : tickets restaurant (valeur, part patronale), panier repas (montant/jour), autres (libellés)
   avantages         Json?
   budgetPrimesAnnuel    Float?
@@ -1149,4 +1150,15 @@ model FactureProjet {
   @@unique([entrepriseId, numero])
   @@index([projetId])
   @@index([entrepriseId, statut])
+}
+
+// Logo du client (image PNG en data URL, redimensionnée à l'envoi) : barre du haut et fichiers Excel.
+// Dans une table à part pour ne pas alourdir la lecture de l'entreprise à chaque page.
+model LogoEntreprise {
+  entrepriseId String     @id
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  data         String
+  largeur      Int
+  hauteur      Int
+  updatedAt    DateTime   @updatedAt
 }

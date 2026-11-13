@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { excelDepuisLignes, reponseExcel } from "@/lib/excel-marque";
 import { prisma } from "@/lib/prisma";
 import { accesProjets, lireProjet } from "@/lib/projets-serveur";
 import { masquerCouts, projetsAvecSynthese, STATUTS_PROJET } from "@/lib/projets";
@@ -24,8 +25,7 @@ export async function GET(request: NextRequest) {
       if (a.voitCouts) l.push(e(s.vendu), e(s.budgetTotal), e(s.coutReel), e(s.margeReelle), e(s.tauxMargeReelle), e(s.projectionCout), e(s.tauxProjection), e(s.consommation));
       return l;
     })];
-    const csv = "﻿" + lignes.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
-    return new NextResponse(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="projets-${new Date().toISOString().slice(0, 10)}.csv"` } });
+    return reponseExcel(await excelDepuisLignes("Projets", lignes, { entrepriseId: a.entrepriseId }), `projets-${new Date().toISOString().slice(0, 10)}`);
   }
   return NextResponse.json({ projets, voitCouts: a.voitCouts, peutGerer: a.peutGerer });
 }

@@ -12,6 +12,7 @@ import SelectAbonnementPaieEntreprise from "@/components/SelectAbonnementPaieEnt
 import ChampTauxCharges from "@/components/ChampTauxCharges";
 import GestionDroits from "@/components/GestionDroits";
 import AvantagesEntreprise from "@/components/AvantagesEntreprise";
+import LogoEntreprise from "@/components/LogoEntreprise";
 
 export const dynamic = "force-dynamic";
 
@@ -136,6 +137,7 @@ export default async function FicheEntrepriseAdmin({
             </div>
 
             <AvantagesEntreprise entrepriseId={id} />
+            <LogoEntreprise entrepriseId={id} />
 
             <div className="bg-white rounded-xl shadow p-6">
               <h2 className="text-lg font-bold mb-4">👤 Accès client</h2>

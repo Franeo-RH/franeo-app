@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { lireFiltres } from "@/lib/indicateurs-acces";
+import { brander, excelDepuisLignes, reponseExcel } from "@/lib/excel-marque";
 import { calculerIndicateurs, lignesDetail, paginer, VUES, type Vue } from "@/lib/indicateurs-rh";
 
 export const dynamic = "force-dynamic";
@@ -34,11 +35,11 @@ export async function GET(request: NextRequest) {
     ["Heures de formation", ind.trainings.heures], ["Coût formation (€)", ind.trainings.cout], ["Budget formation (€)", v(ind.trainings.budget)], ["Consommation budget formation (%)", v(ind.trainings.tauxConsommation)],
   ];
   const date = new Date().toISOString().slice(0, 10);
+  const entrepriseDesFiltres = r.filtres.entreprises.length === 1 ? r.filtres.entreprises[0] : null;
 
   if (format === "csv") {
-    const cell = (x: unknown) => { const t = String(x ?? "").replace(".", ","); return /[;"\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
-    const txt = "﻿" + [cols.map((c) => c.label), ...lignes.map((l) => cols.map((c) => l[c.cle] ?? ""))].map((r2) => r2.map(cell).join(";")).join("\r\n");
-    return new NextResponse(txt, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="indicateurs-rh-${vue}-${date}.csv"` } });
+    // Export simple du détail : fichier Excel avec logos
+    return reponseExcel(await excelDepuisLignes(VUES[vue], [cols.map((c) => c.label), ...lignes.map((l) => cols.map((c) => l[c.cle] ?? ""))], { entrepriseId: entrepriseDesFiltres }), `indicateurs-rh-${vue}-${date}`);
   }
 
   const wb = XLSX.utils.book_new();
@@ -57,5 +58,5 @@ export async function GET(request: NextRequest) {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reps.length ? reps : [{ Information: "Aucune donnée" }]), "Répartitions");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detail.length ? detail : [{ Information: "Aucune donnée" }]), VUES[vue].slice(0, 31));
   const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-  return new NextResponse(buffer, { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="indicateurs-rh-${date}.xlsx"` } });
+  return reponseExcel(await brander(buffer, { entrepriseId: entrepriseDesFiltres }), `indicateurs-rh-${date}`);
 }
