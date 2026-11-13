@@ -31,6 +31,55 @@ body {
 .fr-side-badge { background: #ef4444; color: #ffffff; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 7px; }
 
 /* =========================================================
+   Téléphone : rubriques dans un menu déroulant (remplace la barre latérale)
+   ========================================================= */
+.fr-deroulant { display: none; }
+.fr-es-mobile { display: none; }
+@media (max-width: 768px) {
+  .fr-deroulant {
+    display: block; position: sticky; top: 0; z-index: 45; background: #ffffff;
+    border-bottom: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); padding: 8px 12px;
+  }
+  .fr-deroulant-bouton {
+    width: 100%; display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 6px 14px;
+    border: 1px solid #e5e7eb; border-radius: 14px; background: #ffffff; color: #111827;
+    font-size: 16px; font-weight: 700; cursor: pointer; text-align: left;
+  }
+  .fr-deroulant.ouvert .fr-deroulant-bouton { border-color: #f97316; box-shadow: 0 0 0 3px #ffedd5; }
+  .fr-deroulant-petit { display: block; font-size: 10px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: #9ca3af; }
+  .fr-deroulant-fleche { margin-left: auto; font-size: 18px; color: #f97316; transition: transform 0.2s; }
+  .fr-deroulant.ouvert .fr-deroulant-fleche { transform: rotate(180deg); }
+  .fr-deroulant-fond { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.35); z-index: 44; }
+  .fr-deroulant-panneau {
+    position: absolute; left: 8px; right: 8px; top: calc(100% - 2px); z-index: 46; background: #ffffff;
+    border-radius: 16px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22); padding: 8px;
+    max-height: calc(100vh - 140px); overflow-y: auto; animation: fr-apparait 0.15s ease-out;
+  }
+  .fr-deroulant-groupe { font-size: 11px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: #9ca3af; margin: 12px 12px 4px; }
+  .fr-deroulant-groupe:first-child { margin-top: 4px; }
+  .fr-deroulant-lien {
+    display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 10px 12px;
+    border: none; border-radius: 12px; background: none; color: #374151; font-size: 15px; font-weight: 600;
+    text-decoration: none; text-align: left; cursor: pointer;
+  }
+  .fr-deroulant-lien:active { background: #f3f4f6; }
+  .fr-deroulant-lien.fr-actif { background: #fff7ed; color: #c2410c; box-shadow: inset 3px 0 0 #f97316; }
+  .fr-deroulant-pied {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+    border-top: 1px solid #f3f4f6; margin-top: 8px; padding: 12px 12px 4px; font-size: 14px; color: #6b7280;
+  }
+  .fr-deroulant-pied .fr-nav-petit, .fr-deroulant-pied .fr-nav-theme { color: #374151; font-size: 14px; }
+  .fr-deroulant-pied .fr-nav-deco { color: #dc2626; font-size: 14px; }
+
+  /* Espace salarié : pas de barre noire, une seule barre avec le logo et le menu déroulant */
+  .fr-es-bureau { display: none !important; }
+  .fr-es-mobile { display: flex; align-items: center; gap: 10px; padding-top: calc(8px + env(safe-area-inset-top)); }
+  .fr-es-mobile .fr-deroulant-bouton { flex: 1; min-width: 0; }
+  .fr-es-titre-carte { display: none !important; }
+}
+@keyframes fr-apparait { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* =========================================================
    Espace salarié : rubriques par thème
    ========================================================= */
 .fr-es-page { max-width: 1100px; margin: 0 auto; padding: 16px; }
@@ -153,23 +202,9 @@ body {
   main [class*="min-w-"] { min-width: 0 !important; }
   main img { max-width: 100%; height: auto; }
 
-  /* Barre latérale + contenu : l'un sous l'autre */
+  /* Barre latérale + contenu : l'un sous l'autre ; la barre latérale devient un menu déroulant */
   div.flex:has(> aside.fr-sidebar) { flex-direction: column; }
-  /* Barre latérale : une ligne d'onglets qui défile, collée en haut */
-  aside.fr-sidebar {
-    position: sticky; top: 0; z-index: 40;
-    width: 100%; height: auto; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
-    gap: 6px; padding: 8px 12px; border-right: none; border-bottom: 1px solid #e5e7eb;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04); scrollbar-width: none;
-  }
-  aside.fr-sidebar::-webkit-scrollbar { display: none; }
-  aside.fr-sidebar .fr-side-titre { display: none; }
-  aside.fr-sidebar .fr-side-lien {
-    flex-shrink: 0; padding: 7px 12px; font-size: 13px; border-radius: 999px;
-    border: 1px solid #e5e7eb; box-shadow: none; white-space: nowrap;
-  }
-  aside.fr-sidebar .fr-side-lien.fr-actif { background: #f97316; color: #ffffff; border-color: #f97316; box-shadow: none; }
-  aside.fr-sidebar .fr-side-lien.fr-actif .fr-side-badge { background: #ffffff; color: #dc2626; }
+  aside.fr-sidebar { display: none !important; }
 
   /* Contenu plus compact */
   main { padding: 12px !important; min-width: 0; width: 100%; box-sizing: border-box; }

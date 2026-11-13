@@ -68,7 +68,7 @@ export default function PlanningProjets() {
 
       <div className="bg-white rounded-xl shadow overflow-x-auto">
         {!d ? <p className="p-6 text-gray-500">Chargement…</p> : (
-          <table className="text-sm" style={{ borderCollapse: "collapse", minWidth: "100%" }}>
+          <table className="text-sm fr-tableau-fixe" style={{ borderCollapse: "collapse", minWidth: "100%" }}>
             <thead>
               <tr className="bg-gray-50 text-left">
                 <th className="p-3 sticky left-0 bg-gray-50" style={{ minWidth: 180 }}>Salarié</th>

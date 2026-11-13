@@ -130,7 +130,7 @@ export default function FicheProjet({ id }: { id: string }) {
       {voitCouts && (
         <div className={`${carte} overflow-x-auto`}>
           <h2 className="text-xl font-bold mb-3">💶 Vendu / Budgété / Réel / Projection</h2>
-          <table className="w-full text-sm">
+          <table className="w-full text-sm fr-tableau-fixe">
             <thead className="text-left bg-gray-50"><tr><th className="p-2"></th><th className="p-2">Budgété</th><th className="p-2">Réel à date</th><th className="p-2">Projection fin</th></tr></thead>
             <tbody>
               <tr className="border-t"><td className="p-2 font-semibold">Vendu{p.modeVente === "RECURRENT" ? " (contrat / à date)" : ""}</td><td className="p-2">{eur(s.venduContrat)}</td><td className="p-2">{eur(s.vendu)}</td><td className="p-2">{eur(s.venduContrat)}</td></tr>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { aDroit, droitPourChemin } from "@/lib/droits";
 import { useDroits } from "@/components/useDroits";
 
@@ -151,14 +151,9 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
 export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 0 }: SidebarProps) {
   const pathname = usePathname();
   const moi = useDroits();
-  const ref = useRef<HTMLElement>(null);
-  // Téléphone : la rubrique active reste visible dans la barre qui défile
-  useEffect(() => {
-    const a = ref.current?.querySelector<HTMLElement>(".fr-actif");
-    if (a && ref.current && ref.current.scrollWidth > ref.current.clientWidth) {
-      ref.current.scrollTo({ left: a.offsetLeft - 12, behavior: "smooth" });
-    }
-  }, [pathname]);
+  // Téléphone : les rubriques sont dans un menu déroulant, refermé à chaque changement de page
+  const [ouvert, setOuvert] = useState(false);
+  useEffect(() => { setOuvert(false); }, [pathname]);
   const brut = rubrique(pathname, role, demandesEnAttente, ticketsOuverts);
   if (!brut) return null;
   // Client : on cache les liens dont le droit a été retiré par l'admin
@@ -176,13 +171,43 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
     }
   }
 
+  const totalBadges = r.items.reduce((t, it) => t + (it.badge ?? 0), 0);
+  const [iconeActif, ...texteActif] = (actif?.label ?? r.titre).split(" ");
+  const aIconeActif = !!iconeActif && !/[A-Za-zÀ-ÿ0-9]/.test(iconeActif);
+
   return (
-    <aside ref={ref} className="fr-sidebar" aria-label={r.titre}>
-      <p className="fr-side-titre">{r.titre}</p>
-      {r.items.map((it) => (
-        <SidebarLink key={it.href} href={it.href} label={it.label} active={actif === it} badge={it.badge} />
-      ))}
-    </aside>
+    <>
+      {/* Ordinateur : barre latérale */}
+      <aside className="fr-sidebar" aria-label={r.titre}>
+        <p className="fr-side-titre">{r.titre}</p>
+        {r.items.map((it) => (
+          <SidebarLink key={it.href} href={it.href} label={it.label} active={actif === it} badge={it.badge} />
+        ))}
+      </aside>
+
+      {/* Téléphone : menu déroulant */}
+      <div className={`fr-deroulant${ouvert ? " ouvert" : ""}`}>
+        <button type="button" className="fr-deroulant-bouton" aria-expanded={ouvert} aria-haspopup="true" onClick={() => setOuvert((o) => !o)}>
+          {aIconeActif && <span aria-hidden="true" style={{ fontSize: "20px" }}>{iconeActif}</span>}
+          <span style={{ minWidth: 0, textAlign: "left" }}>
+            <span className="fr-deroulant-petit">{r.titre}</span>
+            <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{aIconeActif ? texteActif.join(" ") : actif?.label ?? "Choisir une rubrique"}</span>
+          </span>
+          {totalBadges > 0 && !ouvert && <span className="fr-side-badge">{totalBadges}</span>}
+          <span className="fr-deroulant-fleche" aria-hidden="true">▾</span>
+        </button>
+        {ouvert && (
+          <>
+            <div className="fr-deroulant-fond" onClick={() => setOuvert(false)} aria-hidden="true" />
+            <nav className="fr-deroulant-panneau" aria-label={r.titre}>
+              {r.items.map((it) => (
+                <SidebarLink key={it.href} href={it.href} label={it.label} active={actif === it} badge={it.badge} classe="fr-deroulant-lien" />
+              ))}
+            </nav>
+          </>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -191,17 +216,19 @@ function SidebarLink({
   label,
   active,
   badge = 0,
+  classe = "fr-side-lien",
 }: {
   href: string;
   label: string;
   active: boolean;
   badge?: number;
+  classe?: string;
 }) {
   // « 👥 Liste des salariés » : l'icône et le texte sont séparés pour un alignement propre
   const [icone, ...reste] = label.split(" ");
   const aIcone = !!icone && !/[A-Za-zÀ-ÿ0-9]/.test(icone);
   return (
-    <Link href={href} className={`fr-side-lien${active ? " fr-actif" : ""}`} aria-current={active ? "page" : undefined}>
+    <Link href={href} className={`${classe}${active ? " fr-actif" : ""}`} aria-current={active ? "page" : undefined}>
       {aIcone && <span className="fr-side-icone" aria-hidden="true">{icone}</span>}
       <span className="fr-side-texte">{aIcone ? reste.join(" ") : label}</span>
       {badge > 0 && <span className="fr-side-badge">{badge}</span>}

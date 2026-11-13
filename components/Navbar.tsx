@@ -8,6 +8,7 @@ import InstallerApp from "@/components/InstallerApp";
 import BoutonTheme from "@/components/BoutonTheme";
 import { viderCacheHorsLigne } from "@/components/EnregistrerSW";
 import { oublierDroits, useDroits } from "@/components/useDroits";
+import EtiquettesTableaux from "@/components/EtiquettesTableaux";
 
 // Adresse du site vitrine (modifiable avec la variable NEXT_PUBLIC_SITE_URL sur Vercel)
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://franeo-rh.com";
@@ -34,26 +35,6 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
     setMenuOuvert(false);
   }, [pathname]);
 
-  // Téléphone : chaque cellule de tableau reçoit le nom de sa colonne,
-  // ce qui permet d'afficher les tableaux sous forme de liste (voir globals.css)
-  useEffect(() => {
-    function etiqueter() {
-      document.querySelectorAll("main table").forEach((table) => {
-        const titres = Array.from(table.querySelectorAll("thead th")).map((th) => (th.textContent || "").trim());
-        if (titres.length === 0) return;
-        table.querySelectorAll("tbody tr").forEach((tr) => {
-          Array.from(tr.children).forEach((td, i) => {
-            const label = titres[i] ?? "";
-            if (td.getAttribute("data-label") !== label) td.setAttribute("data-label", label);
-          });
-        });
-      });
-    }
-    etiqueter();
-    const obs = new MutationObserver(() => etiqueter());
-    obs.observe(document.body, { childList: true, subtree: true });
-    return () => obs.disconnect();
-  }, [pathname]);
 
   async function handleLogout() {
     setChargement(true);
@@ -111,6 +92,7 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
 
   return (
     <nav className="fr-nav">
+      <EtiquettesTableaux />
       <div className="fr-nav-barre">
         <Link href={role === "ADMIN" ? "/admin/dashboard" : "/client/dashboard"} className="fr-nav-logo" aria-label="Accueil Franeo">
           <Image src="/FRANEO-Logo-Orange.png" alt="Franeo RH" width={41} height={50} style={{ objectFit: "contain" }} priority />

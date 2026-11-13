@@ -7,6 +7,7 @@ import RelevesEquipe from "@/components/RelevesEquipe";
 import BadgeSalarie from "@/components/BadgeSalarie";
 import HistoriqueBadge from "@/components/HistoriqueBadge";
 import MesProjetsSalarie from "@/components/MesProjetsSalarie";
+import EtiquettesTableaux from "@/components/EtiquettesTableaux";
 import TableauPresences from "@/components/TableauPresences";
 import BoutonTheme from "@/components/BoutonTheme";
 import Image from "next/image";
@@ -302,7 +303,8 @@ export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, p
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <nav className="fr-nav">
+      <EtiquettesTableaux />
+      <nav className="fr-nav fr-es-bureau">
         <div className="fr-nav-barre">
           <button type="button" onClick={() => choisir("accueil")} className="fr-nav-logo" aria-label="Accueil" style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
             <Image src="/FRANEO-Logo-Orange.png" alt="Franeo RH" width={41} height={50} style={{ objectFit: "contain" }} priority />
@@ -344,6 +346,45 @@ export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, p
         )}
       </nav>
 
+      {/* Téléphone : pas de barre noire, une barre avec le logo et toutes les rubriques dans un menu déroulant */}
+      <div className={`fr-deroulant fr-es-mobile${menu ? " ouvert" : ""}`}>
+        <button type="button" onClick={() => choisir("accueil")} aria-label="Accueil" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+          <Image src="/FRANEO-Logo-Orange.png" alt="Franeo RH" width={30} height={37} style={{ objectFit: "contain" }} />
+        </button>
+        <button type="button" className="fr-deroulant-bouton" aria-expanded={menu} aria-haspopup="true" onClick={() => setMenu((o) => !o)}>
+          <span aria-hidden="true" style={{ fontSize: "20px" }}>{courant.icone}</span>
+          <span style={{ minWidth: 0, textAlign: "left" }}>
+            <span className="fr-deroulant-petit">{moduleCourant.label}</span>
+            <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{courant.label}</span>
+          </span>
+          {!menu && modules.some((m) => m.badge) && <span className="fr-side-badge">{modules.reduce((t, m) => t + (m.badge ?? 0), 0)}</span>}
+          <span className="fr-deroulant-fleche" aria-hidden="true">▾</span>
+        </button>
+        {menu && (
+          <>
+            <div className="fr-deroulant-fond" onClick={() => setMenu(false)} aria-hidden="true" />
+            <nav className="fr-deroulant-panneau" aria-label="Menu">
+              {modules.map((m) => (
+                <div key={m.id}>
+                  {(modules.length > 1 || m.rubriques.length > 1) && <p className="fr-deroulant-groupe">{m.label}</p>}
+                  {m.rubriques.map((x) => (
+                    <button key={x.id} type="button" onClick={() => choisir(x.id)} className={`fr-deroulant-lien${x.id === courant.id ? " fr-actif" : ""}`} aria-current={x.id === courant.id ? "page" : undefined}>
+                      <span aria-hidden="true" style={{ width: 24, textAlign: "center" }}>{x.icone}</span>
+                      <span style={{ flex: 1 }}>{x.label}</span>
+                      {!!x.badge && <span className="fr-side-badge">{x.badge}</span>}
+                    </button>
+                  ))}
+                </div>
+              ))}
+              <div className="fr-deroulant-pied">
+                <span>👤 {prenom}</span>
+                <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>{profil}</div>
+              </div>
+            </nav>
+          </>
+        )}
+      </div>
+
       <div className="flex">
         <aside className="fr-sidebar" aria-label={moduleCourant.label}>
           <p className="fr-side-titre">{moduleCourant.label}</p>
@@ -356,7 +397,7 @@ export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, p
           ))}
         </aside>
         <main className="flex-1 p-4 md:p-8 flex flex-col gap-4" style={{ minWidth: 0, maxWidth: "900px" }}>
-          <div className="bg-white rounded-xl shadow p-6">
+          <div className="bg-white rounded-xl shadow p-6 fr-es-titre-carte">
             <h1 className="text-3xl font-bold">{courant.icone} {courant.label}</h1>
           </div>
           {courant.contenu}
