@@ -4,6 +4,7 @@
 // Les montants et les temps sont générés de façon déterministe (même démo à chaque réinitialisation).
 
 import { prisma } from "@/lib/prisma";
+import { oublierSessions } from "@/lib/session";
 
 type Membre = { id: string; cout: number };
 export type EquipeDemo = { sophie: Membre; karim: Membre; julie: Membre; thomas: Membre; emma: Membre; lucas: Membre };
@@ -89,4 +90,95 @@ export async function peuplerProjetsDemo(entrepriseId: string, equipe: EquipeDem
   }
   // Les temps sont enregistrés en une seule fois (plus rapide)
   for (let i = 0; i < temps.length; i += 500) await prisma.tempsProjet.createMany({ data: temps.slice(i, i + 500) });
+}
+
+/** Matricules des salariés de démo utilisés par les projets */
+const MATRICULES = { sophie: "DEMO-001", karim: "DEMO-002", julie: "DEMO-003", thomas: "DEMO-004", emma: "DEMO-005", lucas: "DEMO-006" } as const;
+
+/** Crée tous les projets de démo (4 projets détaillés + une année d'activité) */
+export async function semerProjetsDemo(entrepriseId: string) {
+  const sal = await prisma.salarie.findMany({ where: { entrepriseId, matricule: { in: Object.values(MATRICULES) } }, select: { id: true, matricule: true } });
+  const id = (m: string) => sal.find((x) => x.matricule === m)?.id;
+  if (Object.values(MATRICULES).some((m) => !id(m))) return; // démo incomplète : rien à faire
+  const sophie = { id: id(MATRICULES.sophie)! }, karim = { id: id(MATRICULES.karim)! }, julie = { id: id(MATRICULES.julie)! };
+  const thomas = { id: id(MATRICULES.thomas)! }, emma = { id: id(MATRICULES.emma)! }, lucas = { id: id(MATRICULES.lucas)! };
+  const jour = (n: number) => new Date(Date.now() + n * J);
+  const jj = (n: number) => new Date(jour(n).toISOString().slice(0, 10) + "T00:00:00Z");
+  const ref = (n: number) => jour(n).toISOString().slice(0, 10);
+  const p1 = await prisma.projet.create({ data: {
+    entrepriseId, nom: "Audit maintenance usine Lille", code: "P-001", client: "Industries du Nord", couleur: "#2563eb", statut: "EN_COURS",
+    dateDebut: jj(-30), dateFin: jj(30), modeVente: "FORFAIT", prixVente: 18000, responsableId: lucas.id, seuilAlerte: 80,
+    description: "Audit complet des lignes et plan de maintenance préventive.",
+    jalons: { create: [
+      { libelle: "Lancement de l'audit", date: jj(-30), etat: "FAIT", faitLe: jj(-30) },
+      { libelle: "Rapport intermédiaire", date: jj(-3), etat: "FAIT", faitLe: jj(-3) },
+      { libelle: "Plan de maintenance final", date: jj(28) },
+    ] },
+    affectations: { create: [
+      { salarieId: thomas.id, du: jj(-30), au: jj(30), heuresSemaine: 24, role: "Technicien" },
+      { salarieId: sophie.id, du: jj(-30), au: jj(30), heuresSemaine: 6, role: "Suivi administratif" },
+    ] },
+    depenses: { create: [
+      { libelle: "Déplacements Lille", categorie: "DEPLACEMENT", montant: 900, date: jj(-30), prevu: true },
+      { libelle: "Train + hôtel semaine 1", categorie: "DEPLACEMENT", montant: 412.5, date: jj(-25), prevu: false },
+    ] },
+    temps: { create: [-29, -22, -15, -8, -1].flatMap((n) => [
+      { salarieId: thomas.id, jour: ref(n), heures: 21, commentaire: "Relevés sur site (semaine)" },
+      { salarieId: sophie.id, jour: ref(n), heures: 5, commentaire: "Comptes rendus" },
+    ]) },
+  } });
+  await prisma.projet.create({ data: {
+    entrepriseId, nom: "Salon Expo Paris 2026", code: "P-002", client: "Client Événementiel SAS", couleur: "#db2777", statut: "EN_COURS",
+    dateDebut: jj(-20), dateFin: jj(10), modeVente: "REGIE", tauxJournalier: 350, joursVendus: 12, budgetHeures: 84, responsableId: lucas.id, seuilAlerte: 80,
+    jalons: { create: [
+      { libelle: "Montage du stand", date: jj(-8), etat: "A_FAIRE" },
+      { libelle: "Bilan du salon avec le client", date: jj(10) },
+    ] },
+    affectations: { create: [
+      { salarieId: julie.id, du: jj(-20), au: jj(10), heuresSemaine: 21, role: "Accueil stand" },
+      { salarieId: emma.id, du: jj(-20), au: jj(10), heuresSemaine: 14, role: "Communication" },
+    ] },
+    depenses: { create: [
+      { libelle: "Location stand", categorie: "MATERIEL", montant: 1200, date: jj(-18), prevu: true },
+      { libelle: "Location stand (facture)", categorie: "MATERIEL", montant: 1450, date: jj(-15), prevu: false },
+    ] },
+    temps: { create: [-19, -12, -5].flatMap((n) => [
+      { salarieId: julie.id, jour: ref(n), heures: 26, commentaire: "Préparation et salon" },
+      { salarieId: emma.id, jour: ref(n), heures: 16 },
+    ]) },
+  } });
+  await prisma.projet.create({ data: {
+    entrepriseId, nom: "Migration du logiciel comptable", code: "INT-01", couleur: "#16a34a", statut: "PREVU",
+    dateDebut: jj(14), dateFin: jj(60), modeVente: "INTERNE", responsableId: karim.id,
+    affectations: { create: [{ salarieId: karim.id, du: jj(14), au: jj(60), heuresSemaine: 10, role: "Pilote" }] },
+  } });
+  // Contrat récurrent d'entretien
+  await prisma.projet.create({ data: {
+    entrepriseId, nom: "Entretien des bureaux Nord Immobilier", code: "C-001", client: "Nord Immobilier", couleur: "#0891b2", statut: "EN_COURS", modele: "SERVICES",
+    dateDebut: jj(-75), modeVente: "RECURRENT", montantMensuel: 1200, seuilAlerte: 85, responsableId: sophie.id,
+    affectations: { create: [{ salarieId: emma.id, du: jj(-75), au: jj(290), heuresSemaine: 6, role: "Suivi du contrat" }] },
+    temps: { create: [-70, -63, -56, -49, -42, -35, -28, -21, -14, -7].map((n) => ({ salarieId: emma.id, jour: ref(n), heures: 8, commentaire: "Passage hebdomadaire" })) },
+  } });
+  // Une année complète d'activité : 17 projets de plus, avec temps et frais (lib/demo-projets.ts)
+  await peuplerProjetsDemo(entrepriseId, {
+    sophie: { id: sophie.id, cout: coutDemo(3200) }, karim: { id: karim.id, cout: coutDemo(2900) }, julie: { id: julie.id, cout: coutDemo(2300) },
+    thomas: { id: thomas.id, cout: coutDemo(2600, 39) }, emma: { id: emma.id, cout: coutDemo(1200) }, lucas: { id: lucas.id, cout: coutDemo(2700) },
+  });
+
+  // Le train Paris-Lille de Julie (note de frais validée) est imputé à l'audit de Lille
+  await prisma.noteFrais.updateMany({ where: { entrepriseId, salarieId: julie.id, statut: "Validé" }, data: { projetId: p1.id } });
+}
+
+/**
+ * Démo déjà créée avant l'option Projets : ajoute l'option et les projets sans tout réinitialiser.
+ * Ne fait rien si la démo a déjà des projets.
+ */
+export async function assurerProjetsDemo(entrepriseId: string) {
+  const e = await prisma.entreprise.findUnique({ where: { id: entrepriseId }, select: { demo: true, permissions: true } });
+  if (!e?.demo) return;
+  if (!e.permissions.includes("projets")) {
+    await prisma.entreprise.update({ where: { id: entrepriseId }, data: { permissions: { push: "projets" } } });
+    oublierSessions();
+  }
+  if ((await prisma.projet.count({ where: { entrepriseId } })) === 0) await semerProjetsDemo(entrepriseId);
 }
