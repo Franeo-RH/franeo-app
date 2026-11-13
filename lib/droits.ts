@@ -98,6 +98,8 @@ export const DROITS_PAGES: { prefixe: string; droit: ActionId }[] = [
   { prefixe: "/client/paie/import", droit: "paie.import" },
   { prefixe: "/client/projets", droit: "projets.voir" },
   { prefixe: "/client/projets/rentabilite", droit: "projets.couts" },
+  { prefixe: "/client/projets/devis", droit: "projets.couts" },
+  { prefixe: "/client/projets/factures", droit: "projets.couts" },
   { prefixe: "/client/paie/journal", droit: "paie.historique" },
   { prefixe: "/client/paie/controle", droit: "paie.variables" },
   { prefixe: "/client/tickets/historique", droit: "tickets.creer" },

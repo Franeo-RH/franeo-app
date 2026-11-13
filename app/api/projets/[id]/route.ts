@@ -79,7 +79,7 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
   }
   const { erreurs, data } = lireProjet(b);
   if (erreurs.length) return NextResponse.json({ erreur: erreurs.join(" ") }, { status: 400 });
-  if (!a.voitCouts) { delete (data as Partial<typeof data>).prixVente; delete (data as Partial<typeof data>).tauxJournalier; }
+  if (!a.voitCouts) { delete (data as Partial<typeof data>).prixVente; delete (data as Partial<typeof data>).tauxJournalier; delete (data as Partial<typeof data>).montantMensuel; }
   if (data.responsableId && !(await prisma.salarie.findFirst({ where: { id: data.responsableId, entrepriseId: a.entrepriseId } }))) data.responsableId = null;
   await prisma.projet.update({ where: { id }, data });
   return NextResponse.json({ succes: true });

@@ -49,9 +49,22 @@ export async function GET(request: NextRequest) {
       const base = Math.max(p.synthese.projectionCout, p.synthese.coutReel, 1);
       coutMois.forEach((c, i) => { mois[i].ca += (p.synthese.vendu * c) / base; });
     }
+    if (p.modeVente === "RECURRENT" && p.montantMensuel) {
+      for (let m = 0; m < 12; m++) {
+        const debutMois = new Date(Date.UTC(annee, m, 1)), finMois = new Date(Date.UTC(annee, m + 1, 0, 23, 59, 59));
+        if (p.dateDebut <= finMois && (!p.dateFin || p.dateFin >= debutMois) && debutMois <= new Date()) mois[m].ca += p.montantMensuel;
+      }
+    }
+    for (const f of p.factures) {
+      if (f.statut === "ANNULEE") continue;
+      const i = idx(f.date);
+      if (i >= 0) mois[i].facture += f.totalHT;
+      if (f.statut === "PAYEE") { const k = idx(f.payeeLe ?? f.date); if (k >= 0) mois[k].encaisse += f.totalHT; }
+    }
+    const avecFacture = new Set(p.factures.filter((f) => f.statut !== "ANNULEE").map((f) => f.jalonId));
     for (const j of p.jalons) {
       const i = idx(j.date);
-      if (i < 0 || !j.montant) continue;
+      if (i < 0 || !j.montant || avecFacture.has(j.id)) continue;
       if (j.facturation === "FACTURE" || j.facturation === "PAYE") mois[i].facture += j.montant;
       if (j.facturation === "PAYE") mois[i].encaisse += j.montant;
     }
@@ -90,6 +103,22 @@ export async function GET(request: NextRequest) {
   const clients = new Map<string, number>();
   for (const p of projets) if (p.modeVente !== "INTERNE") clients.set(p.client || "Sans client", (clients.get(p.client || "Sans client") ?? 0) + p.synthese.vendu);
   const dans30 = new Date(auj.getTime() + 30 * 86400000);
+  const dans90 = new Date(auj.getTime() + 90 * 86400000);
+  // Pilotage du dirigeant : carnet de commandes, devis en attente, encaissements attendus à 90 jours, impayés
+  const devisEnAttente = a.voitCouts ? await prisma.devisProjet.aggregate({ where: { entrepriseId: a.entrepriseId, statut: "ENVOYE" }, _sum: { totalHT: true }, _count: true }) : null;
+  const actifsTous = tous.filter((p) => p.statut === "PREVU" || p.statut === "EN_COURS");
+  // Déjà réalisé : forfait au prorata des coûts engagés, régie en jours passés, récurrent en mois écoulés
+  const realise = (p: (typeof tous)[number]) => {
+    const sy = p.synthese;
+    if (p.modeVente === "REGIE") return Math.min(sy.venduContrat, (sy.heuresReelles / HEURES_JOUR) * (p.tauxJournalier ?? 0));
+    if (p.modeVente === "RECURRENT") return sy.vendu;
+    return sy.projectionCout > 0 ? sy.venduContrat * Math.min(1, sy.coutReel / sy.projectionCout) : 0;
+  };
+  const carnet = arrondi(actifsTous.reduce((t, p) => t + Math.max(0, p.synthese.venduContrat - realise(p)), 0));
+  const facturesOuvertes = tous.flatMap((p) => p.factures.filter((f) => f.statut === "EMISE"));
+  const impayes = arrondi(facturesOuvertes.filter((f) => f.echeance < auj).reduce((t, f) => t + f.totalTTC, 0));
+  const attendu90 = arrondi(facturesOuvertes.reduce((t, f) => t + f.totalTTC, 0) + tous.flatMap((p) => p.jalons).filter((j) => j.facturation === "A_FACTURER" && j.montant && j.date <= dans90).reduce((t, j) => t + (j.montant ?? 0) * 1.2, 0)
+    + tous.filter((p) => p.modeVente === "RECURRENT" && p.montantMensuel && p.statut === "EN_COURS").reduce((t, p) => t + (p.montantMensuel ?? 0) * 1.2 * 3, 0));
 
   const resume = projets.map((p) => ({ id: p.id, nom: p.nom, couleur: p.couleur, statut: p.statut, client: p.client, tauxMargeReelle: p.synthese.tauxMargeReelle, tauxProjection: p.synthese.tauxProjection, margeReelle: p.synthese.margeReelle, vendu: p.synthese.vendu, consommation: p.synthese.consommation, avancementTemps: p.synthese.avancementTemps, heures: arrondi(parProjetHeures.get(p.id) ?? 0, 1), alertes: p.synthese.alertes.filter((x) => x.niveau !== "info").length }));
   const c = a.voitCouts;
@@ -105,6 +134,7 @@ export async function GET(request: NextRequest) {
         vendu: arrondi(projets.reduce((t, p) => t + p.synthese.vendu, 0)),
         resteAFacturer: arrondi(projets.reduce((t, p) => t + p.synthese.resteAFacturer, 0)),
         margeProjetee: arrondi(projets.reduce((t, p) => t + p.synthese.projectionMarge, 0)),
+        carnet, impayes, attendu90, devisEnAttente: arrondi(devisEnAttente?._sum.totalHT ?? 0), nbDevisEnAttente: devisEnAttente?._count ?? 0,
       } : {}),
     },
     series: c ? series : series.map((s) => ({ mois: s.mois, heures: s.heures, cumulHeures: s.cumulHeures })),

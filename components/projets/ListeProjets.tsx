@@ -90,7 +90,7 @@ export default function ListeProjets() {
       {creation && (
         <div className="bg-white rounded-xl shadow p-6">
           <h2 className="text-xl font-bold mb-4">Nouveau projet</h2>
-          <FormulaireProjet initial={projetVide()} salaries={salaries} voitCouts={voitCouts} onEnvoyer={creer} onAnnuler={() => setCreation(false)} libelle="Créer le projet" />
+          <FormulaireProjet avecModele initial={projetVide()} salaries={salaries} voitCouts={voitCouts} onEnvoyer={creer} onAnnuler={() => setCreation(false)} libelle="Créer le projet" />
         </div>
       )}
 

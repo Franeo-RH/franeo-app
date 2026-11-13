@@ -34,7 +34,7 @@ export function lireProjet(b: Record<string, unknown>) {
   if (!dateDebut) erreurs.push("La date de début est obligatoire.");
   const dateFin = d(b.dateFin);
   if (dateDebut && dateFin && dateFin < dateDebut) erreurs.push("La date de fin est avant la date de début.");
-  const modeVente = ["FORFAIT", "REGIE", "INTERNE"].includes(String(b.modeVente)) ? String(b.modeVente) : "FORFAIT";
+  const modeVente = ["FORFAIT", "REGIE", "RECURRENT", "INTERNE"].includes(String(b.modeVente)) ? String(b.modeVente) : "FORFAIT";
   const statut = ["PREVU", "EN_COURS", "TERMINE", "ANNULE"].includes(String(b.statut)) ? String(b.statut) : "PREVU";
   const seuil = n(b.seuilAlerte);
   return {
@@ -44,7 +44,7 @@ export function lireProjet(b: Record<string, unknown>) {
       couleur: typeof b.couleur === "string" && /^#[0-9a-f]{6}$/i.test(b.couleur) ? b.couleur : "#ea580c",
       statut, dateDebut: dateDebut ?? new Date(), dateFin, modeVente,
       prixVente: n(b.prixVente), tauxJournalier: n(b.tauxJournalier), joursVendus: n(b.joursVendus),
-      budgetHeures: n(b.budgetHeures), seuilAlerte: seuil && seuil > 0 && seuil <= 100 ? Math.round(seuil) : 80,
+      budgetHeures: n(b.budgetHeures), montantMensuel: n(b.montantMensuel), seuilAlerte: seuil && seuil > 0 && seuil <= 100 ? Math.round(seuil) : 80,
       responsableId: t(b.responsableId, 40),
     },
   };

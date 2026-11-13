@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { accesProjets, lireProjet } from "@/lib/projets-serveur";
-import { masquerCouts, projetsAvecSynthese, STATUTS_PROJET } from "@/lib/projets";
+import { masquerCouts, prixVendu, projetsAvecSynthese, STATUTS_PROJET } from "@/lib/projets";
+import { MODELES_METIER } from "@/lib/projets-constantes";
 
 /** GET : liste des projets avec leur synthèse (?statut=EN_COURS,PREVU) ; ?format=csv pour l'export */
 export async function GET(request: NextRequest) {
@@ -29,13 +30,22 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ projets, voitCouts: a.voitCouts, peutGerer: a.peutGerer });
 }
 
-/** POST : nouveau projet */
+/** POST : nouveau projet ; avec { modele } : jalons et échéancier de facturation du métier préremplis */
 export async function POST(request: NextRequest) {
   const a = await accesProjets("projets.gerer");
   if (!a.ok) return a.refus;
-  const { erreurs, data } = lireProjet(await request.json().catch(() => ({})));
+  const b = await request.json().catch(() => ({}));
+  const { erreurs, data } = lireProjet(b);
   if (erreurs.length) return NextResponse.json({ erreur: erreurs.join(" ") }, { status: 400 });
   if (data.responsableId && !(await prisma.salarie.findFirst({ where: { id: data.responsableId, entrepriseId: a.entrepriseId } }))) data.responsableId = null;
-  const p = await prisma.projet.create({ data: { ...data, entrepriseId: a.entrepriseId } });
+  const modele = typeof b.modele === "string" && MODELES_METIER[b.modele] ? b.modele : null;
+  const m = modele ? MODELES_METIER[modele] : null;
+  const vendu = prixVendu({ ...data });
+  const jour = (n: number) => new Date(data.dateDebut.getTime() + n * 86400000);
+  const jalons = m ? [
+    ...m.jalons.map((j) => ({ libelle: j.libelle, date: jour(j.jours) })),
+    ...(vendu > 0 && data.modeVente === "FORFAIT" ? m.echeancier.map((e) => ({ libelle: `${e.libelle} (${e.pct} %)`, date: jour(e.jours), montant: Math.round(vendu * e.pct) / 100, facturation: "A_FACTURER" })) : []),
+  ] : [];
+  const p = await prisma.projet.create({ data: { ...data, modele, entrepriseId: a.entrepriseId, ...(jalons.length ? { jalons: { create: jalons } } : {}) } });
   return NextResponse.json({ succes: true, id: p.id });
 }

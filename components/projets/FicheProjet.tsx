@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { CATEGORIES_DEPENSE, FACTURATION_JALON, MODES_VENTE } from "@/lib/projets-constantes";
 import { couleurMarge, dateFR, eur, FormulaireProjet, h, iso, Jauge, PastilleStatut, pct, Tuile, type ValeursProjet } from "./outils";
+import FacturationProjet from "./FacturationProjet";
 
 type Sal = { id: string; prenom: string; nom: string; coutHoraire?: number | null };
 type Ligne = { salarieId: string; salarie: string; coutHoraire: number | null; heuresPrevues: number; heuresReelles: number; coutPrevu: number; coutReel: number };
@@ -17,8 +18,10 @@ type Projet = {
   depenses: { id: string; libelle: string; categorie: string; montant: number; date: string; prevu: boolean }[];
   notesFrais: { id: string; montant: number; statut: string; motif: string; date: string; salarie: { prenom: string; nom: string } }[];
   jalons: { id: string; libelle: string; date: string; etat: string; montant: number | null; facturation: string; faitLe: string | null }[];
+  montantMensuel: number | null; modele: string | null;
+  devis: { id: string; numero: string; objet: string; statut: string; totalHT: number; supplementaire: boolean }[];
   synthese: {
-    facture: number; paye: number; aFacturer: number; resteAFacturer: number; jalonsFaits: number; jalonsTotal: number; jalonsEnRetard: number;
+    venduContrat: number; facture: number; paye: number; aFacturer: number; resteAFacturer: number; jalonsFaits: number; jalonsTotal: number; jalonsEnRetard: number;
     vendu: number; heuresPrevues: number; heuresReelles: number; heuresRestantes: number; budgetMO: number; budgetFrais: number; budgetTotal: number;
     margePrevue: number; tauxMargePrevue: number | null; coutMO: number; fraisReels: number; coutReel: number; margeReelle: number; tauxMargeReelle: number | null;
     consommation: number | null; avancementTemps: number | null; projectionCout: number; projectionMarge: number; tauxProjection: number | null;
@@ -75,7 +78,7 @@ export default function FicheProjet({ id }: { id: string }) {
   const initial: ValeursProjet = {
     nom: p.nom, code: p.code ?? "", client: p.client ?? "", description: p.description ?? "", couleur: p.couleur, statut: p.statut,
     dateDebut: iso(p.dateDebut), dateFin: iso(p.dateFin), modeVente: p.modeVente, prixVente: p.prixVente?.toString() ?? "", tauxJournalier: p.tauxJournalier?.toString() ?? "",
-    joursVendus: p.joursVendus?.toString() ?? "", budgetHeures: p.budgetHeures?.toString() ?? "", seuilAlerte: String(p.seuilAlerte), responsableId: p.responsableId ?? "",
+    joursVendus: p.joursVendus?.toString() ?? "", budgetHeures: p.budgetHeures?.toString() ?? "", seuilAlerte: String(p.seuilAlerte), responsableId: p.responsableId ?? "", montantMensuel: p.montantMensuel?.toString() ?? "",
   };
   const suppr = (quoi: string, cle: string, question: string) => { if (confirm(question)) appel("DELETE", undefined, `?quoi=${quoi}&cle=${cle}`); };
 
@@ -131,7 +134,7 @@ export default function FicheProjet({ id }: { id: string }) {
           <table className="w-full text-sm">
             <thead className="text-left bg-gray-50"><tr><th className="p-2"></th><th className="p-2">Budgété</th><th className="p-2">Réel à date</th><th className="p-2">Projection fin</th></tr></thead>
             <tbody>
-              <tr className="border-t"><td className="p-2 font-semibold">Vendu</td><td className="p-2">{eur(s.vendu)}</td><td className="p-2">{eur(s.vendu)}</td><td className="p-2">{eur(s.vendu)}</td></tr>
+              <tr className="border-t"><td className="p-2 font-semibold">Vendu{p.modeVente === "RECURRENT" ? " (contrat / à date)" : ""}</td><td className="p-2">{eur(s.venduContrat)}</td><td className="p-2">{eur(s.vendu)}</td><td className="p-2">{eur(s.venduContrat)}</td></tr>
               <tr className="border-t"><td className="p-2 font-semibold">Main-d&apos;œuvre</td><td className="p-2">{eur(s.budgetMO)}</td><td className="p-2">{eur(s.coutMO)}</td><td className="p-2" rowSpan={2}>{eur(s.projectionCout)}</td></tr>
               <tr className="border-t"><td className="p-2 font-semibold">Frais</td><td className="p-2">{eur(s.budgetFrais)}</td><td className="p-2">{eur(s.fraisReels)}</td></tr>
               <tr className="border-t font-bold"><td className="p-2">Marge</td>
@@ -194,9 +197,11 @@ export default function FicheProjet({ id }: { id: string }) {
         <p className="text-xs text-gray-500 mt-2">Vue d&apos;ensemble de la charge de chacun : <Link href="/client/projets/planning" className="underline">Planning</Link>.</p>
       </div>
 
+      {voitCouts && <FacturationProjet projet={p} peutGerer={peutGerer} onChange={charger} />}
+
       <div className={carte}>
         <div className="flex flex-wrap justify-between items-baseline gap-2 mb-3">
-          <h2 className="text-xl font-bold">🏁 Jalons & facturation</h2>
+          <h2 className="text-xl font-bold">🏁 Jalons & échéancier</h2>
           <span className="text-sm text-gray-500">{s.jalonsFaits} / {s.jalonsTotal} jalon(s) faits{voitCouts && s.vendu > 0 ? ` · facturé ${eur(s.facture)} · payé ${eur(s.paye)} · reste à facturer ${eur(s.resteAFacturer)}` : ""}</span>
         </div>
         {voitCouts && s.vendu > 0 && (

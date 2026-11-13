@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { COULEURS_PROJET, MODES_VENTE, STATUTS_PROJET } from "@/lib/projets-constantes";
+import { COULEURS_PROJET, MODELES_METIER, MODES_VENTE, STATUTS_PROJET } from "@/lib/projets-constantes";
 
 export const eur = (n: number | null | undefined) => (n == null ? "—" : n.toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }));
 export const pct = (n: number | null | undefined) => (n == null ? "—" : `${n.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} %`);
@@ -51,18 +51,18 @@ export function Tuile({ titre, valeur, detail, couleur }: { titre: string; valeu
 export type ValeursProjet = {
   nom: string; code: string; client: string; description: string; couleur: string; statut: string;
   dateDebut: string; dateFin: string; modeVente: string; prixVente: string; tauxJournalier: string; joursVendus: string;
-  budgetHeures: string; seuilAlerte: string; responsableId: string;
+  budgetHeures: string; seuilAlerte: string; responsableId: string; montantMensuel: string; modele?: string;
 };
 
 export const projetVide = (): ValeursProjet => ({
   nom: "", code: "", client: "", description: "", couleur: COULEURS_PROJET[0], statut: "PREVU",
   dateDebut: new Date().toISOString().slice(0, 10), dateFin: "", modeVente: "FORFAIT", prixVente: "", tauxJournalier: "", joursVendus: "",
-  budgetHeures: "", seuilAlerte: "80", responsableId: "",
+  budgetHeures: "", seuilAlerte: "80", responsableId: "", montantMensuel: "", modele: "LIBRE",
 });
 
 /** Formulaire de création / modification d'un projet */
-export function FormulaireProjet({ initial, salaries, voitCouts, onEnvoyer, onAnnuler, libelle }: {
-  initial: ValeursProjet; salaries: { id: string; prenom: string; nom: string }[]; voitCouts: boolean;
+export function FormulaireProjet({ initial, salaries, voitCouts, onEnvoyer, onAnnuler, libelle, avecModele = false }: {
+  initial: ValeursProjet; salaries: { id: string; prenom: string; nom: string }[]; voitCouts: boolean; avecModele?: boolean;
   onEnvoyer: (v: ValeursProjet) => Promise<string | null>; onAnnuler?: () => void; libelle: string;
 }) {
   const [v, setV] = useState(initial);
@@ -74,6 +74,14 @@ export function FormulaireProjet({ initial, salaries, voitCouts, onEnvoyer, onAn
 
   return (
     <form className="grid grid-cols-1 md:grid-cols-3 gap-3" onSubmit={async (e) => { e.preventDefault(); setEnvoi(true); setErreur(await onEnvoyer(v)); setEnvoi(false); }}>
+      {avecModele && (
+        <label className="text-sm font-semibold md:col-span-3">Métier (préremplit les étapes et l&apos;échéancier de facturation)
+          <select className={input} value={v.modele ?? "LIBRE"} onChange={(e) => { const m = MODELES_METIER[e.target.value]; setV({ ...v, modele: e.target.value, modeVente: m?.modeVente ?? v.modeVente, seuilAlerte: String(m?.seuilAlerte ?? 80) }); }}>
+            {Object.entries(MODELES_METIER).map(([k, m]) => <option key={k} value={k}>{m.icone} {m.label}</option>)}
+          </select>
+          <span className="block text-xs text-gray-500 font-normal mt-1">{MODELES_METIER[v.modele ?? "LIBRE"]?.conseil}</span>
+        </label>
+      )}
       <label className="text-sm font-semibold md:col-span-2">Nom du projet *<input className={input} required {...champ("nom")} placeholder="Ex. Refonte du site, Chantier Dupont…" /></label>
       <label className="text-sm font-semibold">Code<input className={input} {...champ("code")} placeholder="Ex. P-2026-014" /></label>
       <label className="text-sm font-semibold">Client<input className={input} {...champ("client")} placeholder="Nom du client" /></label>
@@ -107,6 +115,7 @@ export function FormulaireProjet({ initial, salaries, voitCouts, onEnvoyer, onAn
               </label>
             </>
           )}
+          {v.modeVente === "RECURRENT" && <label className="text-sm font-semibold">Montant mensuel HT (€)<input type="number" step="0.01" min="0" className={input} {...champ("montantMensuel")} /><span className="text-xs text-gray-500 font-normal">sans date de fin : contrat sur 12 mois</span></label>}
           {v.modeVente === "INTERNE" && <p className="text-sm text-gray-500 self-end">Projet interne : on suit seulement son coût.</p>}
         </>
       )}

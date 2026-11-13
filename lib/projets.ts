@@ -134,7 +134,7 @@ export type LigneSalarieProjet = {
 };
 
 export type Synthese = {
-  vendu: number;
+  vendu: number; venduContrat: number;
   heuresPrevues: number; heuresReelles: number; heuresRestantes: number;
   budgetMO: number; budgetFrais: number; budgetTotal: number; margePrevue: number; tauxMargePrevue: number | null;
   coutMO: number; fraisReels: number; coutReel: number; margeReelle: number; tauxMargeReelle: number | null;
@@ -156,12 +156,35 @@ type ProjetCalcul = {
   depenses: { montant: number; prevu: boolean }[];
   temps: { salarieId: string; heures: number; salarie: SalarieCout }[];
   notesFrais: { montant: number; statut: string }[];
-  jalons?: { libelle: string; date: Date; etat: string; montant: number | null; facturation: string }[];
+  jalons?: { id?: string; libelle: string; date: Date; etat: string; montant: number | null; facturation: string }[];
+  montantMensuel?: number | null;
+  factures?: { jalonId: string | null; totalHT: number; statut: string; echeance: Date; numero: string }[];
 };
 type SalarieCout = { id: string; prenom: string; nom: string; coutHoraireStandard: number | null; salaireMensuel: number | null; heuresHebdomadaires: number | null };
 
-export const prixVendu = (p: { modeVente: string; prixVente: number | null; tauxJournalier: number | null; joursVendus: number | null }) =>
-  p.modeVente === "INTERNE" ? 0 : p.modeVente === "REGIE" ? (p.tauxJournalier ?? 0) * (p.joursVendus ?? 0) : p.prixVente ?? 0;
+/** Nombre de mois (entamés) entre deux dates */
+export function moisEntre(du: Date, au: Date): number {
+  if (au < du) return 0;
+  return (au.getUTCFullYear() - du.getUTCFullYear()) * 12 + au.getUTCMonth() - du.getUTCMonth() + 1;
+}
+
+type Vente = { modeVente: string; prixVente: number | null; tauxJournalier: number | null; joursVendus: number | null; montantMensuel?: number | null; dateDebut?: Date; dateFin?: Date | null };
+
+/**
+ * Montant vendu. Contrat récurrent : « à date » = mois écoulés × montant mensuel ;
+ * « contrat » = durée totale (12 mois si pas de date de fin).
+ */
+export const prixVendu = (p: Vente, quand: "contrat" | "a-date" = "contrat", maintenant = new Date()) => {
+  if (p.modeVente === "INTERNE") return 0;
+  if (p.modeVente === "REGIE") return (p.tauxJournalier ?? 0) * (p.joursVendus ?? 0);
+  if (p.modeVente === "RECURRENT") {
+    const debut = p.dateDebut ?? maintenant;
+    const fin = p.dateFin ?? new Date(Date.UTC(debut.getUTCFullYear() + 1, debut.getUTCMonth(), debut.getUTCDate() - 1));
+    const n = quand === "contrat" ? moisEntre(debut, fin) : moisEntre(debut, maintenant < fin ? maintenant : fin);
+    return (p.montantMensuel ?? 0) * n;
+  }
+  return p.prixVente ?? 0;
+};
 
 /** Synthèse budget / réel / projection d'un projet */
 export function synthese(p: ProjetCalcul, tauxCharges: number | null | undefined, heuresPointeesProjet: Map<string, number>, salariesPointes: Map<string, SalarieCout>, maintenant = new Date()): Synthese {
@@ -196,7 +219,8 @@ export function synthese(p: ProjetCalcul, tauxCharges: number | null | undefined
   const parSalarie = [...lignes.values()].sort((a, b) => b.heuresReelles + b.heuresPrevues - (a.heuresReelles + a.heuresPrevues));
   const somme = (f: (l: LigneSalarieProjet) => number) => arrondi(parSalarie.reduce((t, l) => t + f(l), 0));
 
-  const vendu = arrondi(prixVendu(p));
+  const vendu = arrondi(prixVendu(p, "a-date", maintenant));
+  const venduContrat = arrondi(prixVendu(p, "contrat", maintenant));
   const heuresPrevues = somme((l) => l.heuresPrevues);
   const heuresReelles = somme((l) => l.heuresReelles);
   const budgetMO = somme((l) => l.coutPrevu);
@@ -207,7 +231,7 @@ export function synthese(p: ProjetCalcul, tauxCharges: number | null | undefined
   const coutReel = arrondi(coutMO + fraisReels);
   const fraisRestants = Math.max(0, budgetFrais - fraisReels);
   const projectionCout = arrondi(p.statut === "TERMINE" || p.statut === "ANNULE" ? coutReel : coutReel + restePrevu + fraisRestants);
-  const taux = (marge: number) => (vendu > 0 ? arrondi((marge / vendu) * 100, 1) : null);
+  const taux = (marge: number, base = vendu) => (base > 0 ? arrondi((marge / base) * 100, 1) : null);
 
   let avancementTemps: number | null = null;
   if (p.dateFin && p.dateFin > p.dateDebut) avancementTemps = arrondi(Math.min(100, Math.max(0, ((maintenant.getTime() - p.dateDebut.getTime()) / (p.dateFin.getTime() - p.dateDebut.getTime())) * 100)), 0);
@@ -218,31 +242,38 @@ export function synthese(p: ProjetCalcul, tauxCharges: number | null | undefined
   if (consommation != null && consommation >= 100) alertes.push({ niveau: "danger", texte: `Budget dépassé : ${consommation} % consommé.` });
   else if (consommation != null && consommation >= p.seuilAlerte) alertes.push({ niveau: "attention", texte: `${consommation} % du budget consommé (seuil d'alerte ${p.seuilAlerte} %).` });
   if (consommation != null && avancementTemps != null && avancementTemps > 10 && consommation > avancementTemps + 15) alertes.push({ niveau: "attention", texte: `Le budget se consomme plus vite que le calendrier (${consommation} % du budget pour ${avancementTemps} % du temps).` });
-  if (vendu > 0 && projectionCout > vendu) alertes.push({ niveau: "danger", texte: "Au rythme prévu, le projet finira à perte." });
+  if (venduContrat > 0 && projectionCout > venduContrat) alertes.push({ niveau: "danger", texte: "Au rythme prévu, le projet finira à perte." });
   if (p.budgetHeures && heuresReelles > p.budgetHeures) alertes.push({ niveau: "danger", texte: `Enveloppe d'heures dépassée (${heuresReelles} h pour ${p.budgetHeures} h).` });
   if (p.modeVente === "REGIE" && p.joursVendus && heuresReelles / HEURES_JOUR > p.joursVendus) alertes.push({ niveau: "attention", texte: `Plus de jours passés (${arrondi(heuresReelles / HEURES_JOUR, 1)}) que de jours vendus (${p.joursVendus}) : pensez à facturer le complément.` });
   if (p.statut === "EN_COURS" && p.dateFin && p.dateFin < aujourdhui) alertes.push({ niveau: "attention", texte: "La date de fin est passée mais le projet est toujours en cours." });
   if (sansCout.length) alertes.push({ niveau: "info", texte: `Coût horaire inconnu pour ${sansCout.join(", ")} : renseignez le salaire ou un coût standard dans la fiche.` });
   const jalons = p.jalons ?? [];
   const sommeJ = (f: (j: (typeof jalons)[number]) => boolean) => arrondi(jalons.filter(f).reduce((t, j) => t + (j.montant ?? 0), 0));
-  const facture = sommeJ((j) => j.facturation === "FACTURE" || j.facturation === "PAYE");
-  const paye = sommeJ((j) => j.facturation === "PAYE");
+  // Facturé : factures émises depuis le projet + jalons marqués facturés à la main (sans facture liée)
+  const factures = (p.factures ?? []).filter((f) => f.statut !== "ANNULEE");
+  const jalonsFactures = new Set(factures.map((f) => f.jalonId).filter(Boolean));
+  const jalonsManuels = (j: (typeof jalons)[number]) => !j.id || !jalonsFactures.has(j.id);
+  const facture = arrondi(factures.reduce((t, f) => t + f.totalHT, 0) + sommeJ((j) => jalonsManuels(j) && (j.facturation === "FACTURE" || j.facturation === "PAYE")));
+  const paye = arrondi(factures.filter((f) => f.statut === "PAYEE").reduce((t, f) => t + f.totalHT, 0) + sommeJ((j) => jalonsManuels(j) && j.facturation === "PAYE"));
   const aFacturer = sommeJ((j) => j.facturation === "A_FACTURER");
+  const impayees = factures.filter((f) => f.statut === "EMISE" && f.echeance < aujourdhui);
+  if (impayees.length) alertes.push({ niveau: "danger", texte: `Facture(s) en retard de paiement : ${impayees.map((f) => `${f.numero} (${f.totalHT.toLocaleString("fr-FR")} € HT)`).join(", ")}.` });
   const enRetard = jalons.filter((j) => j.etat !== "FAIT" && j.date < aujourdhui);
   const aFacturerEchus = jalons.filter((j) => j.facturation === "A_FACTURER" && (j.etat === "FAIT" || j.date < aujourdhui));
   if (enRetard.length) alertes.push({ niveau: "attention", texte: `Jalon(s) en retard : ${enRetard.map((j) => j.libelle).join(", ")}.` });
   if (aFacturerEchus.length) alertes.push({ niveau: "attention", texte: `À facturer maintenant : ${aFacturerEchus.map((j) => `${j.libelle}${j.montant ? ` (${j.montant.toLocaleString("fr-FR")} €)` : ""}`).join(", ")}.` });
-  if (facture - paye > 0) alertes.push({ niveau: "info", texte: `${(facture - paye).toLocaleString("fr-FR")} € facturés en attente de paiement.` });
+  if (facture - paye > 0 && !impayees.length) alertes.push({ niveau: "info", texte: `${(facture - paye).toLocaleString("fr-FR")} € facturés en attente de paiement.` });
   if (!p.affectations.length && p.statut !== "TERMINE" && p.statut !== "ANNULE") alertes.push({ niveau: "info", texte: "Aucun salarié planifié sur ce projet." });
 
   return {
     vendu, heuresPrevues, heuresReelles, heuresRestantes: arrondi(resteHeures),
-    budgetMO, budgetFrais, budgetTotal, margePrevue: arrondi(vendu - budgetTotal), tauxMargePrevue: taux(vendu - budgetTotal),
+    venduContrat,
+    budgetMO, budgetFrais, budgetTotal, margePrevue: arrondi(venduContrat - budgetTotal), tauxMargePrevue: taux(venduContrat - budgetTotal, venduContrat),
     coutMO, fraisReels, coutReel, margeReelle: arrondi(vendu - coutReel), tauxMargeReelle: taux(vendu - coutReel),
     consommation, avancementTemps,
-    projectionCout, projectionMarge: arrondi(vendu - projectionCout), tauxProjection: taux(vendu - projectionCout),
+    projectionCout, projectionMarge: arrondi(venduContrat - projectionCout), tauxProjection: taux(venduContrat - projectionCout, venduContrat),
     sansCout, alertes, parSalarie,
-    facture, paye, aFacturer, resteAFacturer: arrondi(Math.max(0, vendu - facture)),
+    facture, paye, aFacturer, resteAFacturer: arrondi(Math.max(0, (p.modeVente === "RECURRENT" ? vendu : venduContrat) - facture)),
     jalonsFaits: jalons.filter((j) => j.etat === "FAIT").length, jalonsTotal: jalons.length, jalonsEnRetard: enRetard.length,
   };
 }
@@ -263,6 +294,8 @@ export async function projetsAvecSynthese(entrepriseId: string, where: { id?: st
         temps: { include: { salarie: { select: SELECT_COUT } }, orderBy: { jour: "desc" } },
         notesFrais: { select: { id: true, montant: true, statut: true, motif: true, date: true, salarie: { select: { prenom: true, nom: true } } } },
         jalons: { orderBy: { date: "asc" } },
+        factures: { orderBy: { date: "desc" }, select: { id: true, numero: true, type: true, date: true, echeance: true, totalHT: true, totalTTC: true, tauxTva: true, statut: true, jalonId: true, payeeLe: true, relances: true, periodeDu: true, periodeAu: true } },
+        devis: { orderBy: { createdAt: "desc" }, select: { id: true, numero: true, objet: true, statut: true, totalHT: true, supplementaire: true, createdAt: true } },
       },
     }),
   ]);
@@ -288,10 +321,10 @@ export function masquerCouts<T extends { synthese: Synthese; prixVente?: number 
   const s = p.synthese;
   return {
     ...p, prixVente: null, tauxJournalier: null,
-    depenses: [], notesFrais: [],
+    depenses: [], notesFrais: [], factures: [], devis: [], montantMensuel: null,
     ...("jalons" in p ? { jalons: (p as unknown as { jalons: Record<string, unknown>[] }).jalons.map((j) => ({ ...j, montant: null })) } : {}),
     synthese: {
-      ...s, vendu: 0, budgetMO: 0, budgetFrais: 0, budgetTotal: 0, margePrevue: 0, tauxMargePrevue: null, coutMO: 0, fraisReels: 0, coutReel: 0,
+      ...s, vendu: 0, venduContrat: 0, budgetMO: 0, budgetFrais: 0, budgetTotal: 0, margePrevue: 0, tauxMargePrevue: null, coutMO: 0, fraisReels: 0, coutReel: 0,
       margeReelle: 0, tauxMargeReelle: null, projectionCout: 0, projectionMarge: 0, tauxProjection: null, consommation: null,
       facture: 0, paye: 0, aFacturer: 0, resteAFacturer: 0,
       alertes: s.alertes.filter((a) => !/budget|perte|coût|factur|paiement/i.test(a.texte)),

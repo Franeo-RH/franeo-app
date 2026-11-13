@@ -10,7 +10,7 @@ type Mois = { mois: number; heures: number; cumulHeures: number; coutMO?: number
 type PR = { id: string; nom: string; couleur: string; statut: string; client: string | null; tauxMargeReelle: number | null; tauxProjection: number | null; margeReelle: number; vendu: number; consommation: number | null; avancementTemps: number | null; heures: number; alertes: number };
 type D = {
   annee: number; voitCouts: boolean;
-  kpi: { projetsActifs: number; projetsPrevus: number; projetsTermines: number; heures: number; occupation: number | null; enAlerte: number; ca?: number; cout?: number; marge?: number; tauxMarge?: number | null; facture?: number; encaisse?: number; vendu?: number; resteAFacturer?: number; margeProjetee?: number };
+  kpi: { projetsActifs: number; projetsPrevus: number; projetsTermines: number; heures: number; occupation: number | null; enAlerte: number; ca?: number; cout?: number; marge?: number; tauxMarge?: number | null; facture?: number; encaisse?: number; vendu?: number; resteAFacturer?: number; margeProjetee?: number; carnet?: number; impayes?: number; attendu90?: number; devisEnAttente?: number; nbDevisEnAttente?: number };
   series: Mois[];
   charge: { semaine: string; planifie: number; capacite: number; taux: number }[];
   heuresParProjet: { nom: string; couleur: string; valeur: number }[];
@@ -74,6 +74,10 @@ export default function TableauBordProjets() {
             <Tuile titre="Marge réalisée" valeur={eur(k.marge)} detail={pct(k.tauxMarge)} couleur={couleurMarge(k.tauxMarge)} />
             <Tuile titre="Facturé / encaissé" valeur={eur(k.facture)} detail={`encaissé ${eur(k.encaisse)} · reste à facturer ${eur(k.resteAFacturer)}`} />
             <Tuile titre="Marge projetée en fin" valeur={eur(k.margeProjetee)} couleur={v(k.margeProjetee) < 0 ? "#b91c1c" : "#15803d"} detail="si les plannings sont tenus" />
+            <Tuile titre="Carnet de commandes" valeur={eur(k.carnet)} detail="vendu restant à réaliser (HT)" />
+            <Tuile titre="Devis en attente" valeur={eur(k.devisEnAttente)} detail={`${v(k.nbDevisEnAttente)} devis envoyé(s) sans réponse`} />
+            <Tuile titre="Encaissements attendus à 90 j" valeur={eur(k.attendu90)} detail="factures ouvertes + échéances + contrats (TTC estimé)" />
+            <Tuile titre="Impayés en retard" valeur={eur(k.impayes)} couleur={v(k.impayes) > 0 ? "#b91c1c" : "#15803d"} detail={v(k.impayes) > 0 ? "à relancer (Factures)" : "aucun retard"} />
           </>
         )}
       </div>

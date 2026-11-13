@@ -92,6 +92,8 @@ model Entreprise {
   piecesJointes     PieceJointe[]
   pointages         Pointage[]
   projets           Projet[]
+  devisProjets      DevisProjet[]
+  facturesProjets   FactureProjet[]
 }
 
 model Facturation {
@@ -980,6 +982,8 @@ model Projet {
   tauxJournalier  Float?
   joursVendus     Float?
   budgetHeures    Float?     // enveloppe d'heures (facultative)
+  modele          String?    // modèle métier choisi à la création (BTP, CONSEIL…)
+  montantMensuel  Float?     // contrat récurrent : montant HT facturé chaque mois
   seuilAlerte     Int        @default(80) // % du budget consommé qui déclenche l'alerte
   responsableId   String?
   responsable     Salarie?   @relation("ResponsableProjet", fields: [responsableId], references: [id], onDelete: SetNull)
@@ -991,6 +995,8 @@ model Projet {
   pointages       Pointage[]
   notesFrais      NoteFrais[]
   jalons          JalonProjet[]
+  devis           DevisProjet[]
+  factures        FactureProjet[]
 
   @@index([entrepriseId, statut])
 }
@@ -1058,4 +1064,70 @@ model JalonProjet {
   createdAt   DateTime  @default(now())
 
   @@index([projetId, date])
+}
+
+// Devis chiffré depuis les coûts réels ; accepté, il crée le projet (ou s'ajoute au projet comme travaux supplémentaires)
+// statut : BROUILLON | ENVOYE | ACCEPTE | REFUSE ; lignes : [{ libelle, type, quantite, unite, prixUnitaire, coutUnitaire, salarieId? }]
+model DevisProjet {
+  id            String     @id @default(cuid())
+  entrepriseId  String
+  entreprise    Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  projetId      String?    // renseigné : avenant / travaux supplémentaires sur ce projet (ou projet créé à l'acceptation)
+  projet        Projet?    @relation(fields: [projetId], references: [id], onDelete: SetNull)
+  numero        String
+  objet         String
+  client        String?
+  clientAdresse String?
+  clientEmail   String?
+  supplementaire Boolean   @default(false)
+  modele        String?
+  lignes        Json
+  margeVisee    Float      @default(30)
+  tauxTva       Float      @default(20)
+  acomptePct    Float?
+  validiteJours Int        @default(30)
+  conditions    String?
+  statut        String     @default("BROUILLON")
+  dateDebut     DateTime?
+  dateFin       DateTime?
+  totalHT       Float      @default(0)
+  coutTotal     Float      @default(0)
+  envoyeLe      DateTime?
+  accepteLe     DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([entrepriseId, numero])
+  @@index([entrepriseId, statut])
+}
+
+// Factures émises depuis un projet ; type : ACOMPTE | SITUATION | REGIE | SOLDE | JALON | MENSUELLE | AVOIR
+// statut : EMISE | PAYEE | ANNULEE
+model FactureProjet {
+  id            String     @id @default(cuid())
+  entrepriseId  String
+  entreprise    Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  projetId      String
+  projet        Projet     @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  jalonId       String?
+  numero        String
+  type          String
+  date          DateTime   @default(now())
+  echeance      DateTime
+  lignes        Json
+  totalHT       Float
+  tauxTva       Float      @default(20)
+  totalTTC      Float
+  periodeDu     String?    // régie / mensuelle : AAAA-MM-JJ
+  periodeAu     String?
+  statut        String     @default("EMISE")
+  payeeLe       DateTime?
+  relances      Int        @default(0)
+  derniereRelance DateTime?
+  note          String?
+  createdAt     DateTime   @default(now())
+
+  @@unique([entrepriseId, numero])
+  @@index([projetId])
+  @@index([entrepriseId, statut])
 }
