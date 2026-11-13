@@ -18,7 +18,7 @@ type Projet = {
   depenses: { id: string; libelle: string; categorie: string; montant: number; date: string; prevu: boolean }[];
   notesFrais: { id: string; montant: number; statut: string; motif: string; date: string; salarie: { prenom: string; nom: string } }[];
   jalons: { id: string; libelle: string; date: string; etat: string; montant: number | null; facturation: string; faitLe: string | null }[];
-  montantMensuel: number | null; modele: string | null;
+  montantMensuel: number | null; modele: string | null; adresse: string | null;
   devis: { id: string; numero: string; objet: string; statut: string; totalHT: number; supplementaire: boolean }[];
   synthese: {
     venduContrat: number; facture: number; paye: number; aFacturer: number; resteAFacturer: number; jalonsFaits: number; jalonsTotal: number; jalonsEnRetard: number;
@@ -78,7 +78,7 @@ export default function FicheProjet({ id }: { id: string }) {
   const initial: ValeursProjet = {
     nom: p.nom, code: p.code ?? "", client: p.client ?? "", description: p.description ?? "", couleur: p.couleur, statut: p.statut,
     dateDebut: iso(p.dateDebut), dateFin: iso(p.dateFin), modeVente: p.modeVente, prixVente: p.prixVente?.toString() ?? "", tauxJournalier: p.tauxJournalier?.toString() ?? "",
-    joursVendus: p.joursVendus?.toString() ?? "", budgetHeures: p.budgetHeures?.toString() ?? "", seuilAlerte: String(p.seuilAlerte), responsableId: p.responsableId ?? "", montantMensuel: p.montantMensuel?.toString() ?? "",
+    joursVendus: p.joursVendus?.toString() ?? "", budgetHeures: p.budgetHeures?.toString() ?? "", seuilAlerte: String(p.seuilAlerte), responsableId: p.responsableId ?? "", montantMensuel: p.montantMensuel?.toString() ?? "", adresse: p.adresse ?? "",
   };
   const suppr = (quoi: string, cle: string, question: string) => { if (confirm(question)) appel("DELETE", undefined, `?quoi=${quoi}&cle=${cle}`); };
 
@@ -92,6 +92,7 @@ export default function FicheProjet({ id }: { id: string }) {
             <p className="text-gray-500 mt-1">
               {[p.code, p.client, voitCouts ? MODES_VENTE[p.modeVente as keyof typeof MODES_VENTE] : null, `du ${dateFR(p.dateDebut)} au ${dateFR(p.dateFin)}`, p.responsable ? `Responsable : ${p.responsable.prenom} ${p.responsable.nom}` : null].filter(Boolean).join(" · ")}
             </p>
+            {p.adresse && <p className="text-sm mt-1">📍 <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.adresse)}`} target="_blank" rel="noreferrer" className="underline">{p.adresse}</a></p>}
             {p.description && <p className="text-sm mt-2 whitespace-pre-line">{p.description}</p>}
           </div>
           <div className="flex flex-wrap gap-2 items-center">

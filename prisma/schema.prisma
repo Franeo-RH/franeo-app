@@ -997,6 +997,7 @@ model Projet {
   tauxJournalier  Float?
   joursVendus     Float?
   budgetHeures    Float?     // enveloppe d'heures (facultative)
+  adresse         String?    // lieu d'intervention (chantier, site client…), affiché dans le planning du salarié
   modele          String?    // modèle métier choisi à la création (BTP, CONSEIL…)
   montantMensuel  Float?     // contrat récurrent : montant HT facturé chaque mois
   seuilAlerte     Int        @default(80) // % du budget consommé qui déclenche l'alerte

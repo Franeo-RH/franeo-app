@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { LIBELLES_ABSENCE } from "@/lib/espace-salarie";
 
-type Jour = { jour: string; absence: { type: string; enAttente: boolean } | null; projets: { nom: string; code: string | null; couleur: string; heures: number; role: string | null }[] };
+type Jour = { jour: string; absence: { type: string; enAttente: boolean } | null; projets: { nom: string; code: string | null; couleur: string; heures: number; role: string | null; adresse: string | null; client: string | null }[] };
 const carte: React.CSSProperties = { background: "#ffffff", borderRadius: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", padding: "18px" };
 
 /** Tableau de bord du salarié : son planning prévisionnel de la semaine (projets et absences, du lundi au vendredi) */
@@ -16,7 +16,7 @@ export default function PlanningSemaineSalarie() {
 
   return (
     <section style={carte}>
-      <h2 style={{ margin: "0 0 10px", fontSize: "17px" }}>📅 Mon planning de la semaine</h2>
+      <h2 style={{ margin: "0 0 10px", fontSize: "17px" }}>📅 Mon planning de la semaine (projets et adresses)</h2>
       {vide ? (
         <p style={{ margin: 0, fontSize: "14px", color: "#6b7280" }}>Aucun projet planifié pour vous cette semaine.</p>
       ) : (
@@ -39,7 +39,8 @@ export default function PlanningSemaineSalarie() {
                 {j.projets.map((p) => (
                   <div key={p.nom} style={{ marginTop: "4px", borderLeft: `4px solid ${p.couleur}`, paddingLeft: "8px", fontSize: "13px", opacity: j.absence && !j.absence.enAttente ? 0.5 : 1 }}>
                     <strong>{p.code ? `${p.code} · ` : ""}{p.nom}</strong>
-                    <span style={{ display: "block", color: "#6b7280" }}>≈ {p.heures.toLocaleString("fr-FR")} h{p.role ? ` · ${p.role}` : ""}</span>
+                    <span style={{ display: "block", color: "#6b7280" }}>≈ {p.heures.toLocaleString("fr-FR")} h{p.role ? ` · ${p.role}` : ""}{p.client ? ` · ${p.client}` : ""}</span>
+                    {p.adresse && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.adresse)}`} target="_blank" rel="noreferrer" style={{ display: "block", color: "#2563eb", textDecoration: "underline" }}>📍 {p.adresse}</a>}
                   </div>
                 ))}
               </div>

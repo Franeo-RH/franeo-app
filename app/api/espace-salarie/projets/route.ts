@@ -13,7 +13,7 @@ export async function GET() {
   const fin = new Date(l0.getTime() + 6 * 7 * 86400000 - 1);
   const affectations = await prisma.affectationProjet.findMany({
     where: { salarieId: s.salarie.id, du: { lte: fin }, au: { gte: l0 }, projet: { statut: { in: ["PREVU", "EN_COURS"] } } },
-    include: { projet: { select: { id: true, nom: true, code: true, couleur: true, client: true, responsable: { select: { prenom: true, nom: true } } } } },
+    include: { projet: { select: { id: true, nom: true, code: true, couleur: true, client: true, adresse: true, responsable: { select: { prenom: true, nom: true } } } } },
   });
   const semaines = Array.from({ length: 6 }, (_, k) => {
     const l = new Date(l0.getTime() + k * 7 * 86400000), v = new Date(l.getTime() + 4 * 86400000 + 86399000);
@@ -41,7 +41,7 @@ export async function GET() {
       absence: abs ? { type: abs.type, enAttente: /attente/i.test(abs.statut) } : null,
       projets: affectations
         .filter((a) => jourISO(a.du) <= iso && iso <= jourISO(a.au))
-        .map((a) => ({ nom: a.projet.nom, code: a.projet.code, couleur: a.projet.couleur, heures: arrondi(a.heuresSemaine / 5, 1), role: a.role })),
+        .map((a) => ({ nom: a.projet.nom, code: a.projet.code, couleur: a.projet.couleur, heures: arrondi(a.heuresSemaine / 5, 1), role: a.role, adresse: a.projet.adresse, client: a.projet.client })),
     };
   });
 

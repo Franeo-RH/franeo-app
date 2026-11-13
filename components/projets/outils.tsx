@@ -51,13 +51,13 @@ export function Tuile({ titre, valeur, detail, couleur }: { titre: string; valeu
 export type ValeursProjet = {
   nom: string; code: string; client: string; description: string; couleur: string; statut: string;
   dateDebut: string; dateFin: string; modeVente: string; prixVente: string; tauxJournalier: string; joursVendus: string;
-  budgetHeures: string; seuilAlerte: string; responsableId: string; montantMensuel: string; modele?: string;
+  budgetHeures: string; seuilAlerte: string; responsableId: string; montantMensuel: string; modele?: string; adresse?: string;
 };
 
 export const projetVide = (): ValeursProjet => ({
   nom: "", code: "", client: "", description: "", couleur: COULEURS_PROJET[0], statut: "PREVU",
   dateDebut: new Date().toISOString().slice(0, 10), dateFin: "", modeVente: "FORFAIT", prixVente: "", tauxJournalier: "", joursVendus: "",
-  budgetHeures: "", seuilAlerte: "80", responsableId: "", montantMensuel: "", modele: "LIBRE",
+  budgetHeures: "", seuilAlerte: "80", responsableId: "", montantMensuel: "", modele: "LIBRE", adresse: "",
 });
 
 /** Formulaire de création / modification d'un projet */
@@ -85,6 +85,7 @@ export function FormulaireProjet({ initial, salaries, voitCouts, onEnvoyer, onAn
       <label className="text-sm font-semibold md:col-span-2">Nom du projet *<input className={input} required {...champ("nom")} placeholder="Ex. Refonte du site, Chantier Dupont…" /></label>
       <label className="text-sm font-semibold">Code<input className={input} {...champ("code")} placeholder="Ex. P-2026-014" /></label>
       <label className="text-sm font-semibold">Client<input className={input} {...champ("client")} placeholder="Nom du client" /></label>
+      <label className="text-sm font-semibold md:col-span-3">📍 Adresse d&apos;intervention<input className={input} value={v.adresse ?? ""} onChange={(e) => setV({ ...v, adresse: e.target.value })} placeholder="Ex. 12 rue de l'Usine, 59000 Lille (affichée dans le planning des salariés)" /></label>
       <label className="text-sm font-semibold">Responsable
         <select className={input} {...champ("responsableId")}>
           <option value="">—</option>

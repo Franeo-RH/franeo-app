@@ -24,6 +24,8 @@ type Modele = {
   couleur: string; annule?: boolean;
 };
 
+const ADRESSES = ["12 rue Serpenoise, 57000 Metz", "8 place Stanislas, 54000 Nancy", "45 avenue Foch, 57000 Metz", "3 rue des Dominicains, 54000 Nancy", "Zone industrielle Nord, 57300 Hagondange", "18 rue du Pont-Mouja, 54000 Nancy", "Parc des Expositions, 57000 Metz"];
+
 const PROJETS: Modele[] = [
   { nom: "Rénovation des bureaux Cabinet Dumas", client: "Cabinet Dumas", modele: "BTP", mode: "FORFAIT", prix: 24000, debut: -350, duree: 70, equipe: [["thomas", 30], ["lucas", 4]], ratio: 1.05, frais: [{ libelle: "Matériaux", categorie: "MATERIEL", prevu: 6000, reel: 6650 }], couleur: "#ea580c" },
   { nom: "Audit organisation RH Groupe Vial", client: "Groupe Vial", modele: "CONSEIL", mode: "FORFAIT", prix: 12500, debut: -320, duree: 45, equipe: [["sophie", 20], ["karim", 6]], ratio: 0.88, frais: [{ libelle: "Déplacements Lyon", categorie: "DEPLACEMENT", prevu: 600, reel: 540 }], couleur: "#2563eb" },
@@ -60,7 +62,7 @@ export async function peuplerProjetsDemo(entrepriseId: string, equipe: EquipeDem
     const finPlanning = fin ?? jour(m.debut + 365);
     const p = await prisma.projet.create({
       data: {
-        entrepriseId, nom: m.nom, client: m.client, modele: m.modele, couleur: m.couleur, statut, dateDebut: debut, dateFin: fin,
+        entrepriseId, nom: m.nom, client: m.client, adresse: m.client ? ADRESSES[m.client.length % ADRESSES.length] : null, modele: m.modele, couleur: m.couleur, statut, dateDebut: debut, dateFin: fin,
         modeVente: m.mode, prixVente: m.prix ?? null, tauxJournalier: m.tj ?? null, joursVendus: m.jours ?? null, montantMensuel: m.mensuel ?? null,
         seuilAlerte: m.modele === "BTP" ? 75 : 80, responsableId: equipe.lucas.id,
         description: m.annule ? "Projet annulé par le client avant démarrage." : null,
@@ -106,7 +108,7 @@ export async function semerProjetsDemo(entrepriseId: string) {
   const jj = (n: number) => new Date(jour(n).toISOString().slice(0, 10) + "T00:00:00Z");
   const ref = (n: number) => jour(n).toISOString().slice(0, 10);
   const p1 = await prisma.projet.create({ data: {
-    entrepriseId, nom: "Audit maintenance usine Lille", code: "P-001", client: "Industries du Nord", couleur: "#2563eb", statut: "EN_COURS",
+    entrepriseId, nom: "Audit maintenance usine Lille", code: "P-001", adresse: "Rue de l'Usine, 59000 Lille", client: "Industries du Nord", couleur: "#2563eb", statut: "EN_COURS",
     dateDebut: jj(-30), dateFin: jj(30), modeVente: "FORFAIT", prixVente: 18000, responsableId: lucas.id, seuilAlerte: 80,
     description: "Audit complet des lignes et plan de maintenance préventive.",
     jalons: { create: [
@@ -128,7 +130,7 @@ export async function semerProjetsDemo(entrepriseId: string) {
     ]) },
   } });
   await prisma.projet.create({ data: {
-    entrepriseId, nom: "Salon Expo Paris 2026", code: "P-002", client: "Client Événementiel SAS", couleur: "#db2777", statut: "EN_COURS",
+    entrepriseId, nom: "Salon Expo Paris 2026", code: "P-002", adresse: "1 place de la Porte de Versailles, 75015 Paris", client: "Client Événementiel SAS", couleur: "#db2777", statut: "EN_COURS",
     dateDebut: jj(-20), dateFin: jj(10), modeVente: "REGIE", tauxJournalier: 350, joursVendus: 12, budgetHeures: 84, responsableId: lucas.id, seuilAlerte: 80,
     jalons: { create: [
       { libelle: "Montage du stand", date: jj(-8), etat: "A_FAIRE" },
