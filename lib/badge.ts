@@ -71,7 +71,11 @@ export async function majReleveDepuisPointages(salarieId: string, entrepriseId: 
 }
 
 /** Les pointages sont effacés au bout d'un an (durée de conservation limitée) */
+const dernierePurge = new Map<string, number>();
 export async function purgerPointages(entrepriseId: string) {
+  // Une purge par entreprise et par jour suffit (évite une suppression en base à chaque pointage)
+  if ((dernierePurge.get(entrepriseId) ?? 0) > Date.now() - 86400000) return;
+  dernierePurge.set(entrepriseId, Date.now());
   const limite = new Date(Date.now() - 366 * 86400000);
   await prisma.pointage.deleteMany({ where: { entrepriseId, at: { lt: limite } } }).catch(() => {});
 }

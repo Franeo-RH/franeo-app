@@ -8,20 +8,45 @@ import { empreinte, lireJeton, NOM_COOKIE } from "./jeton-session";
  * `cache` : une seule requête à la base par affichage de page, même si le layout, la page
  * et les composants appellent la session chacun de leur côté.
  */
-export const getSessionBrute = cache(async () => {
-  const cookieStore = await cookies();
-  // Cookie signé : un cookie modifié ou expiré est refusé
-  const jeton = lireJeton(cookieStore.get(NOM_COOKIE)?.value);
-  if (!jeton) return null;
+// Mémoire courte des sessions (15 s) : évite de relire l'utilisateur et son entreprise en base
+// à chaque appel d'API d'une même page. Les changements de droits s'appliquent au plus tard 15 s après.
+type UtilisateurSession = NonNullable<Awaited<ReturnType<typeof lireUtilisateur>>>;
+const MEMOIRE_MS = 15_000;
+const memoireSessions = new Map<string, { expire: number; u: UtilisateurSession }>();
 
-  const utilisateur = await prisma.utilisateur.findUnique({
-    where: { id: jeton.userId },
+function lireUtilisateur(id: string) {
+  return prisma.utilisateur.findUnique({
+    where: { id },
     include: {
       entreprise: {
         include: { abonnement: true },
       },
     },
   });
+}
+
+/** À appeler après un changement de droits, de mot de passe ou de statut (vide la mémoire de cette instance) */
+export function oublierSessions(userId?: string) {
+  if (userId) memoireSessions.delete(userId);
+  else memoireSessions.clear();
+}
+
+export const getSessionBrute = cache(async () => {
+  const cookieStore = await cookies();
+  // Cookie signé : un cookie modifié ou expiré est refusé
+  const jeton = lireJeton(cookieStore.get(NOM_COOKIE)?.value);
+  if (!jeton) return null;
+
+  const m = memoireSessions.get(jeton.userId);
+  // Mémoire ignorée si le mot de passe ne correspond plus (changé depuis) : on relit la base
+  let utilisateur: UtilisateurSession | null = m && m.expire > Date.now() && empreinte(m.u.motDePasse) === jeton.empreinte ? m.u : null;
+  if (!utilisateur) {
+    utilisateur = await lireUtilisateur(jeton.userId);
+    if (utilisateur) {
+      if (memoireSessions.size > 500) memoireSessions.clear();
+      memoireSessions.set(jeton.userId, { expire: Date.now() + MEMOIRE_MS, u: utilisateur });
+    } else memoireSessions.delete(jeton.userId);
+  }
 
   // Mot de passe changé depuis l'ouverture de la session : la session n'est plus valable
   if (!utilisateur || empreinte(utilisateur.motDePasse) !== jeton.empreinte) return null;

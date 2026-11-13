@@ -3,6 +3,7 @@
 
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
+import { coutDemo, peuplerProjetsDemo } from "@/lib/demo-projets";
 
 export const EMAIL_DEMO = "demo@franeo-rh.com";
 export const EMAIL_DEMO_SALARIE = "demo-salarie@franeo-rh.com";
@@ -355,12 +356,12 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
           { salarieId: sophie.id, jour: ref(n), heures: 5, commentaire: "Comptes rendus" },
         ]) },
       } });
-      const p2 = await prisma.projet.create({ data: {
+      await prisma.projet.create({ data: {
         entrepriseId, nom: "Salon Expo Paris 2026", code: "P-002", client: "Client Événementiel SAS", couleur: "#db2777", statut: "EN_COURS",
         dateDebut: jj(-20), dateFin: jj(10), modeVente: "REGIE", tauxJournalier: 350, joursVendus: 12, budgetHeures: 84, responsableId: lucas.id, seuilAlerte: 80,
         jalons: { create: [
           { libelle: "Montage du stand", date: jj(-8), etat: "A_FAIRE" },
-          { libelle: "Facture régie (12 jours)", date: jj(10), montant: 4200, facturation: "FACTURE" },
+          { libelle: "Bilan du salon avec le client", date: jj(10) },
         ] },
         affectations: { create: [
           { salarieId: julie.id, du: jj(-20), au: jj(10), heuresSemaine: 21, role: "Accueil stand" },
@@ -381,31 +382,17 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
         affectations: { create: [{ salarieId: karim.id, du: jj(14), au: jj(60), heuresSemaine: 10, role: "Pilote" }] },
       } });
       // Contrat récurrent d'entretien, avec une facture payée et une en retard
-      const an = new Date().getFullYear();
-      const moisIso = (n: number) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + n); return d.toISOString().slice(0, 7); };
-      const p4 = await prisma.projet.create({ data: {
+      await prisma.projet.create({ data: {
         entrepriseId, nom: "Entretien des bureaux Nord Immobilier", code: "C-001", client: "Nord Immobilier", couleur: "#0891b2", statut: "EN_COURS", modele: "SERVICES",
         dateDebut: jj(-75), modeVente: "RECURRENT", montantMensuel: 1200, seuilAlerte: 85, responsableId: sophie.id,
         affectations: { create: [{ salarieId: emma.id, du: jj(-75), au: jj(290), heuresSemaine: 6, role: "Suivi du contrat" }] },
         temps: { create: [-70, -63, -56, -49, -42, -35, -28, -21, -14, -7].map((n) => ({ salarieId: emma.id, jour: ref(n), heures: 8, commentaire: "Passage hebdomadaire" })) },
       } });
-      const facture = (projetId: string, numero: string, type: string, j: number, libelle: string, ht: number, statut: string, extra: { jalonId?: string | null; periodeDu?: string; periodeAu?: string } = {}) => prisma.factureProjet.create({ data: {
-        entrepriseId, projetId, numero, type, date: jj(j), echeance: jj(j + 30), lignes: [{ libelle, quantite: 1, unite: "forfait", prixUnitaire: ht }], totalHT: ht, tauxTva: 20, totalTTC: Math.round(ht * 120) / 100, statut, ...(statut === "PAYEE" ? { payeeLe: jj(j + 12) } : {}), ...extra,
-      } });
-      const jalonAcompte = await prisma.jalonProjet.findFirst({ where: { projetId: p1.id, libelle: "Acompte 30 %" } });
-      await facture(p1.id, `F-${an}-0001`, "ACOMPTE", -30, "Acompte de 30 % — Audit maintenance usine Lille", 5400, "PAYEE", { jalonId: jalonAcompte?.id ?? null });
-      await facture(p4.id, `F-${an}-0002`, "MENSUELLE", -45, `Entretien des bureaux — ${moisIso(-2)}`, 1200, "PAYEE", { periodeDu: `${moisIso(-2)}-01`, periodeAu: `${moisIso(-2)}-28` });
-      await facture(p4.id, `F-${an}-0003`, "MENSUELLE", -40, `Entretien des bureaux — ${moisIso(-1)}`, 1200, "EMISE", { periodeDu: `${moisIso(-1)}-01`, periodeAu: `${moisIso(-1)}-28` });
-      await facture(p2.id, `F-${an}-0004`, "REGIE", -6, "Régie salon — 10 jours", 3500, "EMISE", { periodeDu: ref(-20), periodeAu: ref(-6) });
-
-      // Devis : celui qui a créé l'audit, des travaux supplémentaires en attente, un brouillon
-      const ligne = (libelle: string, type: string, quantite: number, unite: string, coutUnitaire: number, prixUnitaire: number) => ({ libelle, type, quantite, unite, coutUnitaire, prixUnitaire, salarieId: null });
-      await prisma.devisProjet.create({ data: { entrepriseId, numero: `D-${an}-0001`, objet: "Audit maintenance usine Lille", client: "Industries du Nord", clientAdresse: "12 rue de l'Usine\n59000 Lille", clientEmail: "achats@industries-du-nord.fr", modele: "MAINTENANCE", statut: "ACCEPTE", projetId: p1.id, envoyeLe: jj(-40), accepteLe: jj(-32), acomptePct: 30,
-        lignes: [ligne("Audit des lignes (technicien)", "MO", 210, "h", 26.5, 62), ligne("Rédaction du plan de maintenance", "MO", 40, "h", 31, 70), ligne("Déplacements Lille", "DEPLACEMENT", 6, "u", 150, 205)], totalHT: 18000, coutTotal: 7705 } });
-      await prisma.devisProjet.create({ data: { entrepriseId, numero: `D-${an}-0002`, objet: "Extension de l'audit à la ligne 3", client: "Industries du Nord", supplementaire: true, projetId: p1.id, statut: "ENVOYE", envoyeLe: jj(-4),
-        lignes: [ligne("Audit ligne 3", "MO", 35, "h", 26.5, 62), ligne("Pièces d'essai", "ACHAT", 1, "forfait", 180, 260)], totalHT: 2430, coutTotal: 1107.5, conditions: "Travaux supplémentaires à réaliser après acceptation écrite du présent devis." } });
-      await prisma.devisProjet.create({ data: { entrepriseId, numero: `D-${an}-0003`, objet: "Rénovation de l'accueil", client: "Cabinet Martin", modele: "BTP", statut: "BROUILLON", acomptePct: 30, tauxTva: 10,
-        lignes: [ligne("Main-d'œuvre", "MO", 35, "h", 24, 34.3), ligne("Matériaux et fournitures", "ACHAT", 1, "forfait", 1400, 2000)], totalHT: 3200.5, coutTotal: 2240 } });
+      // Une année complète d'activité : 17 projets de plus, devis, temps, frais et factures (lib/demo-projets.ts)
+      await peuplerProjetsDemo(entrepriseId, {
+        sophie: { id: sophie.id, cout: coutDemo(3200) }, karim: { id: karim.id, cout: coutDemo(2900) }, julie: { id: julie.id, cout: coutDemo(2300) },
+        thomas: { id: thomas.id, cout: coutDemo(2600, 39) }, emma: { id: emma.id, cout: coutDemo(1200) }, lucas: { id: lucas.id, cout: coutDemo(2700) },
+      });
 
       // Le train Paris-Lille de Julie (note de frais validée) est imputé à l'audit de Lille
       await prisma.noteFrais.updateMany({ where: { entrepriseId, salarieId: julie.id, statut: "Validé" }, data: { projetId: p1.id } });

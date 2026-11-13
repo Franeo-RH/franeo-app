@@ -114,12 +114,27 @@ export function heuresPointeesParJour(pointages: { salarieId: string; jour: stri
 }
 
 /** Toutes les heures datées (pointées + saisies) des projets donnés */
-export async function heuresDatees(projetIds: string[]) {
+/**
+ * Pointages complets des journées où un salarié a pointé sur un de ces projets
+ * (il faut toute la journée pour trouver la fin de chaque plage). Deux requêtes simples,
+ * plutôt qu'une longue liste de conditions « salarié + jour » qui ralentissait la base.
+ */
+async function pointagesDesJoursProjet(projetIds: string[]) {
   if (!projetIds.length) return [];
   const avecProjet = await prisma.pointage.findMany({ where: { projetId: { in: projetIds } }, select: { salarieId: true, jour: true } });
-  const cles = [...new Set(avecProjet.map((x) => `${x.salarieId}|${x.jour}`))];
+  if (!avecProjet.length) return [];
+  const cles = new Set(avecProjet.map((x) => `${x.salarieId}|${x.jour}`));
+  const tous = await prisma.pointage.findMany({
+    where: { salarieId: { in: [...new Set(avecProjet.map((x) => x.salarieId))] }, jour: { in: [...new Set(avecProjet.map((x) => x.jour))] } },
+    select: { salarieId: true, jour: true, type: true, at: true, projetId: true },
+  });
+  return tous.filter((p) => cles.has(`${p.salarieId}|${p.jour}`));
+}
+
+export async function heuresDatees(projetIds: string[]) {
+  if (!projetIds.length) return [];
   const [pointages, temps] = await Promise.all([
-    cles.length ? prisma.pointage.findMany({ where: { OR: cles.map((c) => { const [salarieId, jour] = c.split("|"); return { salarieId, jour }; }) }, select: { salarieId: true, jour: true, type: true, at: true, projetId: true } }) : Promise.resolve([]),
+    pointagesDesJoursProjet(projetIds),
     prisma.tempsProjet.findMany({ where: { projetId: { in: projetIds } }, select: { projetId: true, salarieId: true, jour: true, heures: true, commentaire: true } }),
   ]);
   return [
@@ -295,7 +310,7 @@ const SELECT_COUT = { id: true, prenom: true, nom: true, coutHoraireStandard: tr
 
 /** Projets d'une entreprise avec leur synthèse (un seul passage en base pour les pointages) */
 export async function projetsAvecSynthese(entrepriseId: string, where: { id?: string; statut?: { in: string[] } } = {}) {
-  const [entreprise, projets] = await Promise.all([
+  const [entreprise, projetsBruts, salaries] = await Promise.all([
     prisma.entreprise.findUnique({ where: { id: entrepriseId }, select: { tauxCharges: true } }),
     prisma.projet.findMany({
       where: { entrepriseId, ...where },
@@ -304,29 +319,21 @@ export async function projetsAvecSynthese(entrepriseId: string, where: { id?: st
         responsable: { select: { id: true, prenom: true, nom: true } },
         affectations: { include: { salarie: { select: SELECT_COUT } }, orderBy: { du: "asc" } },
         depenses: { orderBy: { date: "desc" } },
-        temps: { include: { salarie: { select: SELECT_COUT } }, orderBy: { jour: "desc" } },
+        temps: { select: { id: true, salarieId: true, jour: true, heures: true, commentaire: true }, orderBy: { jour: "desc" } },
         notesFrais: { select: { id: true, montant: true, statut: true, motif: true, date: true, salarie: { select: { prenom: true, nom: true } } } },
         jalons: { orderBy: { date: "asc" } },
         factures: { orderBy: { date: "desc" }, select: { id: true, numero: true, type: true, date: true, echeance: true, totalHT: true, totalTTC: true, tauxTva: true, statut: true, jalonId: true, payeeLe: true, relances: true, periodeDu: true, periodeAu: true } },
         devis: { orderBy: { createdAt: "desc" }, select: { id: true, numero: true, objet: true, statut: true, totalHT: true, coutTotal: true, supplementaire: true, createdAt: true } },
       },
     }),
+    // Tous les salariés de l'entreprise en une requête (coûts horaires), au lieu d'une jointure par ligne de temps
+    prisma.salarie.findMany({ where: { entrepriseId }, select: SELECT_COUT }),
   ]);
-  const ids = projets.map((p) => p.id);
-  // Toutes les journées où un pointage porte un de ces projets, pour retrouver les fins de plage
-  const avecProjet = ids.length ? await prisma.pointage.findMany({ where: { projetId: { in: ids } }, select: { salarieId: true, jour: true } }) : [];
-  const cles = [...new Set(avecProjet.map((x) => `${x.salarieId}|${x.jour}`))];
-  const pointages = cles.length
-    ? await prisma.pointage.findMany({
-        where: { OR: cles.map((c) => { const [salarieId, jour] = c.split("|"); return { salarieId, jour }; }) },
-        select: { salarieId: true, jour: true, type: true, at: true, projetId: true },
-      })
-    : [];
-  const hp = heuresPointees(pointages);
-  const salariesPointes = new Map(
-    (await prisma.salarie.findMany({ where: { id: { in: [...new Set(avecProjet.map((x) => x.salarieId))] } }, select: SELECT_COUT })).map((s) => [s.id, s]),
-  );
-  return projets.map((p) => ({ ...p, synthese: synthese(p, entreprise?.tauxCharges, hp, salariesPointes) }));
+  const parId = new Map(salaries.map((s) => [s.id, s]));
+  const inconnu = (id: string): SalarieCout => ({ id, prenom: "Salarié", nom: "supprimé", coutHoraireStandard: null, salaireMensuel: null, heuresHebdomadaires: null });
+  const projets = projetsBruts.map((p) => ({ ...p, temps: p.temps.map((t) => ({ ...t, salarie: parId.get(t.salarieId) ?? inconnu(t.salarieId) })) }));
+  const hp = heuresPointees(await pointagesDesJoursProjet(projets.map((p) => p.id)));
+  return projets.map((p) => ({ ...p, synthese: synthese(p, entreprise?.tauxCharges, hp, parId) }));
 }
 
 /** Retire les montants pour un utilisateur sans le droit « projets.couts » */

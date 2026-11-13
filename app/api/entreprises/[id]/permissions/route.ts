@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { getSession, oublierSessions } from "@/lib/session";
 import { ACCES_FORMULES, ACTIONS, MODULES } from "@/lib/droits";
 
 const AUTORISES = new Set<string>([...MODULES.map((m) => m.id), ...ACTIONS.map((a) => `-${a.id}`), ...ACCES_FORMULES.map((f) => `@acces:${f.id}`)]);
@@ -33,5 +33,6 @@ export async function PUT(
   }
 
   await prisma.entreprise.update({ where: { id }, data: { permissions } });
+  oublierSessions();
   return NextResponse.json({ succes: true, permissions });
 }

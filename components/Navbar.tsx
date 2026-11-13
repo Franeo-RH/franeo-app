@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import InstallerApp from "@/components/InstallerApp";
 import BoutonTheme from "@/components/BoutonTheme";
 import { viderCacheHorsLigne } from "@/components/EnregistrerSW";
-import { oublierDroits } from "@/components/useDroits";
+import { oublierDroits, useDroits } from "@/components/useDroits";
 
 // Adresse du site vitrine (modifiable avec la variable NEXT_PUBLIC_SITE_URL sur Vercel)
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://franeo-rh.com";
@@ -20,28 +20,14 @@ interface NavbarProps {
 
 type Lien = { href: string; label: string; icon: string; visible: boolean; actifSur?: string[] };
 
-// Les droits sont relus ici : la barre est toujours complète, même si la page ne les a pas encore chargés
-let memoire: { prenom: string; permissions: string[]; aPaie: boolean } | null = null;
+// Les droits viennent du cache partagé useDroits : un seul appel à /api/me par visite (et non à chaque page)
 
 export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [chargement, setChargement] = useState(false);
   const [menuOuvert, setMenuOuvert] = useState(false);
-  const [moi, setMoi] = useState(memoire);
-
-  useEffect(() => {
-    let actif = true;
-    fetch("/api/me")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (!actif || !d) return;
-        memoire = { prenom: d.prenom || "", permissions: d.permissions || [], aPaie: !!d.aPaie };
-        setMoi(memoire);
-      })
-      .catch(() => {});
-    return () => { actif = false; };
-  }, []);
+  const moi = useDroits();
 
   // Ferme le menu téléphone à chaque changement de page
   useEffect(() => {
@@ -71,7 +57,6 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
 
   async function handleLogout() {
     setChargement(true);
-    memoire = null;
     oublierDroits();
     await viderCacheHorsLigne(); // les pages gardées pour le hors-ligne ne restent pas sur l'appareil
     await fetch("/api/logout", { method: "POST" });

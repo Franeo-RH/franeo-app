@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-type Moi = { role: string; permissions: string[]; aPaie: boolean };
+type Moi = { role: string; permissions: string[]; aPaie: boolean; prenom: string };
 let cache: Moi | null = null;
 let enCours: Promise<Moi | null> | null = null;
 
-/** Droits de l'utilisateur connecté (lus une fois, partagés entre les composants) */
+/** Droits de l'utilisateur connecté (lus une seule fois par visite, partagés entre la barre du haut, la barre latérale et les gardes de pages) */
 export function useDroits(): Moi | null {
   const [moi, setMoi] = useState<Moi | null>(cache);
   useEffect(() => {
@@ -14,7 +14,7 @@ export function useDroits(): Moi | null {
     if (!enCours) {
       enCours = fetch("/api/me")
         .then((r) => (r.ok ? r.json() : null))
-        .then((d) => (d ? { role: d.role, permissions: d.permissions || [], aPaie: !!d.aPaie } : null))
+        .then((d) => (d ? { role: d.role, permissions: d.permissions || [], aPaie: !!d.aPaie, prenom: d.prenom || "" } : null))
         .catch(() => null);
     }
     enCours.then((d) => {

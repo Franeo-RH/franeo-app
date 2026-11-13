@@ -143,6 +143,7 @@ model DemandeRecrutement {
 
   entrepriseId      String
   entreprise        Entreprise @relation(fields: [entrepriseId], references: [id])
+  @@index([entrepriseId]) // ajouté pour accélérer les recherches
 }
 
 model DemandeEvolution {
@@ -155,6 +156,7 @@ model DemandeEvolution {
   entreprise      Entreprise  @relation(fields: [entrepriseId], references: [id])
 
   abonnementId    String
+  @@index([entrepriseId]) // ajouté pour accélérer les recherches
 }
 
 model Utilisateur {
@@ -296,6 +298,7 @@ model Document {
 
   salarieId   String
   salarie     Salarie  @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+  @@index([salarieId]) // ajouté pour accélérer les recherches
 }
 
 model Ticket {
@@ -490,6 +493,7 @@ model DemandeEvolutionPaie {
   statut        String    @default("EN_ATTENTE")
   createdAt     DateTime  @default(now())
   traiteeAt     DateTime?
+  @@index([entrepriseId]) // ajouté pour accélérer les recherches
 }
 
 model Actualite {
@@ -505,6 +509,7 @@ model BuddyContexte {
   userId    String   @id
   data      String   @default("{}")
   updatedAt DateTime @updatedAt
+  @@index([userId]) // ajouté pour accélérer les recherches
 }
 
 model RappelSalarie {
@@ -544,6 +549,7 @@ model DemandeSalarie {
 
   @@index([entrepriseId, statut])
   @@index([statut])
+  @@index([salarieId]) // ajouté pour accélérer les recherches
 }
 
 // Prestation commandée par un client depuis l'application (facturée sur le mois de la commande)
@@ -597,6 +603,7 @@ model LectureCommunication {
   luAt            DateTime      @default(now())
 
   @@unique([communicationId, utilisateurId])
+  @@index([utilisateurId]) // ajouté pour accélérer les recherches
 }
 
 // Relevé d'activité mensuel du salarié : brouillon enregistré au fil du mois, puis envoyé (verrouillé)
@@ -720,6 +727,7 @@ model Formation {
   createdAt    DateTime   @default(now())
 
   @@index([entrepriseId, date])
+  @@index([salarieId]) // ajouté pour accélérer les recherches
 }
 
 // Demande d'inscription ou de contact envoyée depuis la démo / la page de connexion
@@ -795,6 +803,8 @@ model NoteFrais {
   createdAt    DateTime   @default(now())
 
   @@index([entrepriseId, statut])
+  @@index([salarieId]) // ajouté pour accélérer les recherches
+  @@index([projetId]) // ajouté pour accélérer les recherches
 }
 
 // Question d'un salarié à son N+1 (peut être reroutée au N+1 du manager ou à FRANEO RH)
@@ -889,6 +899,7 @@ model PieceJointe {
   createdAt    DateTime   @default(now())
 
   @@index([questionId])
+  @@index([entrepriseId]) // ajouté pour accélérer les recherches
 }
 
 // Modèle de contrat Word (.docx) déposé par le client, avec ses champs {{...}}
@@ -921,6 +932,7 @@ model DemandeContrat {
   createdAt    DateTime   @default(now())
 
   @@index([entrepriseId, createdAt])
+  @@index([salarieId]) // ajouté pour accélérer les recherches
 }
 
 
@@ -944,6 +956,7 @@ model Pointage {
 
   @@index([entrepriseId, jour])
   @@index([salarieId, jour])
+  @@index([projetId]) // ajouté pour accélérer les recherches
 }
 
 // Questions auxquelles Buddy n'a pas su répondre, et réponses rédigées par l'admin (Communication › Questions Buddy)
@@ -1099,6 +1112,7 @@ model DevisProjet {
 
   @@unique([entrepriseId, numero])
   @@index([entrepriseId, statut])
+  @@index([projetId]) // ajouté pour accélérer les recherches
 }
 
 // Factures émises depuis un projet ; type : ACOMPTE | SITUATION | REGIE | SOLDE | JALON | MENSUELLE | AVOIR
