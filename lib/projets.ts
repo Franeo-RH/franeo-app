@@ -316,7 +316,7 @@ export async function projetsAvecSynthese(entrepriseId: string, where: { id?: st
         responsable: { select: { id: true, prenom: true, nom: true } },
         affectations: { include: { salarie: { select: SELECT_COUT } }, orderBy: { du: "asc" } },
         depenses: { orderBy: { date: "desc" } },
-        temps: { select: { id: true, salarieId: true, jour: true, heures: true, commentaire: true }, orderBy: { jour: "desc" } },
+        temps: { select: { id: true, salarieId: true, jour: true, heures: true, commentaire: true, releveId: true }, orderBy: { jour: "desc" } },
         notesFrais: { select: { id: true, montant: true, statut: true, motif: true, date: true, salarie: { select: { prenom: true, nom: true } } } },
         jalons: { orderBy: { date: "asc" } },
         factures: { orderBy: { date: "desc" }, select: { id: true, numero: true, type: true, date: true, echeance: true, totalHT: true, totalTTC: true, tauxTva: true, statut: true, jalonId: true, payeeLe: true, relances: true, periodeDu: true, periodeAu: true } },

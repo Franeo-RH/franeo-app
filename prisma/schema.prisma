@@ -645,6 +645,8 @@ model ReleveJour {
   heuresSupp  Float      @default(0)
   teletravail Boolean    @default(false)
   commentaire String?
+  // Option Projets : répartition des heures du jour par projet [{ projetId, heures }] (heures vides = toute la journée)
+  projets     Json?
 
   @@unique([releveId, date])
 }
@@ -1056,10 +1058,12 @@ model TempsProjet {
   jour        String   // AAAA-MM-JJ
   heures      Float
   commentaire String?
+  releveId    String?  // renseigné : temps issu du relevé mensuel du salarié (recalculé à chaque enregistrement)
   createdAt   DateTime @default(now())
 
   @@index([projetId])
   @@index([salarieId, jour])
+  @@index([releveId])
 }
 
 // Jalons du projet et échéancier de facturation

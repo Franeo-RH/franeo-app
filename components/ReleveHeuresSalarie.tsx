@@ -5,8 +5,10 @@ import CalendrierReleve, { absenceDuJour, styleAbsence } from "@/components/Cale
 import { LIBELLES_ABSENCE } from "@/lib/espace-salarie";
 import { fmtH, joursDuMois, lireHeures, NOMS_MOIS, STATUTS_RELEVE, type AbsenceReleve, type JourReleve } from "@/lib/heures";
 
-type Saisie = { heures: string; heuresSupp: string; commentaire: string; teletravail?: boolean };
-const vide: Saisie = { heures: "", heuresSupp: "", commentaire: "", teletravail: false };
+type Part = { projetId: string; heures: string };
+type Saisie = { heures: string; heuresSupp: string; commentaire: string; teletravail?: boolean; projets?: Part[] };
+type ProjetChoix = { id: string; nom: string; code: string | null; couleur: string; planifie: boolean };
+const vide: Saisie = { heures: "", heuresSupp: "", commentaire: "", teletravail: false, projets: [] };
 const versTexte = (n: number | null | undefined) => (n == null || n === 0 ? "" : String(n).replace(".", ","));
 
 const champ: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: "1px solid #d1d5db", borderRadius: "8px", padding: "10px", fontSize: "16px", background: "#ffffff", marginTop: "4px" };
@@ -27,6 +29,8 @@ export default function ReleveHeuresSalarie() {
   const [message, setMessage] = useState<{ ok: boolean; texte: string } | null>(null);
   const [remplir, setRemplir] = useState("7");
   const [commentaireMois, setCommentaireMois] = useState("");
+  const [projets, setProjets] = useState<ProjetChoix[]>([]);
+  const [projetRemplir, setProjetRemplir] = useState("");
 
   const modifiable = statut === "Brouillon" || statut === "Refusé";
   const jours = joursDuMois(mois, annee);
@@ -38,8 +42,9 @@ export default function ReleveHeuresSalarie() {
     setMotifRefus(d.motifRefus);
     setCommentaireMois(d.commentaire || "");
     setAbsences(d.absences || []);
+    setProjets(d.projets || []);
     const s: Record<string, Saisie> = {};
-    for (const j of d.jours as JourReleve[]) s[j.date] = { heures: versTexte(j.heures), heuresSupp: versTexte(j.heuresSupp), commentaire: j.commentaire || "", teletravail: !!j.teletravail };
+    for (const j of d.jours as JourReleve[]) s[j.date] = { heures: versTexte(j.heures), heuresSupp: versTexte(j.heuresSupp), commentaire: j.commentaire || "", teletravail: !!j.teletravail, projets: (j.projets || []).map((p) => ({ projetId: p.projetId, heures: versTexte(p.heures) })) };
     setSaisie(s);
     setModifie(false);
     setSelection(null);
@@ -53,6 +58,11 @@ export default function ReleveHeuresSalarie() {
     setMois(d.getMonth() + 1);
     setAnnee(d.getFullYear());
     setMessage(null);
+  }
+
+  function majProjets(iso: string, parts: Part[]) {
+    setSaisie((s) => ({ ...s, [iso]: { ...(s[iso] || vide), projets: parts } }));
+    setModifie(true);
   }
 
   function maj(iso: string, champ: keyof Saisie, valeur: string | boolean) {
@@ -69,8 +79,12 @@ export default function ReleveHeuresSalarie() {
         const jour = new Date(`${iso}T12:00:00Z`).getUTCDay();
         if (jour === 0 || jour === 6) continue; // week-end
         if (absenceDuJour(absences, iso)) continue; // jour d'absence
-        if (n[iso]?.heures) continue; // déjà saisi
-        n[iso] = { ...(n[iso] || vide), heures: String(h).replace(".", ",") };
+        if (n[iso]?.heures) {
+          // Jour déjà saisi : on ajoute seulement le projet choisi s'il n'y en a pas encore
+          if (projetRemplir && !(n[iso].projets || []).length) n[iso] = { ...n[iso], projets: [{ projetId: projetRemplir, heures: "" }] };
+          continue;
+        }
+        n[iso] = { ...(n[iso] || vide), heures: String(h).replace(".", ","), projets: projetRemplir ? [{ projetId: projetRemplir, heures: "" }] : n[iso]?.projets || [] };
       }
       return n;
     });
@@ -81,7 +95,7 @@ export default function ReleveHeuresSalarie() {
     if (envoyer && !confirm(`Envoyer votre relevé de ${NOMS_MOIS[mois - 1]} ${annee} ?\n\nUne fois envoyé, vous ne pourrez plus le modifier.`)) return;
     setEnvoi(true);
     setMessage(null);
-    const corps = { mois, annee, envoyer, commentaire: commentaireMois, jours: Object.entries(saisie).map(([date, v]) => ({ date, ...v })) };
+    const corps = { mois, annee, envoyer, commentaire: commentaireMois, jours: Object.entries(saisie).map(([date, v]) => ({ date, ...v, projets: (v.projets || []).filter((p) => p.projetId) })) };
     const res = await fetch("/api/espace-salarie/heures", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) });
     const d = await res.json().catch(() => ({}));
     setEnvoi(false);
@@ -103,6 +117,20 @@ export default function ReleveHeuresSalarie() {
     totH += hOk || 0;
     totS += sOk;
   }
+
+  // Répartition du mois par projet (heures vides = reste de la journée)
+  const parProjet = new Map<string, number>();
+  let sansProjet = 0;
+  for (const [iso, v] of Object.entries(saisie)) {
+    const h = pourCalendrier[iso]?.heures ?? 0;
+    const parts = (v.projets || []).filter((p) => p.projetId);
+    if (!parts.length) { sansProjet += h; continue; }
+    const fixes = parts.map((p) => { const x = lireHeures(p.heures); return x !== null && !Number.isNaN(x) ? x : null; });
+    const libres = fixes.filter((x) => x === null).length;
+    const reste = Math.max(0, h - fixes.reduce<number>((t, x) => t + (x ?? 0), 0));
+    parts.forEach((p, i) => parProjet.set(p.projetId, (parProjet.get(p.projetId) ?? 0) + (fixes[i] ?? (libres ? reste / libres : 0))));
+  }
+  const nomProjet = (id: string) => projets.find((p) => p.id === id);
 
   const st = STATUTS_RELEVE[statut] || STATUTS_RELEVE.Brouillon;
   const absSel = selection ? absenceDuJour(absences, selection) : null;
@@ -143,6 +171,37 @@ export default function ReleveHeuresSalarie() {
                 <input type="checkbox" checked={!!s.teletravail} onChange={(e) => maj(selection, "teletravail", e.target.checked)} style={{ width: "18px", height: "18px", accentColor: "#f97316" }} />
                 🏠 Journée en télétravail
               </label>
+              {projets.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {(s.projets || []).length <= 1 ? (
+                    <label style={label}>📐 Projet de la journée
+                      <select value={s.projets?.[0]?.projetId ?? ""} onChange={(e) => majProjets(selection, e.target.value ? [{ projetId: e.target.value, heures: "" }] : [])} style={champ}>
+                        <option value="">— Sans projet —</option>
+                        {projets.map((p) => <option key={p.id} value={p.id}>{p.planifie ? "⭐ " : ""}{p.code ? `${p.code} · ` : ""}{p.nom}</option>)}
+                      </select>
+                    </label>
+                  ) : (
+                    <>
+                      <span style={label}>📐 Répartition entre projets (heures vides = le reste de la journée)</span>
+                      {(s.projets || []).map((p, i) => (
+                        <div key={i} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 90px 36px", gap: "6px", alignItems: "center" }}>
+                          <select value={p.projetId} onChange={(e) => majProjets(selection, (s.projets || []).map((x, k) => (k === i ? { ...x, projetId: e.target.value } : x)))} style={{ ...champ, marginTop: 0 }}>
+                            <option value="">— Choisir —</option>
+                            {projets.map((x) => <option key={x.id} value={x.id}>{x.planifie ? "⭐ " : ""}{x.nom}</option>)}
+                          </select>
+                          <input inputMode="decimal" placeholder="h" value={p.heures} onChange={(e) => majProjets(selection, (s.projets || []).map((x, k) => (k === i ? { ...x, heures: e.target.value } : x)))} style={{ ...champ, marginTop: 0, textAlign: "center" }} />
+                          <button type="button" aria-label="Retirer ce projet" onClick={() => majProjets(selection, (s.projets || []).filter((_, k) => k !== i))} style={{ border: "none", background: "none", color: "#b91c1c", fontSize: "18px", cursor: "pointer" }}>✕</button>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {(s.projets || []).length < 5 && (
+                    <button type="button" onClick={() => majProjets(selection, [...((s.projets || []).length ? s.projets! : [{ projetId: "", heures: "" }]), { projetId: "", heures: "" }])} style={{ alignSelf: "flex-start", border: "none", background: "none", color: "#ea580c", fontWeight: 600, fontSize: "13px", cursor: "pointer", padding: 0 }}>
+                      ➕ Répartir sur plusieurs projets
+                    </button>
+                  )}
+                </div>
+              )}
               <label style={label}>Commentaire<input maxLength={300} value={s.commentaire} onChange={(e) => maj(selection, "commentaire", e.target.value)} placeholder="facultatif" style={champ} /></label>
               <button type="button" onClick={() => setSelection(null)} style={{ alignSelf: "flex-end", background: "#111827", color: "#ffffff", border: "none", borderRadius: "8px", padding: "8px 16px", fontWeight: 600, cursor: "pointer" }}>OK</button>
             </>
@@ -150,6 +209,7 @@ export default function ReleveHeuresSalarie() {
             <p style={{ margin: 0, fontSize: "14px" }}>
               {fmtH(pourCalendrier[selection]?.heures)}{pourCalendrier[selection]?.heuresSupp ? ` · dont ${fmtH(pourCalendrier[selection].heuresSupp)} supp.` : ""}
               {pourCalendrier[selection]?.commentaire ? ` · ${pourCalendrier[selection].commentaire}` : ""}
+              {(s.projets || []).filter((p) => p.projetId).map((p) => <span key={p.projetId} style={{ display: "block", color: nomProjet(p.projetId)?.couleur }}>📐 {nomProjet(p.projetId)?.nom ?? "Projet"}{p.heures ? ` · ${p.heures} h` : ""}</span>)}
             </p>
           )}
         </div>
@@ -160,6 +220,12 @@ export default function ReleveHeuresSalarie() {
           <span>Remplir les jours ouvrés vides avec</span>
           <input inputMode="decimal" value={remplir} onChange={(e) => setRemplir(e.target.value)} aria-label="Heures par jour" style={{ ...champ, width: "70px", marginTop: 0, padding: "6px", textAlign: "center" }} />
           <span>h</span>
+          {projets.length > 0 && (
+            <select value={projetRemplir} onChange={(e) => setProjetRemplir(e.target.value)} aria-label="Projet pour les jours remplis" style={{ ...champ, width: "auto", maxWidth: "100%", marginTop: 0, padding: "6px" }}>
+              <option value="">sans projet</option>
+              {projets.map((p) => <option key={p.id} value={p.id}>sur {p.nom}</option>)}
+            </select>
+          )}
           <button type="button" onClick={remplirOuvres} style={{ border: "1px solid #f97316", color: "#ea580c", background: "#ffffff", borderRadius: "8px", padding: "6px 12px", fontWeight: 600, cursor: "pointer" }}>Remplir</button>
         </div>
       )}
@@ -167,6 +233,13 @@ export default function ReleveHeuresSalarie() {
       <p style={{ margin: 0, fontSize: "14px" }}>
         Total du mois : <strong>{fmtH(totH)}</strong>{totS > 0 && <> dont <strong style={{ color: "#c2410c" }}>{fmtH(totS)} supp.</strong></>}
       </p>
+      {projets.length > 0 && parProjet.size > 0 && (
+        <div style={{ fontSize: "13px", background: "#f9fafb", borderRadius: "10px", padding: "8px 10px", display: "flex", flexWrap: "wrap", gap: "6px 12px" }}>
+          <strong>📐 Par projet :</strong>
+          {[...parProjet.entries()].map(([id, h]) => <span key={id} style={{ color: nomProjet(id)?.couleur }}>{nomProjet(id)?.nom ?? "Projet"} {fmtH(Math.round(h * 100) / 100)}</span>)}
+          {sansProjet > 0 && <span style={{ color: "#6b7280" }}>sans projet {fmtH(Math.round(sansProjet * 100) / 100)}</span>}
+        </div>
+      )}
 
       {modifiable ? (
         <label style={label}>💬 Commentaire sur mon relevé (facultatif)
@@ -189,7 +262,7 @@ export default function ReleveHeuresSalarie() {
 
       {message && <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: message.ok ? "#15803d" : "#b91c1c" }}>{message.texte}</p>}
       <p style={{ margin: 0, fontSize: "12px", color: "#6b7280" }}>
-        Touchez un jour pour saisir vos heures. Enregistrez au fil du mois, puis envoyez le relevé : il ne sera plus modifiable. Vos absences s&apos;affichent automatiquement.
+        Touchez un jour pour saisir vos heures{projets.length > 0 ? " et le projet sur lequel vous avez travaillé (⭐ = projets où vous êtes planifié)" : ""}. Enregistrez au fil du mois, puis envoyez le relevé : il ne sera plus modifiable. Vos absences s&apos;affichent automatiquement.
       </p>
     </div>
   );

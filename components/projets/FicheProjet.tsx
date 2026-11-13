@@ -13,7 +13,7 @@ type Projet = {
   dateDebut: string; dateFin: string | null; modeVente: string; prixVente: number | null; tauxJournalier: number | null; joursVendus: number | null;
   budgetHeures: number | null; seuilAlerte: number; responsableId: string | null; responsable: { prenom: string; nom: string } | null;
   affectations: { id: string; salarieId: string; du: string; au: string; heuresSemaine: number; role: string | null; salarie: Sal }[];
-  temps: { id: string; salarieId: string; jour: string; heures: number; commentaire: string | null; salarie: Sal }[];
+  temps: { id: string; salarieId: string; jour: string; heures: number; commentaire: string | null; releveId?: string | null; salarie: Sal }[];
   depenses: { id: string; libelle: string; categorie: string; montant: number; date: string; prevu: boolean }[];
   notesFrais: { id: string; montant: number; statut: string; motif: string; date: string; salarie: { prenom: string; nom: string } }[];
   jalons: { id: string; libelle: string; date: string; etat: string; montant: number | null; facturation: string; faitLe: string | null }[];
@@ -236,13 +236,13 @@ export default function FicheProjet({ id }: { id: string }) {
           <h2 className="text-xl font-bold mb-1">⏱️ Temps passé</h2>
           <a href={`/api/projets/${id}?format=csv`} className="text-sm font-semibold underline">📥 Exporter les temps (Excel)</a>
         </div>
-        <p className="text-sm text-gray-500 mb-3">Les heures pointées avec ce projet depuis le badge sont comptées automatiquement. Ajoutez ici le temps qui n&apos;a pas été pointé.</p>
+        <p className="text-sm text-gray-500 mb-3">Les heures pointées avec ce projet au badge et celles que les salariés attribuent au projet dans leur relevé mensuel sont comptées automatiquement. Ajoutez ici le temps qui manque.</p>
         {p.temps.length > 0 && (
           <ul className="divide-y mb-3 max-h-72 overflow-y-auto">
             {p.temps.map((t) => (
               <li key={t.id} className="py-2 flex justify-between gap-2 text-sm">
                 <span>{dateFR(t.jour)} · <strong>{t.salarie.prenom} {t.salarie.nom}</strong> · {h(t.heures)}{t.commentaire ? ` — ${t.commentaire}` : ""}</span>
-                {peutGerer && <button type="button" onClick={() => suppr("temps", t.id, "Supprimer ce temps ?")} className="text-red-700 text-xs underline">Supprimer</button>}
+                {t.releveId ? <span className="text-xs text-gray-500">depuis le relevé du salarié</span> : peutGerer && <button type="button" onClick={() => suppr("temps", t.id, "Supprimer ce temps ?")} className="text-red-700 text-xs underline">Supprimer</button>}
               </li>
             ))}
           </ul>

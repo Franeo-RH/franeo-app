@@ -5,6 +5,7 @@ import { notifierClients } from "@/lib/notifications";
 import { fmtH, joursDuMois, jourUTC, lireHeures, NOMS_MOIS } from "@/lib/heures";
 import { chargerReleve, lireMoisAnnee } from "@/lib/releves";
 import { aDroit } from "@/lib/droits";
+import { lireRepartition, projetsPourReleve, synchroniserTempsReleve, type PartProjet } from "@/lib/releves-projets";
 
 const MODIFIABLE = ["Brouillon", "Refusé"];
 
@@ -16,7 +17,13 @@ export async function GET(request: NextRequest) {
   const p = request.nextUrl.searchParams;
   const ma = lireMoisAnnee(p.get("mois"), p.get("annee"));
   if (!ma) return NextResponse.json({ erreur: "Mois invalide" }, { status: 400 });
-  return NextResponse.json(await chargerReleve(s.salarie.id, ma.mois, ma.annee));
+  // Option Projets : liste des projets du mois pour choisir le projet de chaque journée
+  const avecProjets = aDroit(s.utilisateur.entreprise?.permissions, "espace.projets");
+  const [releve, projets] = await Promise.all([
+    chargerReleve(s.salarie.id, ma.mois, ma.annee),
+    avecProjets ? projetsPourReleve(s.utilisateur.entrepriseId!, s.salarie.id, ma.mois, ma.annee) : Promise.resolve([]),
+  ]);
+  return NextResponse.json({ ...releve, projets });
 }
 
 /**
@@ -39,7 +46,9 @@ export async function PUT(request: NextRequest) {
   }
 
   const joursValides = new Set(joursDuMois(mois, annee));
-  const lignes: { date: Date; heures: number | null; heuresSupp: number; commentaire: string | null; teletravail: boolean }[] = [];
+  const avecProjets = aDroit(s.utilisateur.entreprise?.permissions, "espace.projets");
+  const projetsAutorises = new Set(avecProjets ? (await projetsPourReleve(s.utilisateur.entrepriseId!, s.salarie.id, mois, annee)).map((p) => p.id) : []);
+  const lignes: { date: Date; heures: number | null; heuresSupp: number; commentaire: string | null; teletravail: boolean; projets?: PartProjet[] }[] = [];
   for (const brut of Array.isArray(corps?.jours) ? corps.jours.slice(0, 31) : []) {
     const j = brut as Record<string, unknown>;
     const iso = String(j.date ?? "");
@@ -53,7 +62,12 @@ export async function PUT(request: NextRequest) {
     const commentaire = typeof j.commentaire === "string" && j.commentaire.trim() ? j.commentaire.trim().slice(0, 300) : null;
     const teletravail = j.teletravail === true;
     if (heures === null && supp === 0 && !commentaire && !teletravail) continue;
-    lignes.push({ date, heures, heuresSupp: supp, commentaire, teletravail });
+    const projets = avecProjets ? lireRepartition(j.projets, projetsAutorises) : [];
+    const reparties = projets.reduce((t, p) => t + (p.heures ?? 0), 0);
+    if (heures !== null && reparties > heures + 0.01) {
+      return NextResponse.json({ erreur: `Le ${date.toLocaleDateString("fr-FR", { timeZone: "UTC" })}, les heures réparties sur les projets (${fmtH(reparties)}) dépassent les heures de la journée (${fmtH(heures)}).` }, { status: 400 });
+    }
+    lignes.push({ date, heures, heuresSupp: supp, commentaire, teletravail, ...(projets.length ? { projets } : {}) });
   }
 
   const envoyer = corps?.envoyer === true;
@@ -74,6 +88,9 @@ export async function PUT(request: NextRequest) {
       data: envoyer ? { statut: "Envoyé", envoyeAt: new Date(), motifRefus: null, commentaire } : { statut: "Brouillon", commentaire },
     });
   });
+
+  // Les heures réparties sur les projets deviennent des temps passés (option Projets)
+  if (avecProjets) await synchroniserTempsReleve(releve.id);
 
   if (envoyer) {
     const totH = lignes.reduce((a, l) => a + (l.heures || 0), 0);

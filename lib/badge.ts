@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { repartitionDepuisBadge } from "@/lib/releves-projets";
 import { jourUTC } from "@/lib/heures";
 
 export const TYPES_POINTAGE = {
@@ -47,7 +48,7 @@ export function heuresDuJour(pointages: { type: string; at: Date }[]): number {
 export async function majReleveDepuisPointages(salarieId: string, entrepriseId: string, jour: string) {
   const [annee, mois] = jour.split("-").map(Number);
   const [pointages, salarie] = await Promise.all([
-    prisma.pointage.findMany({ where: { salarieId, jour }, select: { type: true, at: true } }),
+    prisma.pointage.findMany({ where: { salarieId, jour }, select: { salarieId: true, jour: true, type: true, at: true, projetId: true } }),
     prisma.salarie.findUnique({ where: { id: salarieId }, select: { heuresHebdomadaires: true } }),
   ]);
   const heures = heuresDuJour(pointages);
@@ -63,10 +64,14 @@ export async function majReleveDepuisPointages(salarieId: string, entrepriseId: 
   });
   if (releve.statut !== "Brouillon" && releve.statut !== "Refusé") return;
   const existant = await prisma.releveJour.findUnique({ where: { releveId_date: { releveId: releve.id, date } } });
+  // Projets choisis au pointage : la journée du relevé est répartie d'après le badge (sauf si le salarié l'a déjà fait)
+  const parts = repartitionDepuisBadge(pointages);
+  const dejaReparti = existant && Array.isArray(existant.projets) && existant.projets.length > 0;
+  const projets = parts.length && !dejaReparti ? { projets: parts } : {};
   if (existant) {
-    await prisma.releveJour.update({ where: { id: existant.id }, data: { heures, heuresSupp: supp } });
+    await prisma.releveJour.update({ where: { id: existant.id }, data: { heures, heuresSupp: supp, ...projets } });
   } else if (heures > 0) {
-    await prisma.releveJour.create({ data: { releveId: releve.id, date, heures, heuresSupp: supp, commentaire: "Badge" } });
+    await prisma.releveJour.create({ data: { releveId: releve.id, date, heures, heuresSupp: supp, commentaire: "Badge", ...projets } });
   }
 }
 
