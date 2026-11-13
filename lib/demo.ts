@@ -276,9 +276,9 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
       if (new Date().getHours() >= 10) {
         await prisma.pointage.createMany({
           data: [
-            { salarieId: sophie.id, entrepriseId, type: "ARRIVEE", at: a(8, 52), jour: j, dansZone: true, etablissement: "Siège Paris" },
-            { salarieId: julie.id, entrepriseId, type: "ARRIVEE", at: a(9, 6), jour: j, dansZone: false, etablissement: "Siège Paris", motif: "Hors zone (environ 850 m au-delà de « Siège Paris »)" },
-            { salarieId: emma.id, entrepriseId, type: "ARRIVEE", at: a(9, 30), jour: j, dansZone: true, etablissement: "Siège Paris" },
+            { salarieId: sophie.id, entrepriseId, type: "ARRIVEE", at: a(8, 52), jour: j, adresse: "10 Rue de la Paix 75002 Paris" },
+            { salarieId: julie.id, entrepriseId, type: "ARRIVEE", at: a(9, 6), jour: j, adresse: "Parc des Expositions, 1 Place de la Porte de Versailles 75015 Paris" },
+            { salarieId: emma.id, entrepriseId, type: "ARRIVEE", at: a(9, 30), jour: j, adresse: "10 Rue de la Paix 75002 Paris" },
           ],
         });
       }

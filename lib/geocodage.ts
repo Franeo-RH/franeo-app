@@ -19,3 +19,23 @@ export async function geocoder(adresse: string): Promise<{ latitude: number; lon
   }
   return null;
 }
+
+/** Adresse correspondant à une position GPS (géocodage inverse, Base Adresse Nationale) */
+export async function adresseDe(latitude: number, longitude: number): Promise<string | null> {
+  const urls = [
+    `https://data.geopf.fr/geocodage/reverse?lon=${longitude}&lat=${latitude}&limit=1`,
+    `https://api-adresse.data.gouv.fr/reverse/?lon=${longitude}&lat=${latitude}&limit=1`,
+  ];
+  for (const url of urls) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      if (!r.ok) continue;
+      const d = await r.json();
+      const label = d?.features?.[0]?.properties?.label;
+      if (typeof label === "string" && label) return label;
+    } catch {
+      // service suivant
+    }
+  }
+  return null;
+}

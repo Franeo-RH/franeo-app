@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { fmtH } from "@/lib/heures";
 
-type P = { id: string; type: string; at: string; dansZone: boolean | null; motif: string | null; etablissement: string | null };
+type P = { id: string; type: string; at: string; adresse: string | null };
 type Etat = { jour: string; pointages: P[]; actions: string[]; heures: number; controleZone: boolean };
 
 const TYPES: Record<string, { label: string; icone: string; fond: string }> = {
@@ -82,9 +82,7 @@ export default function BadgeSalarie({ compact = false }: { compact?: boolean })
             {etat.pointages.map((p) => (
               <li key={p.id} style={{ borderTop: "1px solid #f3f4f6", padding: "9px 0", display: "flex", justifyContent: "space-between", gap: "10px", fontSize: "14px" }}>
                 <span>{TYPES[p.type]?.icone} <strong>{TYPES[p.type]?.label}</strong> à {heure(p.at)}</span>
-                <span style={{ color: p.dansZone === false ? "#b91c1c" : p.dansZone ? "#15803d" : "#6b7280", fontSize: "13px", textAlign: "right" }}>
-                  {p.dansZone === true ? `✓ ${p.etablissement ?? "dans la zone"}` : p.dansZone === false ? "⚠️ hors zone" : p.motif ?? ""}
-                </span>
+                <span style={{ color: "#6b7280", fontSize: "13px", textAlign: "right" }}>📍 {p.adresse ?? ""}</span>
               </li>
             ))}
           </ul>
@@ -93,9 +91,7 @@ export default function BadgeSalarie({ compact = false }: { compact?: boolean })
       )}
 
       {!compact && <p style={{ margin: 0, fontSize: "12px", color: "#6b7280", lineHeight: 1.5 }}>
-        🔒 {etat?.controleZone
-          ? "Votre position est demandée uniquement au moment où vous pointez, pour vérifier que vous êtes sur votre lieu de travail. Elle n'est ni suivie ni conservée : seul le résultat « dans la zone / hors zone » est enregistré, pendant un an maximum."
-          : "Aucune position n'est demandée pour vos pointages."} Pour toute question, adressez-vous à votre employeur.
+        🔒 Votre position est demandée uniquement au moment où vous pointez (aucun suivi en continu). L&apos;adresse du lieu de pointage est enregistrée et visible par votre employeur, pendant un an maximum. Pour toute question, adressez-vous à votre employeur.
       </p>}
     </>
   );

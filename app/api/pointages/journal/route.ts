@@ -4,7 +4,7 @@ import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
 
 /**
- * GET ?du=&au=&entrepriseId=&horsZone=1 : journal (log) des pointages, du plus récent au plus ancien.
+ * GET ?du=&au=&entrepriseId= : journal (log) des pointages, du plus récent au plus ancien.
  * Admin : tous les clients (hors démo) ou un client ; client : son entreprise.
  */
 export async function GET(request: NextRequest) {
@@ -19,11 +19,10 @@ export async function GET(request: NextRequest) {
         ? (p.get("entrepriseId") ? { entrepriseId: p.get("entrepriseId")! } : { entreprise: { demo: false } })
         : { entrepriseId: session.entrepriseId ?? "-" }),
       ...(ok(p.get("du")) || ok(p.get("au")) ? { jour: { ...(ok(p.get("du")) ? { gte: p.get("du")! } : {}), ...(ok(p.get("au")) ? { lte: p.get("au")! } : {}) } } : {}),
-      ...(p.get("horsZone") === "1" ? { dansZone: false } : {}),
     },
     include: { salarie: { select: { prenom: true, nom: true } }, entreprise: { select: { nom: true } } },
     orderBy: { at: "desc" },
     take: 1000,
   });
-  return NextResponse.json(l.map((x) => ({ id: x.id, at: x.at, jour: x.jour, type: x.type, dansZone: x.dansZone, motif: x.motif, etablissement: x.etablissement, salarie: x.salarie, entreprise: x.entreprise.nom })));
+  return NextResponse.json(l.map((x) => ({ id: x.id, at: x.at, jour: x.jour, type: x.type, adresse: x.adresse, salarie: x.salarie, entreprise: x.entreprise.nom })));
 }

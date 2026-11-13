@@ -51,7 +51,6 @@ export function ChampsRoleRH({ valeur, onChange, exclureId }: { valeur: RoleRH; 
           <label className="flex items-center gap-2"><input type="checkbox" checked={valeur.saisieVariables} onChange={(e) => onChange({ ...valeur, saisieVariables: e.target.checked })} /> Saisir les variables de paie de son équipe</label>
         </div>
       )}
-      <label className="col-span-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={!!valeur.badgeSansZone} onChange={(e) => onChange({ ...valeur, badgeSansZone: e.target.checked })} /> Salarié itinérant : badge sans contrôle de zone (chantiers, déplacements)</label>
       {valeur.roleRH === "DIRIGEANT" && <p className="col-span-2 text-sm text-gray-600">Le dirigeant voit toute l&apos;entreprise dans son espace salarié et valide pour les salariés sans manager.</p>}
     </div>
   );

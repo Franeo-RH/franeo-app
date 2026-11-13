@@ -10,7 +10,7 @@ export async function GET() {
   if (!s.ok) return NextResponse.json({ erreur: "Accès refusé" }, { status: 401 });
   if (!aDroit(s.utilisateur.entreprise?.permissions, "espace.badge")) return NextResponse.json([]);
   const depuis = new Date(Date.now() - 14 * 86400000);
-  const l = await prisma.pointage.findMany({ where: { salarieId: s.salarie.id, at: { gte: depuis } }, orderBy: { at: "asc" }, select: { type: true, at: true, jour: true, dansZone: true, motif: true } });
+  const l = await prisma.pointage.findMany({ where: { salarieId: s.salarie.id, at: { gte: depuis } }, orderBy: { at: "asc" }, select: { type: true, at: true, jour: true, adresse: true } });
   const jours = [...new Set(l.map((x) => x.jour))].sort().reverse();
   return NextResponse.json(jours.map((j) => {
     const p = l.filter((x) => x.jour === j);

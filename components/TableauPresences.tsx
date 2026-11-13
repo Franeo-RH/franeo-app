@@ -5,8 +5,8 @@ import { fmtH } from "@/lib/heures";
 
 type L = {
   salarie: { id: string; prenom: string; nom: string; poste: string };
-  pointages: { type: string; at: string; dansZone: boolean | null; motif: string | null }[];
-  heures: number; etat: string; horsZone: number; oubli: boolean;
+  pointages: { type: string; at: string; adresse: string | null }[];
+  heures: number; etat: string; oubli: boolean;
 };
 const ETATS: Record<string, { l: string; f: string; t: string }> = {
   PRESENT: { l: "Présent", f: "#dcfce7", t: "#15803d" }, PAUSE: { l: "En pause", f: "#fef3c7", t: "#b45309" },
@@ -30,7 +30,7 @@ export default function TableauPresences({ api, exportCsv = false }: { api: stri
   useEffect(() => { charger(); }, [charger]);
 
   const present = lignes?.filter((l) => l.etat === "PRESENT" || l.etat === "PAUSE").length ?? 0;
-  const alertes = lignes?.filter((l) => l.horsZone > 0 || l.oubli).length ?? 0;
+  const alertes = lignes?.filter((l) => l.oubli).length ?? 0;
   const cell: React.CSSProperties = { padding: "10px 8px", borderTop: "1px solid #f3f4f6", fontSize: "14px", verticalAlign: "top" };
 
   return (
@@ -57,9 +57,9 @@ export default function TableauPresences({ api, exportCsv = false }: { api: stri
                 <tr key={l.salarie.id}>
                   <td style={cell}><strong>{l.salarie.prenom} {l.salarie.nom}</strong><span style={{ display: "block", fontSize: "12px", color: "#6b7280" }}>{l.salarie.poste}</span></td>
                   <td style={cell}><span style={{ background: e.f, color: e.t, borderRadius: "999px", padding: "3px 10px", fontSize: "12px", fontWeight: 700, whiteSpace: "nowrap" }}>{e.l}</span></td>
-                  <td style={cell}>{l.pointages.length === 0 ? "—" : l.pointages.map((p, i) => <span key={i} style={{ display: "inline-block", marginRight: "8px", color: p.dansZone === false ? "#b91c1c" : undefined }} title={p.motif ?? ""}>{LIB[p.type]} {heure(p.at)}{p.dansZone === false ? " ⚠️" : ""}</span>)}</td>
+                  <td style={cell}>{l.pointages.length === 0 ? "—" : l.pointages.map((p, i) => <span key={i} style={{ display: "block", marginBottom: "4px" }}><strong>{LIB[p.type]} {heure(p.at)}</strong>{p.adresse ? <span style={{ display: "block", fontSize: "12px", color: "#6b7280" }}>📍 {p.adresse}</span> : null}</span>)}</td>
                   <td style={cell}>{l.heures > 0 ? fmtH(l.heures) : "—"}</td>
-                  <td style={cell}>{[l.horsZone > 0 ? `${l.horsZone} hors zone` : "", l.oubli ? "Départ non pointé" : ""].filter(Boolean).join(" · ") || "—"}</td>
+                  <td style={cell}>{l.oubli ? "Départ non pointé" : "—"}</td>
                 </tr>
               );
             })}

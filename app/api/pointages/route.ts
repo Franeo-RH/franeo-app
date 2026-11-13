@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
       include: { salarie: { select: { prenom: true, nom: true } } },
       orderBy: [{ jour: "asc" }, { at: "asc" }],
     });
-    const lignes = [["Date", "Heure", "Salarié", "Pointage", "Zone", "Établissement", "Remarque"], ...l.map((x) => [
+    const lignes = [["Date", "Heure", "Salarié", "Pointage", "Adresse du pointage"], ...l.map((x) => [
       x.jour.split("-").reverse().join("/"), x.at.toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" }),
       `${x.salarie.prenom} ${x.salarie.nom}`, TYPES_POINTAGE[x.type as keyof typeof TYPES_POINTAGE]?.label ?? x.type,
-      x.dansZone === true ? "Dans la zone" : x.dansZone === false ? "Hors zone" : "—", x.etablissement ?? "", x.motif ?? "",
+      x.adresse ?? "",
     ])];
     const csv = "﻿" + lignes.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
     return new NextResponse(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="pointages-${p.get("du")}-${p.get("au")}.csv"` } });

@@ -910,8 +910,7 @@ model DemandeContrat {
 }
 
 
-// Badge : un pointage (arrivée, pause, reprise, départ). La position GPS n'est JAMAIS conservée :
-// seul le résultat « dans la zone / hors zone » est enregistré (null = sans contrôle ou position non partagée).
+// Badge : un pointage (arrivée, pause, reprise, départ) avec l'adresse où il a été fait (position au moment du clic)
 model Pointage {
   id            String     @id @default(cuid())
   salarieId     String
@@ -923,6 +922,7 @@ model Pointage {
   jour          String     // AAAA-MM-JJ (heure de Paris)
   dansZone      Boolean?
   etablissement String?
+  adresse       String?
   motif         String?    // « position non partagée », « salarié itinérant »…
   commentaire   String?
 

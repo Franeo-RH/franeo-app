@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionSalarie } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
-import { actionsPossibles, distanceM, heuresDuJour, jourParis, majReleveDepuisPointages, purgerPointages, TYPES_POINTAGE } from "@/lib/badge";
+import { adresseDe } from "@/lib/geocodage";
+import { actionsPossibles, heuresDuJour, jourParis, majReleveDepuisPointages, purgerPointages, TYPES_POINTAGE } from "@/lib/badge";
 
 async function acces() {
   const s = await getSessionSalarie();
@@ -16,22 +17,18 @@ export async function GET() {
   const { s, refus } = await acces();
   if (!s) return refus!;
   const jour = jourParis();
-  const [pointages, salarie, zones] = await Promise.all([
-    prisma.pointage.findMany({ where: { salarieId: s.salarie.id, jour }, orderBy: { at: "asc" }, select: { id: true, type: true, at: true, dansZone: true, motif: true, etablissement: true } }),
-    prisma.salarie.findUnique({ where: { id: s.salarie.id }, select: { badgeSansZone: true } }),
-    prisma.etablissement.count({ where: { entrepriseId: s.utilisateur.entrepriseId!, latitude: { not: null } } }),
-  ]);
+  const pointages = await prisma.pointage.findMany({ where: { salarieId: s.salarie.id, jour }, orderBy: { at: "asc" }, select: { id: true, type: true, at: true, adresse: true } });
   return NextResponse.json({
     jour, pointages,
     actions: actionsPossibles(pointages[pointages.length - 1]?.type ?? null),
     heures: heuresDuJour(pointages),
-    controleZone: !salarie?.badgeSansZone && zones > 0,
+    controleZone: true,
   });
 }
 
 /**
  * POST { type, latitude?, longitude?, precision? } : pointage.
- * La position ne sert qu'à vérifier la zone : elle n'est pas enregistrée.
+ * La position est obligatoire : l'adresse correspondante est enregistrée avec le pointage.
  */
 export async function POST(request: NextRequest) {
   const { s, refus } = await acces();
@@ -48,34 +45,16 @@ export async function POST(request: NextRequest) {
   }
   if (dernier && Date.now() - dernier.at.getTime() < 60000) return NextResponse.json({ erreur: "Vous venez de pointer : attendez une minute." }, { status: 429 });
 
-  // Contrôle de zone
-  const salarie = await prisma.salarie.findUnique({ where: { id: s.salarie.id }, select: { badgeSansZone: true, etablissement: true } });
-  let dansZone: boolean | null = null;
-  let motif: string | null = null;
-  let etablissement: string | null = null;
-  if (salarie?.badgeSansZone) {
-    motif = "Salarié itinérant (sans contrôle de zone)";
-  } else {
-    const zones = await prisma.etablissement.findMany({ where: { entrepriseId, latitude: { not: null }, longitude: { not: null } }, select: { nom: true, latitude: true, longitude: true, rayon: true } });
-    const lat = Number(b.latitude), lon = Number(b.longitude), precision = Math.min(Math.max(Number(b.precision) || 0, 0), 1000);
-    if (zones.length === 0) motif = "Aucune zone configurée par l'employeur";
-    else if (b.latitude == null || b.longitude == null || !Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
-      return NextResponse.json({ erreur: "📍 Votre position est nécessaire pour pointer : autorisez la localisation puis réessayez." }, { status: 400 });
-    }
-    else {
-      // L'établissement du salarié en priorité, sinon le plus proche
-      const mesures = zones.map((z) => ({ nom: z.nom, ecart: distanceM({ lat, lon }, { lat: z.latitude!, lon: z.longitude! }) - Math.min(precision, 150) - z.rayon }));
-      const sienne = mesures.find((m) => m.nom === salarie?.etablissement && m.ecart <= 0);
-      const meilleure = sienne ?? mesures.sort((a, c) => a.ecart - c.ecart)[0];
-      dansZone = meilleure.ecart <= 0;
-      etablissement = meilleure.nom;
-      if (!dansZone) motif = `Hors zone (environ ${Math.round(meilleure.ecart)} m au-delà de « ${meilleure.nom} »)`;
-    }
+  // Adresse du pointage : la position est obligatoire
+  const lat = Number(b.latitude), lon = Number(b.longitude);
+  if (b.latitude == null || b.longitude == null || !Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+    return NextResponse.json({ erreur: "📍 Votre position est nécessaire pour pointer : autorisez la localisation puis réessayez." }, { status: 400 });
   }
+  const adresse = (await adresseDe(lat, lon)) ?? `Position GPS ${lat.toFixed(5)}, ${lon.toFixed(5)} (adresse introuvable)`;
 
   await prisma.pointage.create({
     data: {
-      salarieId: s.salarie.id, entrepriseId, type, jour, dansZone, motif, etablissement,
+      salarieId: s.salarie.id, entrepriseId, type, jour, adresse,
       commentaire: typeof b.commentaire === "string" && b.commentaire.trim() ? b.commentaire.trim().slice(0, 200) : null,
     },
   });
@@ -84,6 +63,6 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     succes: true,
-    message: `${TYPES_POINTAGE[type].icone} ${TYPES_POINTAGE[type].label} enregistrée à ${new Date().toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" })}${dansZone === false ? " — hors zone, votre manager en sera informé" : ""}.`,
+    message: `${TYPES_POINTAGE[type].icone} ${TYPES_POINTAGE[type].label} enregistrée à ${new Date().toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" })} — ${adresse}.`,
   });
 }

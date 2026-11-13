@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { fmtH } from "@/lib/heures";
 
-type J = { jour: string; heures: number; pointages: { type: string; at: string; dansZone: boolean | null }[] };
+type J = { jour: string; heures: number; pointages: { type: string; at: string; adresse: string | null }[] };
 const LIB: Record<string, string> = { ARRIVEE: "Arrivée", PAUSE: "Pause", REPRISE: "Reprise", DEPART: "Départ" };
 
 /** Tableau de bord du salarié : son journal de pointages des 14 derniers jours */
@@ -25,8 +25,8 @@ export default function HistoriqueBadge() {
             </div>
             <p style={{ margin: "2px 0 0", fontSize: "13px", color: "#4b5563" }}>
               {j.pointages.map((p, i) => (
-                <span key={i} style={{ marginRight: "10px", color: p.dansZone === false ? "#b91c1c" : undefined }}>
-                  {LIB[p.type]} {new Date(p.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}{p.dansZone === false ? " ⚠️" : ""}
+                <span key={i} style={{ display: "block" }}>
+                  {LIB[p.type]} {new Date(p.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}{p.adresse ? <span style={{ color: "#6b7280" }}> · 📍 {p.adresse}</span> : null}
                 </span>
               ))}
             </p>
