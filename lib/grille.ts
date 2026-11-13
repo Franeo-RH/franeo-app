@@ -4,10 +4,10 @@ export const MENTION_VISITE_MEDICALE = "Suivi des visites médicales : suivi des
 
 export const GRILLE_RH = [
   {
-    nom: "RH Basic", prixMensuel: 50, salariesInclus: 15, prixSalarieSupp: 5, ticketsRH: 0, prixTicketSupp: 70,
+    nom: "RH Basic", prixMensuel: 50, salariesInclus: 25, prixSalarieSupp: 5, ticketsRH: 0, prixTicketSupp: 70,
     recommande: false, message: "",
     features: [
-      "Jusqu'à 15 salariés inclus", "5 € / salarié supplémentaire",
+      "Jusqu'à 25 salariés inclus", "5 € / salarié supplémentaire",
       "Application RH : ajouter, modifier, importer et supprimer vos salariés",
       "Mouvements du personnel", "Saisie des absences", "Communication & helpdesk",
       "Ticket RH à la demande : 70 € / demande",
@@ -16,7 +16,7 @@ export const GRILLE_RH = [
   },
   {
     nom: "RH Essentiel", prixMensuel: 149, salariesInclus: 25, prixSalarieSupp: 4, ticketsRH: 3, prixTicketSupp: 40,
-    recommande: false, message: "Jusqu'à 25 salariés inclus puis seulement 4 € par salarié supplémentaire.",
+    recommande: false, message: "3 tickets RH par mois, conseil RH illimité, puis seulement 4 € par salarié supplémentaire.",
     features: [
       "Toutes les fonctionnalités Basic", "Jusqu'à 25 salariés inclus", "4 € / salarié supplémentaire",
       "3 tickets RH / mois", "Conseil RH ponctuel illimité", "Suivi complet des échéances", "Suivi des périodes d'essai", "SharePoint inclus",

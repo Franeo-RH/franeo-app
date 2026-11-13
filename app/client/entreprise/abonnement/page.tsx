@@ -77,7 +77,7 @@ export default async function AbonnementClient() {
                   </p>
                   <p className="text-gray-500 text-sm mt-1">
                     {a.ticketsRH === 0
-                      ? `Sans tickets RH (${a.prixTicketSupp}€/ticket)`
+                      ? `Tickets RH à la demande (${a.prixTicketSupp}€/ticket)`
                       : `${a.ticketsRH} tickets RH/mois (${a.prixTicketSupp}€/ticket supp.)`}
                   </p>
                 </div>

@@ -9,6 +9,8 @@ import BoutonPackRH from "@/components/BoutonPackRH";
 import OngletsAbonnements from "@/components/OngletsAbonnements";
 import ExportCSV from "@/components/ExportCSV";
 import { PRIX_TICKET_SANS_ABONNEMENT } from "@/lib/facturation";
+import { detailRH, MENTION_VISITE_MEDICALE } from "@/lib/grille";
+import { PRIX_OPTION_PROJETS } from "@/lib/projets-constantes";
 
 export const dynamic = "force-dynamic";
 
@@ -68,7 +70,7 @@ export default async function AdminAbonnementsRH({ searchParams }: { searchParam
               <p className="text-2xl font-bold">{lignes.filter((l) => l.p).length}</p>
             </div>
             <div className="bg-white rounded-xl shadow p-4">
-              <p className="text-xs font-bold text-gray-500 uppercase">Accès de base gratuits</p>
+              <p className="text-xs font-bold text-gray-500 uppercase">Sans formule (tickets à l'unité)</p>
               <p className="text-2xl font-bold">{nbBase}</p>
             </div>
             <div className="bg-white rounded-xl shadow p-4">
@@ -88,13 +90,9 @@ export default async function AdminAbonnementsRH({ searchParams }: { searchParam
               <thead>
                 <tr>
                   <th className="text-left py-2"></th>
-                  <th className="py-2 px-2 text-center" style={{ borderTop: `4px solid ${TEINTES[0]}` }}>
-                    <span className="block text-base font-bold">Accès de base</span>
-                    <span className="block text-2xl font-black">0 €</span>
-                    <span className="block text-xs text-gray-500 font-normal">{nbBase} client(s)</span>
-                  </th>
                   {packs.map((p, i) => (
                     <th key={p.id} className="py-2 px-2 text-center" style={{ borderTop: `4px solid ${TEINTES[(i % 4) + 1]}` }}>
+                      {detailRH(p.nom)?.recommande && <span className="inline-block bg-black text-white text-xs font-bold px-2 py-0.5 rounded-full mb-1">⭐ Recommandée</span>}
                       <span className="block text-base font-bold">{p.nom}</span>
                       <span className="block text-2xl font-black">{p.prixMensuel} €</span>
                       <span className="block text-xs text-gray-500 font-normal">{parPack(p.id).length} client(s)</span>
@@ -104,23 +102,27 @@ export default async function AdminAbonnementsRH({ searchParams }: { searchParam
               </thead>
               <tbody>
                 {[
-                  { label: "Salariés inclus", base: "—", v: (p: Pack) => String(p.salariesInclus) },
-                  { label: "Salarié en plus", base: "—", v: (p: Pack) => eur(p.prixSalarieSupp) },
-                  { label: "Tickets RH inclus / mois", base: "0", v: (p: Pack) => String(p.ticketsRH) },
-                  { label: "Ticket RH en plus", base: eur(PRIX_TICKET_SANS_ABONNEMENT), v: (p: Pack) => eur(p.prixTicketSupp) },
-                  { label: "Questions RH ponctuelles", base: "✓", v: () => "✓" },
+                  { label: "Salariés inclus", v: (p: Pack) => String(p.salariesInclus) },
+                  { label: "Salarié en plus", v: (p: Pack) => eur(p.prixSalarieSupp) },
+                  { label: "Tickets RH inclus / mois", v: (p: Pack) => String(p.ticketsRH) },
+                  { label: "Ticket RH en plus", v: (p: Pack) => eur(p.prixTicketSupp) },
+                  { label: "Conseil RH ponctuel", v: (p: Pack) => (/basic/i.test(p.nom) ? "—" : "illimité") },
+                  { label: "Suivi des échéances", v: (p: Pack) => (/basic/i.test(p.nom) ? "—" : "✓") },
+                  { label: "Saisie des infos de paie", v: (p: Pack) => (/s[ée]r[ée]nit[ée]|premium/i.test(p.nom) ? "✓" : "—") },
+                  { label: "Contrats depuis modèles", v: (p: Pack) => (/s[ée]r[ée]nit[ée]|premium/i.test(p.nom) ? "✓" : "—") },
+                  { label: "Espace salarié (badge, relevés…)", v: () => "inclus" },
+                  { label: `Option Projets (${PRIX_OPTION_PROJETS} € / mois)`, v: () => "en option" },
                 ].map((r) => (
                   <tr key={r.label} className="border-t">
                     <td className="py-2 font-semibold text-gray-600">{r.label}</td>
-                    <td className="py-2 text-center font-semibold">{r.base}</td>
                     {packs.map((p) => <td key={p.id} className="py-2 text-center font-semibold">{r.v(p)}</td>)}
                   </tr>
                 ))}
                 <tr className="border-t align-top">
-                  <td className="py-2 font-semibold text-gray-600">Services</td>
-                  <td className="py-2 text-xs text-gray-500 text-center">Application, FAQ, communications</td>
+                  <td className="py-2 font-semibold text-gray-600">Ce que voit le client</td>
                   {packs.map((p) => (
                     <td key={p.id} className="py-2 px-2">
+                      {detailRH(p.nom)?.message && <p className="text-xs italic text-gray-500 mb-1">{detailRH(p.nom)?.message}</p>}
                       <ul className="text-xs flex flex-col gap-1">
                         {p.features.map((f) => <li key={f}><span style={{ color: "#16a34a", fontWeight: 700 }}>✓</span> {f}</li>)}
                       </ul>
@@ -129,7 +131,8 @@ export default async function AdminAbonnementsRH({ searchParams }: { searchParam
                 </tr>
               </tbody>
             </table>
-            <p className="text-xs text-gray-400 mt-3">Les prix se mettent à jour avec le script prisma/packs-rh-2026.ts.</p>
+            <p className="text-xs text-gray-500 mt-3">🩺 {MENTION_VISITE_MEDICALE}</p>
+            <p className="text-xs text-gray-400 mt-1">Mêmes formules, prix et textes que la page « Gestion de mes abonnements » du client (grille dans lib/grille.ts, appliquée par prisma/grille-2026.ts à chaque mise à jour).</p>
           </div>
 
           {/* Clients */}

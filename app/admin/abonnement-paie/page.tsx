@@ -8,6 +8,7 @@ import Sidebar from "@/components/Sidebar";
 import BoutonAbonnementPaie from "@/components/BoutonAbonnementPaie";
 import OngletsAbonnements from "@/components/OngletsAbonnements";
 import ExportCSV from "@/components/ExportCSV";
+import { detailPaie, MENTION_VISITE_MEDICALE } from "@/lib/grille";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +97,7 @@ export default async function AdminAbonnementPaie({ searchParams }: { searchPara
                   <th className="text-left py-2"></th>
                   {formules.map((f) => (
                     <th key={f.id} className="py-2 px-2 text-center" style={{ borderTop: `4px solid ${TEINTE[f.code] || "#9ca3af"}` }}>
+                      {detailPaie(f.code)?.recommande && <span className="inline-block bg-black text-white text-xs font-bold px-2 py-0.5 rounded-full mb-1">⭐ Recommandée</span>}
                       <span className="block text-base font-bold">{f.nom.replace(/^Paie /, "")}</span>
                       <span className="block text-2xl font-black">{f.prixMensuel} €</span>
                       <span className="block text-xs text-gray-500 font-normal">{parFormule(f.id).length} client(s)</span>
@@ -111,6 +113,7 @@ export default async function AdminAbonnementPaie({ searchParams }: { searchPara
                   { label: "Ticket RH en plus", v: (f: (typeof formules)[number]) => eur(f.prixTicketSupp) },
                   { label: "Arrivée / sortie", v: (f: (typeof formules)[number]) => (f.entreesSortiesIncluses ? "incluses" : `${eur(f.prixEntree)} / ${eur(f.prixSortie)}`) },
                   { label: "Espace salarié", v: (f: (typeof formules)[number]) => "inclus" },
+                  { label: "Rendez-vous paie", v: (f: (typeof formules)[number]) => { const d = detailPaie(f.code); return d ? (d.flags.pointPaie ? `trimestriel inclus, puis ${eur(d.prixRdv)}` : `${eur(d.prixRdv)} / rdv`) : "—"; } },
                 ].map((r) => (
                   <tr key={r.label} className="border-t">
                     <td className="py-2 font-semibold text-gray-600">{r.label}</td>
@@ -128,7 +131,16 @@ export default async function AdminAbonnementPaie({ searchParams }: { searchPara
                 ))}
               </tbody>
             </table>
-            <p className="text-xs text-gray-400 mt-3">Les prix se mettent à jour avec le script prisma/formules-paie-2026.ts.</p>
+            <div className="grid gap-3 mt-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+              {formules.map((f) => { const d = detailPaie(f.code); return d ? (
+                <div key={f.id} className="rounded-lg border p-3 text-xs">
+                  <p className="font-bold text-sm mb-1">Ce que voit le client — {f.nom}</p>
+                  <ul className="flex flex-col gap-1">{[...d.features, ...d.options.map((o) => `€ ${o}`)].map((x) => <li key={x}><span style={{ color: "#16a34a", fontWeight: 700 }}>✓</span> {x}</li>)}</ul>
+                </div>
+              ) : null; })}
+            </div>
+            <p className="text-xs text-gray-500 mt-3">🩺 {MENTION_VISITE_MEDICALE}</p>
+            <p className="text-xs text-gray-400 mt-1">Mêmes formules, prix et textes que la page client (grille dans lib/grille.ts, appliquée par prisma/grille-2026.ts à chaque mise à jour).</p>
           </div>
 
           {/* Clients */}
