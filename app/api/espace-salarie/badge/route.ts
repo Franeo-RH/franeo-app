@@ -60,7 +60,9 @@ export async function POST(request: NextRequest) {
   // Projet choisi (option Projets) : seulement à l'arrivée ou à la reprise
   let projetId: string | null = null;
   if ((type === "ARRIVEE" || type === "REPRISE") && typeof b.projetId === "string" && b.projetId && aDroit(s.utilisateur.entreprise?.permissions, "espace.projets")) {
-    const pr = await prisma.projet.findFirst({ where: { id: b.projetId, entrepriseId, statut: { in: ["PREVU", "EN_COURS"] } }, select: { id: true } });
+    // Uniquement un projet où le salarié est affecté aujourd'hui
+    const maintenant = new Date(), debutJour = new Date(Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth(), maintenant.getUTCDate()));
+    const pr = await prisma.projet.findFirst({ where: { id: b.projetId, entrepriseId, statut: { in: ["PREVU", "EN_COURS"] }, affectations: { some: { salarieId: s.salarie.id, du: { lte: maintenant }, au: { gte: debutJour } } } }, select: { id: true } });
     projetId = pr?.id ?? null;
   }
   const adresse = (await adresseDe(lat, lon)) ?? `Position GPS ${lat.toFixed(5)}, ${lon.toFixed(5)} (adresse introuvable)`;

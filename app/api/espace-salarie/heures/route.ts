@@ -5,7 +5,7 @@ import { notifierClients } from "@/lib/notifications";
 import { fmtH, joursDuMois, jourUTC, lireHeures, NOMS_MOIS } from "@/lib/heures";
 import { chargerReleve, lireMoisAnnee } from "@/lib/releves";
 import { aDroit } from "@/lib/droits";
-import { lireRepartition, projetsPourReleve, synchroniserTempsReleve, type PartProjet } from "@/lib/releves-projets";
+import { lireRepartition, projetCouvreJour, projetsPourReleve, synchroniserTempsReleve, type PartProjet } from "@/lib/releves-projets";
 
 const MODIFIABLE = ["Brouillon", "Refusé"];
 
@@ -47,7 +47,8 @@ export async function PUT(request: NextRequest) {
 
   const joursValides = new Set(joursDuMois(mois, annee));
   const avecProjets = aDroit(s.utilisateur.entreprise?.permissions, "espace.projets");
-  const projetsAutorises = new Set(avecProjets ? (await projetsPourReleve(s.utilisateur.entrepriseId!, s.salarie.id, mois, annee)).map((p) => p.id) : []);
+  // Seuls les projets où le salarié est affecté, et seulement les jours de son affectation
+  const projetsDuMois = avecProjets ? await projetsPourReleve(s.utilisateur.entrepriseId!, s.salarie.id, mois, annee) : [];
   const lignes: { date: Date; heures: number | null; heuresSupp: number; commentaire: string | null; teletravail: boolean; projets?: PartProjet[] }[] = [];
   for (const brut of Array.isArray(corps?.jours) ? corps.jours.slice(0, 31) : []) {
     const j = brut as Record<string, unknown>;
@@ -62,7 +63,7 @@ export async function PUT(request: NextRequest) {
     const commentaire = typeof j.commentaire === "string" && j.commentaire.trim() ? j.commentaire.trim().slice(0, 300) : null;
     const teletravail = j.teletravail === true;
     if (heures === null && supp === 0 && !commentaire && !teletravail) continue;
-    const projets = avecProjets ? lireRepartition(j.projets, projetsAutorises) : [];
+    const projets = avecProjets ? lireRepartition(j.projets, new Set(projetsDuMois.filter((p) => projetCouvreJour(p, iso)).map((p) => p.id))) : [];
     const reparties = projets.reduce((t, p) => t + (p.heures ?? 0), 0);
     if (heures !== null && reparties > heures + 0.01) {
       return NextResponse.json({ erreur: `Le ${date.toLocaleDateString("fr-FR", { timeZone: "UTC" })}, les heures réparties sur les projets (${fmtH(reparties)}) dépassent les heures de la journée (${fmtH(heures)}).` }, { status: 400 });

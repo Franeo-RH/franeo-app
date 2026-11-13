@@ -350,16 +350,14 @@ export function masquerCouts<T extends { synthese: Synthese; prixVente?: number 
   };
 }
 
-/** Projets qu'un salarié peut choisir au pointage : ceux où il est planifié aujourd'hui, sinon tous les projets en cours */
+/** Projets qu'un salarié peut choisir au pointage : uniquement ceux où il est affecté aujourd'hui */
 export async function projetsPourPointage(entrepriseId: string, salarieId: string) {
   const auj = new Date();
   const debutJour = new Date(Date.UTC(auj.getUTCFullYear(), auj.getUTCMonth(), auj.getUTCDate()));
-  const actifs = await prisma.projet.findMany({
-    where: { entrepriseId, statut: { in: ["EN_COURS", "PREVU"] } },
-    select: { id: true, nom: true, code: true, couleur: true, statut: true, affectations: { where: { salarieId, du: { lte: auj }, au: { gte: debutJour } }, select: { id: true } } },
+  const projets = await prisma.projet.findMany({
+    where: { entrepriseId, statut: { in: ["EN_COURS", "PREVU"] }, affectations: { some: { salarieId, du: { lte: auj }, au: { gte: debutJour } } } },
+    select: { id: true, nom: true, code: true, couleur: true },
     orderBy: { nom: "asc" },
   });
-  const planifies = actifs.filter((p) => p.affectations.length);
-  const liste = planifies.length ? planifies : actifs.filter((p) => p.statut === "EN_COURS");
-  return { projets: liste.map(({ id, nom, code, couleur }) => ({ id, nom, code, couleur })), planifie: planifies.length > 0 };
+  return { projets, planifie: projets.length > 0 };
 }

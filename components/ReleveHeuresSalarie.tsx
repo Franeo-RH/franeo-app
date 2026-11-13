@@ -7,7 +7,9 @@ import { fmtH, joursDuMois, lireHeures, NOMS_MOIS, STATUTS_RELEVE, type AbsenceR
 
 type Part = { projetId: string; heures: string };
 type Saisie = { heures: string; heuresSupp: string; commentaire: string; teletravail?: boolean; projets?: Part[] };
-type ProjetChoix = { id: string; nom: string; code: string | null; couleur: string; planifie: boolean };
+type ProjetChoix = { id: string; nom: string; code: string | null; couleur: string; periodes: { du: string; au: string }[] };
+/** Le salarié est-il affecté à ce projet ce jour-là ? */
+const couvre = (p: ProjetChoix, iso: string) => p.periodes.some((x) => x.du <= iso && iso <= x.au);
 const vide: Saisie = { heures: "", heuresSupp: "", commentaire: "", teletravail: false, projets: [] };
 const versTexte = (n: number | null | undefined) => (n == null || n === 0 ? "" : String(n).replace(".", ","));
 
@@ -60,6 +62,8 @@ export default function ReleveHeuresSalarie() {
     setMessage(null);
   }
 
+  const affecte = (id: string, iso: string) => { const p = projets.find((x) => x.id === id); return !!p && couvre(p, iso); };
+
   function majProjets(iso: string, parts: Part[]) {
     setSaisie((s) => ({ ...s, [iso]: { ...(s[iso] || vide), projets: parts } }));
     setModifie(true);
@@ -81,10 +85,10 @@ export default function ReleveHeuresSalarie() {
         if (absenceDuJour(absences, iso)) continue; // jour d'absence
         if (n[iso]?.heures) {
           // Jour déjà saisi : on ajoute seulement le projet choisi s'il n'y en a pas encore
-          if (projetRemplir && !(n[iso].projets || []).length) n[iso] = { ...n[iso], projets: [{ projetId: projetRemplir, heures: "" }] };
+          if (projetRemplir && affecte(projetRemplir, iso) && !(n[iso].projets || []).length) n[iso] = { ...n[iso], projets: [{ projetId: projetRemplir, heures: "" }] };
           continue;
         }
-        n[iso] = { ...(n[iso] || vide), heures: String(h).replace(".", ","), projets: projetRemplir ? [{ projetId: projetRemplir, heures: "" }] : n[iso]?.projets || [] };
+        n[iso] = { ...(n[iso] || vide), heures: String(h).replace(".", ","), projets: projetRemplir && affecte(projetRemplir, iso) ? [{ projetId: projetRemplir, heures: "" }] : n[iso]?.projets || [] };
       }
       return n;
     });
@@ -131,6 +135,8 @@ export default function ReleveHeuresSalarie() {
     parts.forEach((p, i) => parProjet.set(p.projetId, (parProjet.get(p.projetId) ?? 0) + (fixes[i] ?? (libres ? reste / libres : 0))));
   }
   const nomProjet = (id: string) => projets.find((p) => p.id === id);
+  // Projets proposés pour le jour sélectionné : uniquement ceux où le salarié est affecté ce jour-là
+  const projetsDuJour = selection ? projets.filter((p) => couvre(p, selection)) : [];
 
   const st = STATUTS_RELEVE[statut] || STATUTS_RELEVE.Brouillon;
   const absSel = selection ? absenceDuJour(absences, selection) : null;
@@ -171,13 +177,16 @@ export default function ReleveHeuresSalarie() {
                 <input type="checkbox" checked={!!s.teletravail} onChange={(e) => maj(selection, "teletravail", e.target.checked)} style={{ width: "18px", height: "18px", accentColor: "#f97316" }} />
                 🏠 Journée en télétravail
               </label>
-              {projets.length > 0 && (
+              {projets.length > 0 && projetsDuJour.length === 0 && (
+                <p style={{ margin: 0, fontSize: "12px", color: "#6b7280" }}>📐 Vous n&apos;êtes affecté à aucun projet ce jour-là.</p>
+              )}
+              {projetsDuJour.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                   {(s.projets || []).length <= 1 ? (
                     <label style={label}>📐 Projet de la journée
                       <select value={s.projets?.[0]?.projetId ?? ""} onChange={(e) => majProjets(selection, e.target.value ? [{ projetId: e.target.value, heures: "" }] : [])} style={champ}>
                         <option value="">— Sans projet —</option>
-                        {projets.map((p) => <option key={p.id} value={p.id}>{p.planifie ? "⭐ " : ""}{p.code ? `${p.code} · ` : ""}{p.nom}</option>)}
+                        {projetsDuJour.map((p) => <option key={p.id} value={p.id}>{p.code ? `${p.code} · ` : ""}{p.nom}</option>)}
                       </select>
                     </label>
                   ) : (
@@ -187,7 +196,7 @@ export default function ReleveHeuresSalarie() {
                         <div key={i} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 90px 36px", gap: "6px", alignItems: "center" }}>
                           <select value={p.projetId} onChange={(e) => majProjets(selection, (s.projets || []).map((x, k) => (k === i ? { ...x, projetId: e.target.value } : x)))} style={{ ...champ, marginTop: 0 }}>
                             <option value="">— Choisir —</option>
-                            {projets.map((x) => <option key={x.id} value={x.id}>{x.planifie ? "⭐ " : ""}{x.nom}</option>)}
+                            {projetsDuJour.map((x) => <option key={x.id} value={x.id}>{x.nom}</option>)}
                           </select>
                           <input inputMode="decimal" placeholder="h" value={p.heures} onChange={(e) => majProjets(selection, (s.projets || []).map((x, k) => (k === i ? { ...x, heures: e.target.value } : x)))} style={{ ...champ, marginTop: 0, textAlign: "center" }} />
                           <button type="button" aria-label="Retirer ce projet" onClick={() => majProjets(selection, (s.projets || []).filter((_, k) => k !== i))} style={{ border: "none", background: "none", color: "#b91c1c", fontSize: "18px", cursor: "pointer" }}>✕</button>
@@ -223,7 +232,7 @@ export default function ReleveHeuresSalarie() {
           {projets.length > 0 && (
             <select value={projetRemplir} onChange={(e) => setProjetRemplir(e.target.value)} aria-label="Projet pour les jours remplis" style={{ ...champ, width: "auto", maxWidth: "100%", marginTop: 0, padding: "6px" }}>
               <option value="">sans projet</option>
-              {projets.map((p) => <option key={p.id} value={p.id}>sur {p.nom}</option>)}
+              {projets.map((p) => <option key={p.id} value={p.id}>sur {p.nom} (jours d&apos;affectation)</option>)}
             </select>
           )}
           <button type="button" onClick={remplirOuvres} style={{ border: "1px solid #f97316", color: "#ea580c", background: "#ffffff", borderRadius: "8px", padding: "6px 12px", fontWeight: 600, cursor: "pointer" }}>Remplir</button>
@@ -262,7 +271,7 @@ export default function ReleveHeuresSalarie() {
 
       {message && <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: message.ok ? "#15803d" : "#b91c1c" }}>{message.texte}</p>}
       <p style={{ margin: 0, fontSize: "12px", color: "#6b7280" }}>
-        Touchez un jour pour saisir vos heures{projets.length > 0 ? " et le projet sur lequel vous avez travaillé (⭐ = projets où vous êtes planifié)" : ""}. Enregistrez au fil du mois, puis envoyez le relevé : il ne sera plus modifiable. Vos absences s&apos;affichent automatiquement.
+        Touchez un jour pour saisir vos heures{projets.length > 0 ? " et le projet sur lequel vous avez travaillé (seuls les projets auxquels vous êtes affecté ce jour-là sont proposés)" : ""}. Enregistrez au fil du mois, puis envoyez le relevé : il ne sera plus modifiable. Vos absences s&apos;affichent automatiquement.
       </p>
     </div>
   );

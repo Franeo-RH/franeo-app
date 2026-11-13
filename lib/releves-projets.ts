@@ -9,7 +9,7 @@ import { lireHeures } from "@/lib/heures";
 
 export type PartProjet = { projetId: string; heures: number | null };
 
-/** Nettoie la répartition envoyée pour un jour (5 projets au plus) */
+/** Nettoie la répartition envoyée pour un jour (5 projets au plus) ; autorises = projets permis ce jour-là */
 export function lireRepartition(v: unknown, autorises: Set<string>): PartProjet[] {
   if (!Array.isArray(v)) return [];
   const vus = new Set<string>();
@@ -33,18 +33,27 @@ export function heuresParProjet(parts: PartProjet[], heuresJour: number | null):
   return parts.map((p) => ({ projetId: p.projetId, heures: arrondi(p.heures ?? (libres.length ? reste / libres.length : 0)) })).filter((p) => p.heures > 0);
 }
 
-/** Projets proposés dans le relevé d'un mois : ceux actifs ce mois-là, ceux où le salarié est planifié en premier */
+/**
+ * Projets proposés dans le relevé d'un mois : uniquement ceux où le salarié est affecté,
+ * avec ses périodes d'affectation (le projet n'est proposé que les jours couverts).
+ */
 export async function projetsPourReleve(entrepriseId: string, salarieId: string, mois: number, annee: number) {
   const debut = new Date(Date.UTC(annee, mois - 1, 1)), fin = new Date(Date.UTC(annee, mois, 0, 23, 59, 59));
-  const projets = await prisma.projet.findMany({
-    where: { entrepriseId, statut: { not: "ANNULE" }, dateDebut: { lte: fin }, OR: [{ dateFin: null }, { dateFin: { gte: debut } }] },
-    select: { id: true, nom: true, code: true, couleur: true, affectations: { where: { salarieId, du: { lte: fin }, au: { gte: debut } }, select: { id: true } } },
-    orderBy: { nom: "asc" },
+  const affectations = await prisma.affectationProjet.findMany({
+    where: { salarieId, du: { lte: fin }, au: { gte: debut }, projet: { entrepriseId, statut: { not: "ANNULE" } } },
+    select: { du: true, au: true, projet: { select: { id: true, nom: true, code: true, couleur: true } } },
   });
-  return projets
-    .map((p) => ({ id: p.id, nom: p.nom, code: p.code, couleur: p.couleur, planifie: p.affectations.length > 0 }))
-    .sort((a, b) => Number(b.planifie) - Number(a.planifie) || a.nom.localeCompare(b.nom));
+  const parProjet = new Map<string, { id: string; nom: string; code: string | null; couleur: string; periodes: { du: string; au: string }[] }>();
+  for (const a of affectations) {
+    const p = parProjet.get(a.projet.id) ?? { ...a.projet, periodes: [] };
+    p.periodes.push({ du: a.du.toISOString().slice(0, 10), au: a.au.toISOString().slice(0, 10) });
+    parProjet.set(a.projet.id, p);
+  }
+  return [...parProjet.values()].sort((a, b) => a.nom.localeCompare(b.nom));
 }
+
+/** Le projet est-il proposé ce jour-là (AAAA-MM-JJ) ? */
+export const projetCouvreJour = (p: { periodes: { du: string; au: string }[] }, jour: string) => p.periodes.some((x) => x.du <= jour && jour <= x.au);
 
 /**
  * Recalcule les temps passés issus d'un relevé : supprime les anciens, recrée un temps par projet et par jour.
