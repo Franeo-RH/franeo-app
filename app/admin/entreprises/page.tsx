@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import BoutonExport from "@/components/BoutonExport";
-import { BoutonExportComplet } from "@/components/OutilsAdmin";
+import { BoutonExportComplet, BoutonImportAdmin } from "@/components/OutilsAdmin";
 
 export default async function AdminEntreprises() {
   await connection();
@@ -49,7 +49,9 @@ export default async function AdminEntreprises() {
               <h1 className="text-3xl font-bold">🏢 Entreprises</h1>
               <p className="text-gray-500 mt-1">{entreprises.filter((e) => e.actif).length} active(s) · {entreprises.filter((e) => !e.actif).length} suspendue(s)</p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
+              <a href="/api/admin/import?jeu=client" className="border border-green-600 text-green-700 px-4 py-2 rounded-lg font-semibold">📄 Fichier nouveau client (Excel)</a>
+              <BoutonImportAdmin jeu="client" label="📤 Créer un client depuis le fichier" />
               <BoutonExportComplet jeu="entreprises" label="📥 Export complet (entreprises + comptes)" />
               <BoutonExportComplet jeu="comptes" label="📥 Comptes utilisateurs" />
               <Link

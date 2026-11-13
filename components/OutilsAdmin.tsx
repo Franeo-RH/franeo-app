@@ -41,12 +41,12 @@ export function BoutonExportComplet({ jeu, label = "📥 Export complet" }: { je
 }
 
 /** Import Excel admin (absences, variables, échéances) avec modèle à télécharger */
-export function BoutonImportAdmin({ jeu, label = "📤 Importer" }: { jeu: "absences" | "variables" | "echeances"; label?: string }) {
+export function BoutonImportAdmin({ jeu, label = "📤 Importer" }: { jeu: "absences" | "variables" | "echeances" | "client"; label?: string }) {
   const router = useRouter();
   const [ouvert, setOuvert] = useState(false);
   const [fichier, setFichier] = useState<File | null>(null);
   const [envoi, setEnvoi] = useState(false);
-  const [resultat, setResultat] = useState<{ crees: number; erreurs: { ligne: number; raison: string }[] } | null>(null);
+  const [resultat, setResultat] = useState<{ crees: number; erreurs: { ligne: number; raison: string }[]; entrepriseId?: string } | null>(null);
   const [erreur, setErreur] = useState("");
 
   async function envoyer() {
@@ -71,17 +71,18 @@ export function BoutonImportAdmin({ jeu, label = "📤 Importer" }: { jeu: "abse
       {ouvert && (
         <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }} onClick={() => setOuvert(false)}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: "#ffffff", borderRadius: "16px", padding: "20px", width: "100%", maxWidth: "480px", maxHeight: "90vh", overflowY: "auto" }}>
-            <h2 style={{ margin: "0 0 8px", fontSize: "18px", fontWeight: 700 }}>📤 Importer ({jeu})</h2>
+            <h2 style={{ margin: "0 0 8px", fontSize: "18px", fontWeight: 700 }}>📤 {jeu === "client" ? "Créer un client et ses salariés" : `Importer (${jeu})`}</h2>
             <p style={{ margin: "0 0 12px", fontSize: "14px", color: "#4b5563" }}>1. Téléchargez le modèle, remplissez une ligne par élément. 2. Envoyez le fichier.</p>
             <a href={`/api/admin/import?jeu=${jeu}`} style={{ ...btn("#f3f4f6", "#111827", "#e5e7eb"), display: "inline-block", textDecoration: "none", marginBottom: "12px" }}>📥 Télécharger le modèle</a>
             <input type="file" accept=".xlsx" onChange={(e) => setFichier(e.target.files?.[0] ?? null)} style={{ display: "block", marginBottom: "12px" }} aria-label="Fichier Excel" />
             {erreur && <p style={{ color: "#b91c1c", fontSize: "14px", fontWeight: 600 }}>❌ {erreur}</p>}
             {resultat && (
               <div style={{ fontSize: "14px", marginBottom: "12px" }}>
-                <p style={{ color: "#15803d", fontWeight: 700, margin: 0 }}>✅ {resultat.crees} ligne(s) importée(s)</p>
+                <p style={{ color: "#15803d", fontWeight: 700, margin: 0 }}>✅ {jeu === "client" ? (resultat.entrepriseId ? `Entreprise créée avec ${resultat.crees} salarié(s)` : "Rien n'a été créé") : `${resultat.crees} ligne(s) importée(s)`}</p>
+                {resultat.entrepriseId && <a href={`/admin/entreprises/${resultat.entrepriseId}`} style={{ color: "#c2410c", fontWeight: 700 }}>Ouvrir la fiche du client →</a>}
                 {resultat.erreurs.length > 0 && (
                   <ul style={{ color: "#b91c1c", margin: "6px 0 0", paddingLeft: "18px", maxHeight: "160px", overflowY: "auto" }}>
-                    {resultat.erreurs.map((e, i) => <li key={i}>Ligne {e.ligne} : {e.raison}</li>)}
+                    {resultat.erreurs.map((e, i) => <li key={i}>{e.ligne ? `Ligne ${e.ligne} : ` : ""}{e.raison}</li>)}
                   </ul>
                 )}
               </div>
