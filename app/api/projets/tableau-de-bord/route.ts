@@ -9,7 +9,7 @@ import { arrondi, heuresAffectation, heuresDatees, HEURES_JOUR, joursOuvres, jou
  *   CA reconnu : régie = jours passés × taux journalier (dans la limite des jours vendus) ;
  *   forfait = prix × part du coût du mois dans le coût total projeté (méthode à l'avancement) ;
  * - plan de charge des 12 prochaines semaines (planifié / capacité de l'équipe) ;
- * - répartitions (heures par projet, CA par client), statuts, classements, jalons à venir et à facturer.
+ * - répartitions (heures par projet, CA par client), statuts, classements, étapes à venir.
  */
 export async function GET(request: NextRequest) {
   const a = await accesProjets();
@@ -103,9 +103,7 @@ export async function GET(request: NextRequest) {
   const clients = new Map<string, number>();
   for (const p of projets) if (p.modeVente !== "INTERNE") clients.set(p.client || "Sans client", (clients.get(p.client || "Sans client") ?? 0) + p.synthese.vendu);
   const dans30 = new Date(auj.getTime() + 30 * 86400000);
-  const dans90 = new Date(auj.getTime() + 90 * 86400000);
-  // Pilotage du dirigeant : carnet de commandes, devis en attente, encaissements attendus à 90 jours, impayés
-  const devisEnAttente = a.voitCouts ? await prisma.devisProjet.aggregate({ where: { entrepriseId: a.entrepriseId, statut: "ENVOYE" }, _sum: { totalHT: true }, _count: true }) : null;
+  // Pilotage du dirigeant : carnet de commandes (vendu restant à réaliser sur les projets prévus et en cours)
   const actifsTous = tous.filter((p) => p.statut === "PREVU" || p.statut === "EN_COURS");
   // Déjà réalisé : forfait au prorata des coûts engagés, régie en jours passés, récurrent en mois écoulés
   const realise = (p: (typeof tous)[number]) => {
@@ -115,10 +113,6 @@ export async function GET(request: NextRequest) {
     return sy.projectionCout > 0 ? sy.venduContrat * Math.min(1, sy.coutReel / sy.projectionCout) : 0;
   };
   const carnet = arrondi(actifsTous.reduce((t, p) => t + Math.max(0, p.synthese.venduContrat - realise(p)), 0));
-  const facturesOuvertes = tous.flatMap((p) => p.factures.filter((f) => f.statut === "EMISE"));
-  const impayes = arrondi(facturesOuvertes.filter((f) => f.echeance < auj).reduce((t, f) => t + f.totalTTC, 0));
-  const attendu90 = arrondi(facturesOuvertes.reduce((t, f) => t + f.totalTTC, 0) + tous.flatMap((p) => p.jalons).filter((j) => j.facturation === "A_FACTURER" && j.montant && j.date <= dans90).reduce((t, j) => t + (j.montant ?? 0) * 1.2, 0)
-    + tous.filter((p) => p.modeVente === "RECURRENT" && p.montantMensuel && p.statut === "EN_COURS").reduce((t, p) => t + (p.montantMensuel ?? 0) * 1.2 * 3, 0));
 
   const resume = projets.map((p) => ({ id: p.id, nom: p.nom, couleur: p.couleur, statut: p.statut, client: p.client, tauxMargeReelle: p.synthese.tauxMargeReelle, tauxProjection: p.synthese.tauxProjection, margeReelle: p.synthese.margeReelle, vendu: p.synthese.vendu, consommation: p.synthese.consommation, avancementTemps: p.synthese.avancementTemps, heures: arrondi(parProjetHeures.get(p.id) ?? 0, 1), alertes: p.synthese.alertes.filter((x) => x.niveau !== "info").length }));
   const c = a.voitCouts;
@@ -130,11 +124,9 @@ export async function GET(request: NextRequest) {
       enAlerte: resume.filter((p) => p.alertes > 0 && p.statut !== "TERMINE").length,
       ...(c ? {
         ca: caAnnee, cout: coutAnnee, marge: arrondi(caAnnee - coutAnnee), tauxMarge: caAnnee > 0 ? arrondi(((caAnnee - coutAnnee) / caAnnee) * 100, 1) : null,
-        facture: tot((s) => s.facture), encaisse: tot((s) => s.encaisse),
         vendu: arrondi(projets.reduce((t, p) => t + p.synthese.vendu, 0)),
-        resteAFacturer: arrondi(projets.reduce((t, p) => t + p.synthese.resteAFacturer, 0)),
         margeProjetee: arrondi(projets.reduce((t, p) => t + p.synthese.projectionMarge, 0)),
-        carnet, impayes, attendu90, devisEnAttente: arrondi(devisEnAttente?._sum.totalHT ?? 0), nbDevisEnAttente: devisEnAttente?._count ?? 0,
+        carnet,
       } : {}),
     },
     series: c ? series : series.map((s) => ({ mois: s.mois, heures: s.heures, cumulHeures: s.cumulHeures })),
@@ -144,7 +136,7 @@ export async function GET(request: NextRequest) {
     statuts,
     projets: c ? resume : resume.map((p) => ({ ...p, tauxMargeReelle: null, tauxProjection: null, margeReelle: 0, vendu: 0, consommation: null })),
     jalons: tous.flatMap((p) => p.jalons.map((j) => ({ ...j, montant: c ? j.montant : null, projetId: p.id, projet: p.nom, couleur: p.couleur })))
-      .filter((j) => (j.etat !== "FAIT" && j.date <= dans30) || (c && j.facturation === "A_FACTURER" && (j.etat === "FAIT" || j.date <= auj)))
+      .filter((j) => j.etat !== "FAIT" && j.date <= dans30)
       .sort((x, y) => x.date.getTime() - y.date.getTime()).slice(0, 15),
   });
 }

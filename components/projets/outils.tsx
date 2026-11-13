@@ -75,7 +75,7 @@ export function FormulaireProjet({ initial, salaries, voitCouts, onEnvoyer, onAn
   return (
     <form className="grid grid-cols-1 md:grid-cols-3 gap-3" onSubmit={async (e) => { e.preventDefault(); setEnvoi(true); setErreur(await onEnvoyer(v)); setEnvoi(false); }}>
       {avecModele && (
-        <label className="text-sm font-semibold md:col-span-3">Métier (préremplit les étapes et l&apos;échéancier de facturation)
+        <label className="text-sm font-semibold md:col-span-3">Métier (préremplit les étapes clés et le mode de vente)
           <select className={input} value={v.modele ?? "LIBRE"} onChange={(e) => { const m = MODELES_METIER[e.target.value]; setV({ ...v, modele: e.target.value, modeVente: m?.modeVente ?? v.modeVente, seuilAlerte: String(m?.seuilAlerte ?? 80) }); }}>
             {Object.entries(MODELES_METIER).map(([k, m]) => <option key={k} value={k}>{m.icone} {m.label}</option>)}
           </select>

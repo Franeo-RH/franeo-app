@@ -272,7 +272,7 @@ export function synthese(p: ProjetCalcul, tauxCharges: number | null | undefined
   if (consommation != null && avancementTemps != null && avancementTemps > 10 && consommation > avancementTemps + 15) alertes.push({ niveau: "attention", texte: `Le budget se consomme plus vite que le calendrier (${consommation} % du budget pour ${avancementTemps} % du temps).` });
   if (venduContrat > 0 && projectionCout > venduContrat) alertes.push({ niveau: "danger", texte: "Au rythme prévu, le projet finira à perte." });
   if (p.budgetHeures && heuresReelles > p.budgetHeures) alertes.push({ niveau: "danger", texte: `Enveloppe d'heures dépassée (${heuresReelles} h pour ${p.budgetHeures} h).` });
-  if (p.modeVente === "REGIE" && p.joursVendus && heuresReelles / HEURES_JOUR > p.joursVendus) alertes.push({ niveau: "attention", texte: `Plus de jours passés (${arrondi(heuresReelles / HEURES_JOUR, 1)}) que de jours vendus (${p.joursVendus}) : pensez à facturer le complément.` });
+  if (p.modeVente === "REGIE" && p.joursVendus && heuresReelles / HEURES_JOUR > p.joursVendus) alertes.push({ niveau: "attention", texte: `Plus de jours passés (${arrondi(heuresReelles / HEURES_JOUR, 1)}) que de jours vendus (${p.joursVendus}) : le temps vendu est dépassé.` });
   if (p.statut === "EN_COURS" && p.dateFin && p.dateFin < aujourdhui) alertes.push({ niveau: "attention", texte: "La date de fin est passée mais le projet est toujours en cours." });
   if (sansCout.length) alertes.push({ niveau: "info", texte: `Coût horaire inconnu pour ${sansCout.join(", ")} : renseignez le salaire ou un coût standard dans la fiche.` });
   const jalons = p.jalons ?? [];
@@ -285,12 +285,9 @@ export function synthese(p: ProjetCalcul, tauxCharges: number | null | undefined
   const paye = arrondi(factures.filter((f) => f.statut === "PAYEE").reduce((t, f) => t + f.totalHT, 0) + sommeJ((j) => jalonsManuels(j) && j.facturation === "PAYE"));
   const aFacturer = sommeJ((j) => j.facturation === "A_FACTURER");
   const impayees = factures.filter((f) => f.statut === "EMISE" && f.echeance < aujourdhui);
-  if (impayees.length) alertes.push({ niveau: "danger", texte: `Facture(s) en retard de paiement : ${impayees.map((f) => `${f.numero} (${f.totalHT.toLocaleString("fr-FR")} € HT)`).join(", ")}.` });
   const enRetard = jalons.filter((j) => j.etat !== "FAIT" && j.date < aujourdhui);
   const aFacturerEchus = jalons.filter((j) => j.facturation === "A_FACTURER" && (j.etat === "FAIT" || j.date < aujourdhui));
-  if (enRetard.length) alertes.push({ niveau: "attention", texte: `Jalon(s) en retard : ${enRetard.map((j) => j.libelle).join(", ")}.` });
-  if (aFacturerEchus.length) alertes.push({ niveau: "attention", texte: `À facturer maintenant : ${aFacturerEchus.map((j) => `${j.libelle}${j.montant ? ` (${j.montant.toLocaleString("fr-FR")} €)` : ""}`).join(", ")}.` });
-  if (facture - paye > 0 && !impayees.length) alertes.push({ niveau: "info", texte: `${(facture - paye).toLocaleString("fr-FR")} € facturés en attente de paiement.` });
+  if (enRetard.length) alertes.push({ niveau: "attention", texte: `Étape(s) en retard : ${enRetard.map((j) => j.libelle).join(", ")}.` });
   if (!p.affectations.length && p.statut !== "TERMINE" && p.statut !== "ANNULE") alertes.push({ niveau: "info", texte: "Aucun salarié planifié sur ce projet." });
 
   return {

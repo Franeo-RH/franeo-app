@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { CATEGORIES_DEPENSE, FACTURATION_JALON, MODES_VENTE } from "@/lib/projets-constantes";
+import { CATEGORIES_DEPENSE, MODES_VENTE } from "@/lib/projets-constantes";
 import { couleurMarge, dateFR, eur, FormulaireProjet, h, iso, Jauge, PastilleStatut, pct, Tuile, type ValeursProjet } from "./outils";
-import FacturationProjet from "./FacturationProjet";
 
 type Sal = { id: string; prenom: string; nom: string; coutHoraire?: number | null };
 type Ligne = { salarieId: string; salarie: string; coutHoraire: number | null; heuresPrevues: number; heuresReelles: number; coutPrevu: number; coutReel: number };
@@ -201,24 +200,15 @@ export default function FicheProjet({ id }: { id: string }) {
         <p className="text-xs text-gray-500 mt-2">Vue d&apos;ensemble de la charge de chacun : <Link href="/client/projets/planning" className="underline">Planning</Link>.</p>
       </div>
 
-      {voitCouts && <FacturationProjet projet={p} peutGerer={peutGerer} onChange={charger} />}
-
       <div className={carte}>
         <div className="flex flex-wrap justify-between items-baseline gap-2 mb-3">
-          <h2 className="text-xl font-bold">🏁 Jalons & échéancier</h2>
-          <span className="text-sm text-gray-500">{s.jalonsFaits} / {s.jalonsTotal} jalon(s) faits{voitCouts && s.vendu > 0 ? ` · facturé ${eur(s.facture)} · payé ${eur(s.paye)} · reste à facturer ${eur(s.resteAFacturer)}` : ""}</span>
+          <h2 className="text-xl font-bold">🏁 Étapes clés</h2>
+          <span className="text-sm text-gray-500">{s.jalonsFaits} / {s.jalonsTotal} étape(s) faite(s)</span>
         </div>
-        {voitCouts && s.vendu > 0 && (
-          <div className="mb-3" style={{ height: 10, background: "#e5e7eb", borderRadius: 99, overflow: "hidden", display: "flex" }} title="Payé / facturé / reste">
-            <div style={{ width: `${Math.min(100, (s.paye / s.vendu) * 100)}%`, background: "#15803d" }} />
-            <div style={{ width: `${Math.min(100, ((s.facture - s.paye) / s.vendu) * 100)}%`, background: "#2563eb" }} />
-          </div>
-        )}
-        {p.jalons.length === 0 ? <p className="text-sm text-gray-500 mb-3">Aucun jalon. Ajoutez les étapes clés et, si besoin, les échéances de facturation (acompte, situation, solde…).</p> : (
+        {p.jalons.length === 0 ? <p className="text-sm text-gray-500 mb-3">Aucune étape. Ajoutez les moments clés du projet (lancement, livraison, réception…).</p> : (
           <ul className="divide-y mb-3">
             {p.jalons.map((j) => {
               const retard = j.etat !== "FAIT" && new Date(j.date) < new Date(auj());
-              const f = FACTURATION_JALON[j.facturation as keyof typeof FACTURATION_JALON];
               return (
                 <li key={j.id} className="py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
                   <label className="flex items-center gap-2">
@@ -226,32 +216,16 @@ export default function FicheProjet({ id }: { id: string }) {
                     <span style={{ textDecoration: j.etat === "FAIT" ? "line-through" : undefined }}><strong>{j.libelle}</strong> · {dateFR(j.date)}</span>
                     {retard && <span className="text-xs font-semibold text-red-700">en retard</span>}
                   </label>
-                  <span className="flex items-center gap-2">
-                    {voitCouts && j.montant != null && <strong>{eur(j.montant)}</strong>}
-                    {voitCouts && j.facturation !== "AUCUNE" && (
-                      peutGerer
-                        ? <select value={j.facturation} onChange={(e) => appel("POST", { action: "jalonMaj", jalonId: j.id, facturation: e.target.value })} className="border rounded px-2 py-1 text-xs font-semibold" style={{ color: f?.couleur }}>
-                            {Object.entries(FACTURATION_JALON).filter(([k]) => k !== "AUCUNE").map(([k, x]) => <option key={k} value={k}>{x.label}</option>)}
-                          </select>
-                        : <span className="text-xs font-semibold" style={{ color: f?.couleur }}>{f?.label}</span>
-                    )}
-                    {peutGerer && <button type="button" onClick={() => suppr("jalon", j.id, "Supprimer ce jalon ?")} className="text-red-700 text-xs underline">Supprimer</button>}
-                  </span>
+                  {peutGerer && <button type="button" onClick={() => suppr("jalon", j.id, "Supprimer cette étape ?")} className="text-red-700 text-xs underline">Supprimer</button>}
                 </li>
               );
             })}
           </ul>
         )}
         {peutGerer && (
-          <form className="flex flex-wrap gap-2" onSubmit={async (e) => { e.preventDefault(); if (await appel("POST", { action: "jalon", ...jal })) setJal({ ...jal, libelle: "", montant: "" }); }}>
-            <input required placeholder="Ex. Livraison phase 1, Acompte 30 %" value={jal.libelle} onChange={(e) => setJal({ ...jal, libelle: e.target.value })} className={`${input} flex-1 min-w-[200px]`} />
+          <form className="flex flex-wrap gap-2" onSubmit={async (e) => { e.preventDefault(); if (await appel("POST", { action: "jalon", libelle: jal.libelle, date: jal.date })) setJal({ ...jal, libelle: "" }); }}>
+            <input required placeholder="Ex. Livraison phase 1, Réception du chantier" value={jal.libelle} onChange={(e) => setJal({ ...jal, libelle: e.target.value })} className={`${input} flex-1 min-w-[200px]`} />
             <input type="date" required value={jal.date} onChange={(e) => setJal({ ...jal, date: e.target.value })} className={input} />
-            {voitCouts && <input type="number" min="0" step="0.01" placeholder="Montant € (facultatif)" value={jal.montant} onChange={(e) => setJal({ ...jal, montant: e.target.value, facturation: e.target.value ? (jal.facturation === "AUCUNE" ? "A_FACTURER" : jal.facturation) : "AUCUNE" })} className={`${input} w-44`} />}
-            {voitCouts && s.vendu > 0 && !jal.montant && (
-              <span className="flex gap-1 items-center text-xs">
-                {[30, 50, 100].map((x) => <button key={x} type="button" onClick={() => setJal({ ...jal, montant: String(Math.round(s.vendu * x) / 100), facturation: "A_FACTURER", libelle: jal.libelle || (x === 100 ? "Solde" : `Acompte ${x} %`) })} className="border rounded px-2 py-1">{x} %</button>)}
-              </span>
-            )}
             <button type="submit" className="bg-black text-white px-4 py-2 rounded-lg font-semibold">➕ Ajouter</button>
           </form>
         )}

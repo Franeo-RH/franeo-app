@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { FACTURATION_JALON, NOMS_MOIS_COURTS, STATUTS_PROJET } from "@/lib/projets-constantes";
+import { NOMS_MOIS_COURTS, STATUTS_PROJET } from "@/lib/projets-constantes";
 import { Anneau, Graphique, Legende } from "./Graphiques";
 import { couleurMarge, dateFR, eur, h, Jauge, PastilleStatut, pct, Tuile } from "./outils";
 
@@ -72,12 +72,8 @@ export default function TableauBordProjets() {
           <>
             <Tuile titre={`CA reconnu ${annee}`} valeur={eur(k.ca)} detail={`sur ${eur(k.vendu)} vendus`} />
             <Tuile titre="Marge réalisée" valeur={eur(k.marge)} detail={pct(k.tauxMarge)} couleur={couleurMarge(k.tauxMarge)} />
-            <Tuile titre="Facturé / encaissé" valeur={eur(k.facture)} detail={`encaissé ${eur(k.encaisse)} · reste à facturer ${eur(k.resteAFacturer)}`} />
             <Tuile titre="Marge projetée en fin" valeur={eur(k.margeProjetee)} couleur={v(k.margeProjetee) < 0 ? "#b91c1c" : "#15803d"} detail="si les plannings sont tenus" />
             <Tuile titre="Carnet de commandes" valeur={eur(k.carnet)} detail="vendu restant à réaliser (HT)" />
-            <Tuile titre="Devis en attente" valeur={eur(k.devisEnAttente)} detail={`${v(k.nbDevisEnAttente)} devis envoyé(s) sans réponse`} />
-            <Tuile titre="Encaissements attendus à 90 j" valeur={eur(k.attendu90)} detail="factures ouvertes + échéances + contrats (TTC estimé)" />
-            <Tuile titre="Impayés en retard" valeur={eur(k.impayes)} couleur={v(k.impayes) > 0 ? "#b91c1c" : "#15803d"} detail={v(k.impayes) > 0 ? "à relancer (Factures)" : "aucun retard"} />
           </>
         )}
       </div>
@@ -96,7 +92,6 @@ export default function TableauBordProjets() {
             <Graphique etiquettes={etCourant} format={(n) => eur(n)} series={[
               { nom: "CA cumulé", couleur: "#2563eb", type: "ligne", valeurs: sCourant.map((m) => v(m.cumulCA)) },
               { nom: "Coût cumulé", couleur: "#f97316", type: "ligne", valeurs: sCourant.map((m) => v(m.cumulCout)) },
-              { nom: "Facturé cumulé", couleur: "#9333ea", type: "ligne", pointille: true, valeurs: sCourant.map((m) => v(m.cumulFacture)) },
               { nom: "Marge cumulée", couleur: "#15803d", valeurs: sCourant.map((m) => v(m.cumulMarge)) },
             ]} />
           )}
@@ -112,10 +107,10 @@ export default function TableauBordProjets() {
         </div>
         {d.voitCouts ? (
           <div className={carte}>
-            <h2 className="text-xl font-bold mb-3">🧾 Facturé et encaissé</h2>
-            <Graphique etiquettes={et} format={(n) => eur(n)} largeur={520} series={[
-              { nom: "Facturé", couleur: "#9333ea", valeurs: s.map((m) => v(m.facture)) },
-              { nom: "Encaissé", couleur: "#15803d", valeurs: s.map((m) => v(m.encaisse)) },
+            <h2 className="text-xl font-bold mb-3">💰 Gain (marge) par mois</h2>
+            <Graphique etiquettes={etCourant} format={(n) => eur(n)} largeur={520} series={[
+              { nom: "Marge du mois", couleur: "#15803d", valeurs: sCourant.map((m) => v(m.marge)) },
+              { nom: "Marge cumulée", couleur: "#111827", type: "ligne", valeurs: sCourant.map((m) => v(m.cumulMarge)) },
             ]} />
           </div>
         ) : (
@@ -173,16 +168,14 @@ export default function TableauBordProjets() {
           <p className="text-xs text-gray-500 mt-2">Un budget qui avance plus vite que le calendrier annonce un dépassement.</p>
         </div>
         <div className={carte}>
-          <h2 className="text-xl font-bold mb-3">🏁 Jalons à venir & à facturer</h2>
+          <h2 className="text-xl font-bold mb-3">🏁 Étapes des 30 prochains jours</h2>
           {d.jalons.length === 0 ? <p className="text-sm text-gray-500">Rien dans les 30 prochains jours.</p> : (
             <ul className="divide-y text-sm">
               {d.jalons.map((j) => {
                 const retard = j.etat !== "FAIT" && new Date(j.date) < new Date();
-                const f = FACTURATION_JALON[j.facturation as keyof typeof FACTURATION_JALON];
                 return (
                   <li key={j.id} className="py-2 flex justify-between gap-2">
                     <span><Link href={`/client/projets/${j.projetId}`} className="font-semibold hover:underline" style={{ color: j.couleur }}>{j.projet}</Link> · {j.libelle} · {dateFR(j.date)}{retard && <span className="text-red-700 font-semibold"> · en retard</span>}</span>
-                    {j.facturation !== "AUCUNE" && <span className="whitespace-nowrap font-semibold" style={{ color: f?.couleur }}>{j.montant != null ? `${eur(j.montant)} · ` : ""}{f?.label}</span>}
                   </li>
                 );
               })}

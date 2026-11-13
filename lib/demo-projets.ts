@@ -1,6 +1,6 @@
 // lib/demo-projets.ts
 // Démo de l'option Projets : une année complète d'activité (projets terminés, en cours, à venir),
-// avec devis, planning, temps passés, frais, jalons, factures payées / en attente / en retard.
+// avec planning, temps passés, frais et étapes clés : de quoi voir le coût et le gain de chaque projet et au global.
 // Les montants et les temps sont générés de façon déterministe (même démo à chaque réinitialisation).
 
 import { prisma } from "@/lib/prisma";
@@ -57,9 +57,6 @@ export async function peuplerProjetsDemo(entrepriseId: string, equipe: EquipeDem
     const fin = m.duree ? jour(m.debut + m.duree) : null;
     const statut = m.annule ? "ANNULE" : debut > auj ? "PREVU" : fin && fin < auj ? "TERMINE" : "EN_COURS";
     const finPlanning = fin ?? jour(m.debut + 365);
-    const echeancier = m.mode === "FORFAIT" && m.prix
-      ? [{ libelle: "Acompte à la commande (30 %)", jours: 0, pct: 30 }, { libelle: "Situation / livrable intermédiaire (40 %)", jours: Math.round((m.duree ?? 60) / 2), pct: 40 }, { libelle: "Solde à la livraison (30 %)", jours: m.duree ?? 60, pct: 30 }]
-      : [];
     const p = await prisma.projet.create({
       data: {
         entrepriseId, nom: m.nom, client: m.client, modele: m.modele, couleur: m.couleur, statut, dateDebut: debut, dateFin: fin,
@@ -73,7 +70,7 @@ export async function peuplerProjetsDemo(entrepriseId: string, equipe: EquipeDem
         ]) },
         jalons: { create: [
           { libelle: "Lancement", date: debut, etat: debut <= auj ? "FAIT" : "A_FAIRE", faitLe: debut <= auj ? debut : null },
-          ...echeancier.map((e) => ({ libelle: e.libelle, date: jour(m.debut + e.jours), montant: r2((m.prix! * e.pct) / 100), facturation: "A_FACTURER", etat: jour(m.debut + e.jours) <= auj ? "FAIT" : "A_FAIRE" })),
+          ...(m.duree && m.duree > 40 ? [{ libelle: "Point d'étape à mi-parcours", date: jour(m.debut + Math.round(m.duree / 2)), etat: jour(m.debut + Math.round(m.duree / 2)) <= auj && !m.annule ? "FAIT" : "A_FAIRE" }] : []),
           ...(fin ? [{ libelle: "Livraison / réception", date: fin, etat: fin <= auj && !m.annule ? "FAIT" : "A_FAIRE" }] : []),
         ] },
       },
@@ -92,118 +89,4 @@ export async function peuplerProjetsDemo(entrepriseId: string, equipe: EquipeDem
   }
   // Les temps sont enregistrés en une seule fois (plus rapide)
   for (let i = 0; i < temps.length; i += 500) await prisma.tempsProjet.createMany({ data: temps.slice(i, i + 500) });
-
-  await facturerEtChiffrer(entrepriseId, equipe);
-}
-
-/**
- * Pour tous les projets de la démo : devis accepté d'origine, factures (échéances, régie mensuelle,
- * contrats mensuels) numérotées dans l'ordre chronologique, et quelques devis en attente / refusés.
- */
-async function facturerEtChiffrer(entrepriseId: string, equipe: EquipeDemo) {
-  const auj = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00Z");
-  const jour = (n: number) => new Date(auj.getTime() + n * J);
-  const couts = new Map(Object.values(equipe).map((x) => [x.id, x.cout]));
-  const projets = await prisma.projet.findMany({
-    where: { entrepriseId },
-    include: { affectations: true, depenses: { where: { prevu: true } }, jalons: true, temps: { select: { jour: true, heures: true } } },
-    orderBy: { dateDebut: "asc" },
-  });
-
-  type F = { projetId: string; jalonId?: string; type: string; date: Date; libelle: string; quantite: number; unite: string; pu: number; periodeDu?: string; periodeAu?: string };
-  const factures: F[] = [];
-  type D = { projetId: string | null; objet: string; client: string | null; modele: string | null; statut: string; date: Date; supplementaire?: boolean; lignes: { libelle: string; type: string; quantite: number; unite: string; coutUnitaire: number; prixUnitaire: number; salarieId: string | null }[]; acompte?: number | null };
-  const devis: D[] = [];
-
-  for (const p of projets) {
-    if (p.statut === "ANNULE" && p.modeVente !== "INTERNE") {
-      devis.push({ projetId: null, objet: p.nom, client: p.client, modele: p.modele, statut: "REFUSE", date: new Date(p.dateDebut.getTime() - 15 * J), lignes: [{ libelle: "Prestation complète", type: "FORFAIT", quantite: 1, unite: "forfait", coutUnitaire: r2((p.prixVente ?? 0) * 0.7), prixUnitaire: p.prixVente ?? 0, salarieId: null }] });
-      continue;
-    }
-    if (p.modeVente === "INTERNE") continue;
-
-    // Devis d'origine, chiffré au coût réel de l'équipe planifiée
-    const finPlan = p.dateFin ?? new Date(p.dateDebut.getTime() + 365 * J);
-    const semaines = Math.max(1, (finPlan.getTime() - p.dateDebut.getTime()) / (7 * J));
-    const lignesMO = p.affectations.map((a) => ({ salarieId: a.salarieId, heures: r2(a.heuresSemaine * semaines), cout: couts.get(a.salarieId) ?? 25 }));
-    const coutMO = lignesMO.reduce((t, l) => t + l.heures * l.cout, 0);
-    const frais = p.depenses.map((d) => ({ libelle: d.libelle, cout: d.montant, prix: r2(d.montant * 1.25) }));
-    const vendu = p.modeVente === "REGIE" ? (p.tauxJournalier ?? 0) * (p.joursVendus ?? 0) : p.modeVente === "RECURRENT" ? (p.montantMensuel ?? 0) * Math.max(1, Math.round(semaines / 4.33)) : p.prixVente ?? 0;
-    const k = coutMO > 0 ? Math.max(1.05, (vendu - frais.reduce((t, f) => t + f.prix, 0)) / coutMO) : 1.3;
-    const nomSal = (id: string) => Object.entries(equipe).find(([, v]) => v.id === id)?.[0] ?? "Équipe";
-    devis.push({
-      projetId: p.id, objet: p.nom, client: p.client, modele: p.modele, statut: "ACCEPTE", date: new Date(p.dateDebut.getTime() - 12 * J), acompte: p.modeVente === "FORFAIT" ? 30 : null,
-      lignes: [
-        ...lignesMO.map((l) => ({ libelle: `Main-d'œuvre (${nomSal(l.salarieId)})`, type: "MO", quantite: l.heures, unite: "h", coutUnitaire: l.cout, prixUnitaire: r2(l.cout * k), salarieId: l.salarieId })),
-        ...frais.map((f) => ({ libelle: f.libelle, type: "ACHAT", quantite: 1, unite: "forfait", coutUnitaire: f.cout, prixUnitaire: f.prix, salarieId: null })),
-      ],
-    });
-
-    // Factures
-    if (p.modeVente === "FORFAIT") {
-      for (const j of p.jalons.filter((x) => x.montant && x.date <= jour(-7))) {
-        factures.push({ projetId: p.id, jalonId: j.id, type: "JALON", date: j.date, libelle: j.libelle, quantite: 1, unite: "forfait", pu: j.montant! });
-      }
-    } else if (p.modeVente === "REGIE") {
-      // Une facture de régie par mois écoulé, selon les temps saisis
-      const parMois = new Map<string, number>();
-      for (const t of p.temps) if (t.jour < iso(new Date(auj.getFullYear(), auj.getMonth(), 1))) parMois.set(t.jour.slice(0, 7), (parMois.get(t.jour.slice(0, 7)) ?? 0) + t.heures);
-      for (const [mois, h] of [...parMois.entries()].sort()) {
-        const [y, mo] = mois.split("-").map(Number);
-        const finMois = new Date(Date.UTC(y, mo, 0));
-        factures.push({ projetId: p.id, type: "REGIE", date: new Date(finMois.getTime() + J), libelle: `Régie ${mois} — ${r2(h)} h`, quantite: r2(h / 7), unite: "jour", pu: p.tauxJournalier ?? 0, periodeDu: `${mois}-01`, periodeAu: iso(finMois) });
-      }
-    } else if (p.modeVente === "RECURRENT") {
-      const d0 = new Date(Date.UTC(p.dateDebut.getUTCFullYear(), p.dateDebut.getUTCMonth(), 1));
-      for (let d = d0; d < new Date(Date.UTC(auj.getUTCFullYear(), auj.getUTCMonth(), 1)); d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1))) {
-        if (p.dateFin && d > p.dateFin) break;
-        const finMois = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0));
-        factures.push({ projetId: p.id, type: "MENSUELLE", date: finMois, libelle: `${p.nom} — ${d.toLocaleDateString("fr-FR", { month: "long", year: "numeric", timeZone: "UTC" })}`, quantite: 1, unite: "mois", pu: p.montantMensuel ?? 0, periodeDu: iso(d), periodeAu: iso(finMois) });
-      }
-    }
-  }
-
-  // Quelques devis en cours de négociation
-  const p1 = projets.find((p) => p.nom.startsWith("Audit maintenance usine Lille"));
-  if (p1) devis.push({ projetId: p1.id, supplementaire: true, objet: "Extension de l'audit à la ligne 3", client: p1.client, modele: p1.modele, statut: "ENVOYE", date: jour(-4), lignes: [{ libelle: "Audit ligne 3", type: "MO", quantite: 35, unite: "h", coutUnitaire: equipe.thomas.cout, prixUnitaire: 62, salarieId: equipe.thomas.id }, { libelle: "Pièces d'essai", type: "ACHAT", quantite: 1, unite: "forfait", coutUnitaire: 180, prixUnitaire: 260, salarieId: null }] });
-  devis.push({ projetId: null, objet: "Rénovation de l'accueil", client: "Cabinet Martin", modele: "BTP", statut: "BROUILLON", date: jour(-1), acompte: 30, lignes: [{ libelle: "Main-d'œuvre", type: "MO", quantite: 35, unite: "h", coutUnitaire: equipe.thomas.cout, prixUnitaire: 38, salarieId: null }, { libelle: "Matériaux et fournitures", type: "ACHAT", quantite: 1, unite: "forfait", coutUnitaire: 1400, prixUnitaire: 2000, salarieId: null }] });
-  devis.push({ projetId: null, objet: "Audit paie et conformité", client: "Pharmacie Centrale", modele: "CONSEIL", statut: "ENVOYE", date: jour(-9), acompte: 30, lignes: [{ libelle: "Consultant", type: "MO", quantite: 28, unite: "h", coutUnitaire: equipe.sophie.cout, prixUnitaire: 85, salarieId: equipe.sophie.id }] });
-  devis.push({ projetId: null, objet: "Application de prise de rendez-vous", client: "Cabinet dentaire Leroy", modele: "INFORMATIQUE", statut: "ENVOYE", date: jour(-21), acompte: 30, lignes: [{ libelle: "Développement", type: "MO", quantite: 120, unite: "h", coutUnitaire: equipe.emma.cout, prixUnitaire: 65, salarieId: equipe.emma.id }, { libelle: "Gestion de projet", type: "MO", quantite: 16, unite: "h", coutUnitaire: equipe.lucas.cout, prixUnitaire: 80, salarieId: equipe.lucas.id }] });
-  devis.push({ projetId: null, objet: "Ravalement de façade", client: "Copropriété Les Tilleuls", modele: "BTP", statut: "REFUSE", date: jour(-130), lignes: [{ libelle: "Main-d'œuvre", type: "MO", quantite: 160, unite: "h", coutUnitaire: equipe.thomas.cout, prixUnitaire: 36, salarieId: null }, { libelle: "Échafaudage", type: "SOUS_TRAITANCE", quantite: 1, unite: "forfait", coutUnitaire: 2600, prixUnitaire: 3300, salarieId: null }] });
-  devis.push({ projetId: null, objet: "Séminaire de rentrée", client: "Assurances Moselle", modele: "EVENEMENT", statut: "REFUSE", date: jour(-75), lignes: [{ libelle: "Équipe sur place", type: "MO", quantite: 30, unite: "h", coutUnitaire: equipe.julie.cout, prixUnitaire: 45, salarieId: null }, { libelle: "Location salle", type: "SOUS_TRAITANCE", quantite: 1, unite: "forfait", coutUnitaire: 1800, prixUnitaire: 2300, salarieId: null }] });
-
-  // Numérotation chronologique par année
-  const compteurs = new Map<string, number>();
-  const numero = (sorte: "D" | "F", d: Date) => { const k = `${sorte}-${d.getUTCFullYear()}`; const n = (compteurs.get(k) ?? 0) + 1; compteurs.set(k, n); return `${k}-${String(n).padStart(4, "0")}`; };
-
-  devis.sort((a, b) => a.date.getTime() - b.date.getTime());
-  await prisma.devisProjet.createMany({ data: devis.map((d) => {
-    const totalHT = r2(d.lignes.reduce((t, l) => t + l.quantite * l.prixUnitaire, 0));
-    const coutTotal = r2(d.lignes.reduce((t, l) => t + l.quantite * l.coutUnitaire, 0));
-    return {
-      entrepriseId, projetId: d.projetId, numero: numero("D", d.date), objet: d.objet, client: d.client, modele: d.modele, statut: d.statut, supplementaire: !!d.supplementaire,
-      lignes: d.lignes, totalHT, coutTotal, acomptePct: d.acompte ?? null, createdAt: d.date,
-      envoyeLe: d.statut === "BROUILLON" ? null : d.date, accepteLe: d.statut === "ACCEPTE" ? new Date(d.date.getTime() + 6 * J) : null,
-      clientAdresse: d.client ? `${d.client}\n1 rue de la Démo\n57000 Metz` : null,
-    };
-  }) });
-
-  factures.sort((a, b) => a.date.getTime() - b.date.getTime());
-  const payees = new Set<string>();
-  await prisma.factureProjet.createMany({ data: factures.map((f, i) => {
-    const totalHT = r2(f.quantite * f.pu);
-    const age = (auj.getTime() - f.date.getTime()) / J;
-    // Payée après 15 à 35 jours ; les plus récentes restent à encaisser, deux restent en retard
-    const statut = age > 40 && i % 11 !== 5 ? "PAYEE" : "EMISE";
-    if (statut === "PAYEE" && f.jalonId) payees.add(f.jalonId);
-    return {
-      entrepriseId, projetId: f.projetId, jalonId: f.jalonId ?? null, numero: numero("F", f.date), type: f.type, date: f.date, echeance: new Date(f.date.getTime() + 30 * J),
-      lignes: [{ libelle: f.libelle, quantite: f.quantite, unite: f.unite, prixUnitaire: f.pu }], totalHT, tauxTva: 20, totalTTC: r2(totalHT * 1.2),
-      statut, payeeLe: statut === "PAYEE" ? new Date(f.date.getTime() + (15 + (i % 4) * 6) * J) : null, periodeDu: f.periodeDu ?? null, periodeAu: f.periodeAu ?? null,
-    };
-  }) });
-  // Jalons facturés : « Payé » ou « Facturé »
-  const factures_jalons = factures.filter((f) => f.jalonId).map((f) => f.jalonId!);
-  await prisma.jalonProjet.updateMany({ where: { id: { in: [...payees] } }, data: { facturation: "PAYE" } });
-  await prisma.jalonProjet.updateMany({ where: { id: { in: factures_jalons.filter((id) => !payees.has(id)) } }, data: { facturation: "FACTURE" } });
 }

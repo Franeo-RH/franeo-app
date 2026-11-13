@@ -330,7 +330,7 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
       },
     });
 
-    // Option Projets : un projet rentable, un projet qui dérape, un projet interne
+    // Option Projets : une année d'activité pour voir le coût et le gain de chaque projet
     {
       const jj = (n: number) => new Date(jour(n).toISOString().slice(0, 10) + "T00:00:00Z");
       const ref = (n: number) => jour(n).toISOString().slice(0, 10);
@@ -339,9 +339,9 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
         dateDebut: jj(-30), dateFin: jj(30), modeVente: "FORFAIT", prixVente: 18000, responsableId: lucas.id, seuilAlerte: 80,
         description: "Audit complet des lignes et plan de maintenance préventive.",
         jalons: { create: [
-          { libelle: "Acompte 30 %", date: jj(-30), montant: 5400, facturation: "PAYE", etat: "FAIT", faitLe: jj(-30) },
-          { libelle: "Rapport intermédiaire", date: jj(-3), montant: 5400, facturation: "A_FACTURER", etat: "FAIT", faitLe: jj(-3) },
-          { libelle: "Plan de maintenance final", date: jj(28), montant: 7200, facturation: "A_FACTURER" },
+          { libelle: "Lancement de l'audit", date: jj(-30), etat: "FAIT", faitLe: jj(-30) },
+          { libelle: "Rapport intermédiaire", date: jj(-3), etat: "FAIT", faitLe: jj(-3) },
+          { libelle: "Plan de maintenance final", date: jj(28) },
         ] },
         affectations: { create: [
           { salarieId: thomas.id, du: jj(-30), au: jj(30), heuresSemaine: 24, role: "Technicien" },
@@ -381,14 +381,14 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
         dateDebut: jj(14), dateFin: jj(60), modeVente: "INTERNE", responsableId: karim.id,
         affectations: { create: [{ salarieId: karim.id, du: jj(14), au: jj(60), heuresSemaine: 10, role: "Pilote" }] },
       } });
-      // Contrat récurrent d'entretien, avec une facture payée et une en retard
+      // Contrat récurrent d'entretien
       await prisma.projet.create({ data: {
         entrepriseId, nom: "Entretien des bureaux Nord Immobilier", code: "C-001", client: "Nord Immobilier", couleur: "#0891b2", statut: "EN_COURS", modele: "SERVICES",
         dateDebut: jj(-75), modeVente: "RECURRENT", montantMensuel: 1200, seuilAlerte: 85, responsableId: sophie.id,
         affectations: { create: [{ salarieId: emma.id, du: jj(-75), au: jj(290), heuresSemaine: 6, role: "Suivi du contrat" }] },
         temps: { create: [-70, -63, -56, -49, -42, -35, -28, -21, -14, -7].map((n) => ({ salarieId: emma.id, jour: ref(n), heures: 8, commentaire: "Passage hebdomadaire" })) },
       } });
-      // Une année complète d'activité : 17 projets de plus, devis, temps, frais et factures (lib/demo-projets.ts)
+      // Une année complète d'activité : 17 projets de plus, avec temps et frais (lib/demo-projets.ts)
       await peuplerProjetsDemo(entrepriseId, {
         sophie: { id: sophie.id, cout: coutDemo(3200) }, karim: { id: karim.id, cout: coutDemo(2900) }, julie: { id: julie.id, cout: coutDemo(2300) },
         thomas: { id: thomas.id, cout: coutDemo(2600, 39) }, emma: { id: emma.id, cout: coutDemo(1200) }, lucas: { id: lucas.id, cout: coutDemo(2700) },
