@@ -9,6 +9,7 @@ import BoutonSupprimer from "@/components/BoutonSupprimer";
 import RappelsSalarie, { type RappelLite } from "@/components/RappelsSalarie";
 import { versISO } from "@/lib/rappels";
 import EspaceSalarieFiche from "@/components/EspaceSalarieFiche";
+import AvantagesSalarie from "@/components/AvantagesSalarie";
 
 export default async function FicheSalarieAdmin({
   params,
@@ -133,6 +134,8 @@ export default async function FicheSalarieAdmin({
             </div>
 
           </div>
+
+          <div className="mt-6"><AvantagesSalarie salarieId={salarie.id} lienEntreprise={`/admin/entreprises/${salarie.entrepriseId}`} /></div>
 
           <div className="bg-white rounded-xl shadow p-6 mt-6">
             <h2 className="text-lg font-bold mb-3">📱 Espace salarié</h2>

@@ -9,10 +9,13 @@
 // - heures supp. : taux horaire = salaire / (heures hebdo × 52 / 12), +25 % jusqu'à 8 h, +50 % au-delà ;
 // - brut = base − retenues + heures supp. + primes ;
 // - charges = brut × taux de charges de l'entreprise (40 % par défaut, réglable dans la fiche entreprise) ;
-// - coût employeur = brut + charges + notes de frais (remboursées, sans charges).
+// - avantages (fiche entreprise / salarié) : part employeur des tickets restaurant et paniers
+//   (jours travaillés = jours de la fiche, sinon jours ouvrés du mois − jours d'absence) + autres avantages mensuels ;
+// - coût employeur = brut + charges + notes de frais (remboursées, sans charges) + avantages.
 //   Les acomptes sont une avance sur salaire : affichés, mais pas ajoutés au coût.
 
 import { prisma } from "@/lib/prisma";
+import { estimerAvantages, joursOuvresMois, lireAvantagesEntreprise, lireAvantagesSalarie } from "@/lib/avantages";
 
 export const JOURS_OUVRES_MOIS = 21.67;
 export const TAUX_CHARGES_DEFAUT = 40;
@@ -36,6 +39,8 @@ export type LigneMasse = {
   primes: number;
   notesFrais: number;
   acomptes: number;
+  avantages: number; // part employeur TR + paniers + autres avantages
+  retenueTR: number; // part salariale des tickets restaurant
   variablesBrut: number; // heures supp. + primes
   brut: number;
   tauxCharges: number;
@@ -94,8 +99,8 @@ export async function calculerMasseSalariale(options: {
       },
       select: {
         id: true, nom: true, prenom: true, matricule: true, poste: true,
-        salaireMensuel: true, heuresHebdomadaires: true,
-        entreprise: { select: { nom: true, tauxCharges: true } },
+        salaireMensuel: true, heuresHebdomadaires: true, avantagesMensuels: true,
+        entreprise: { select: { nom: true, tauxCharges: true, avantages: true } },
       },
       orderBy: [{ nom: "asc" }, { prenom: "asc" }],
     }),
@@ -143,6 +148,10 @@ export async function calculerMasseSalariale(options: {
     const variablesBrut = heuresSuppBrut + primes;
     const brut = Math.max(base - retenueSansSolde - retenueMaladie + variablesBrut, 0);
     const charges = brut * tauxCharges / 100;
+    const avEnt = lireAvantagesEntreprise(s.entreprise.avantages);
+    const avSal = lireAvantagesSalarie(s.avantagesMensuels, avEnt);
+    const joursTravailles = avSal.joursMois ?? Math.max(0, joursOuvresMois(mois, annee) - joursSansSolde - joursMaladie);
+    const av = estimerAvantages(avEnt, avSal, joursTravailles);
 
     return {
       salarieId: s.id,
@@ -160,11 +169,13 @@ export async function calculerMasseSalariale(options: {
       primes: arrondi(primes),
       notesFrais: arrondi(notesFrais),
       acomptes: arrondi(acomptes),
+      avantages: av.totalEmployeur,
+      retenueTR: av.trSalarie,
       variablesBrut: arrondi(variablesBrut),
       brut: arrondi(brut),
       tauxCharges,
       charges: arrondi(charges),
-      coutTotal: arrondi(brut + charges + notesFrais),
+      coutTotal: arrondi(brut + charges + notesFrais + av.totalEmployeur),
     };
   });
 
@@ -187,6 +198,8 @@ export async function calculerMasseSalariale(options: {
       primes: somme("primes"),
       notesFrais: somme("notesFrais"),
       acomptes: somme("acomptes"),
+      avantages: somme("avantages"),
+      retenueTR: somme("retenueTR"),
       variablesBrut: somme("variablesBrut"),
       brut: somme("brut"),
       charges: somme("charges"),

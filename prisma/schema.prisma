@@ -49,6 +49,8 @@ model Entreprise {
 
   permissions       String[]           @default(["salaries", "paie", "tickets", "absences", "entreprise", "helpdesk"])
   // Indicateurs RH : budgets annuels (facultatifs)
+  // Avantages versés chaque mois : tickets restaurant (valeur, part patronale), panier repas (montant/jour), autres (libellés)
+  avantages         Json?
   budgetPrimesAnnuel    Float?
   budgetFormationAnnuel Float?
   // Convention collective et secteur d'activité (saisis par le client)
@@ -251,6 +253,8 @@ model Salarie {
   salaireAnnuel         Float?
   primes                Float?
   avantages             String?
+  // Avantages mensuels du salarié : bénéficie des TR / paniers, jours par mois, autres montants (transport…)
+  avantagesMensuels     Json?
 
   titreSejour           DateTime?
   matricule             String?
@@ -986,6 +990,7 @@ model Projet {
   temps           TempsProjet[]
   pointages       Pointage[]
   notesFrais      NoteFrais[]
+  jalons          JalonProjet[]
 
   @@index([entrepriseId, statut])
 }
@@ -1036,4 +1041,21 @@ model TempsProjet {
 
   @@index([projetId])
   @@index([salarieId, jour])
+}
+
+// Jalons du projet et échéancier de facturation
+// etat : A_FAIRE | FAIT ; facturation : AUCUNE (jalon simple) | A_FACTURER | FACTURE | PAYE
+model JalonProjet {
+  id          String    @id @default(cuid())
+  projetId    String
+  projet      Projet    @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  libelle     String
+  date        DateTime
+  etat        String    @default("A_FAIRE")
+  montant     Float?
+  facturation String    @default("AUCUNE")
+  faitLe      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([projetId, date])
 }

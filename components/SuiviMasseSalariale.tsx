@@ -22,7 +22,8 @@ export default function SuiviMasseSalariale({
     { label: "Salaire brut total", valeur: eur(t.brut), detail: "base − retenues + variables", couleur: "#111827" },
     { label: "Charges patronales", valeur: eur(t.charges), detail: "selon le taux de l'entreprise", couleur: "#111827" },
     { label: "Coût des variables", valeur: eur(t.coutVariables), detail: `chargées + notes de frais ${eur(t.notesFrais)}`, couleur: "#c2410c" },
-    { label: "Coût employeur total", valeur: eur(t.coutTotal), detail: t.acomptes > 0 ? `acomptes versés : ${eur(t.acomptes)}` : "brut + charges + frais", couleur: "#ffffff", fond: "#f97316" },
+    ...(t.avantages > 0 ? [{ label: "Avantages (TR, paniers…)", valeur: eur(t.avantages), detail: t.retenueTR > 0 ? `part employeur · TR retenus aux salariés ${eur(t.retenueTR)}` : "part employeur", couleur: "#111827" }] : []),
+    { label: "Coût employeur total", valeur: eur(t.coutTotal), detail: t.acomptes > 0 ? `acomptes versés : ${eur(t.acomptes)}` : "brut + charges + frais + avantages", couleur: "#ffffff", fond: "#f97316" },
   ];
 
   return (
@@ -60,6 +61,7 @@ export default function SuiviMasseSalariale({
                 <th className="pb-2">Brut</th>
                 <th className="pb-2">Charges</th>
                 <th className="pb-2">Frais</th>
+                <th className="pb-2">Avantages</th>
                 <th className="pb-2">Coût total</th>
               </tr>
             </thead>
@@ -81,6 +83,7 @@ export default function SuiviMasseSalariale({
                   <td className="py-2 font-semibold">{eur(l.brut)}</td>
                   <td className="py-2">{eur(l.charges)} <span className="text-gray-400">({l.tauxCharges} %)</span></td>
                   <td className="py-2">{l.notesFrais > 0 ? eur(l.notesFrais) : "—"}</td>
+                  <td className="py-2">{l.avantages > 0 ? eur(l.avantages) : "—"}</td>
                   <td className="py-2 font-bold" style={{ color: "#c2410c" }}>{eur(l.coutTotal)}</td>
                 </tr>
               ))}

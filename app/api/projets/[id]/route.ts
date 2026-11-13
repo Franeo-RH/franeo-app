@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { accesProjets, lire, lireProjet } from "@/lib/projets-serveur";
-import { CATEGORIES_DEPENSE, coutHoraire, masquerCouts, projetsAvecSynthese } from "@/lib/projets";
+import { CATEGORIES_DEPENSE, coutHoraire, heuresDatees, masquerCouts, projetsAvecSynthese } from "@/lib/projets";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -10,12 +10,26 @@ async function charger(id: string, entrepriseId: string) {
 }
 
 /** GET : fiche complète du projet (planning, temps, dépenses, synthèse) + listes pour les formulaires */
-export async function GET(_r: NextRequest, { params }: Ctx) {
+export async function GET(request: NextRequest, { params }: Ctx) {
   const a = await accesProjets();
   if (!a.ok) return a.refus;
   const { id } = await params;
   const [p] = await projetsAvecSynthese(a.entrepriseId, { id });
   if (!p) return NextResponse.json({ erreur: "Projet introuvable" }, { status: 404 });
+
+  // ?format=csv : export de tous les temps du projet (badge + saisies)
+  if (request.nextUrl.searchParams.get("format") === "csv") {
+    const noms = new Map(p.synthese.parSalarie.map((l) => [l.salarieId, { nom: l.salarie, cout: l.coutHoraire }]));
+    const lignes = (await heuresDatees([id])).sort((x, y) => x.jour.localeCompare(y.jour));
+    const entete = ["Date", "Salarié", "Heures", "Source", "Commentaire", ...(a.voitCouts ? ["Coût (€)"] : [])];
+    const csv = "\uFEFF" + [entete, ...lignes.map((l) => {
+      const n = noms.get(l.salarieId);
+      return [l.jour.split("-").reverse().join("/"), n?.nom ?? "", String(l.heures).replace(".", ","), l.source, l.commentaire ?? "",
+        ...(a.voitCouts ? [n?.cout ? String(Math.round(l.heures * n.cout * 100) / 100).replace(".", ",") : ""] : [])];
+    })].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
+    const nomFichier = (p.code || p.nom).replace(/[^a-z0-9-]+/gi, "-").slice(0, 40);
+    return new NextResponse(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="temps-${nomFichier}.csv"` } });
+  }
 
   const [salaries, entreprise, fraisLibres] = await Promise.all([
     prisma.salarie.findMany({
@@ -78,12 +92,14 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
  * - depense { libelle, categorie, montant, date, prevu } : frais prévus ou réels
  * - rattacherFrais { noteFraisId } : imputer une note de frais au projet
  * - dupliquer : copie du projet (planning et frais prévus décalés à aujourd'hui)
+ * - jalon { libelle, date, montant?, facturation } : nouveau jalon / échéance de facturation
+ * - jalonMaj { jalonId, etat?, facturation? } : jalon fait, facturé, payé
  */
 export async function POST(request: NextRequest, { params }: Ctx) {
   const a = await accesProjets("projets.gerer");
   if (!a.ok) return a.refus;
   const { id } = await params;
-  const projet = await prisma.projet.findFirst({ where: { id, entrepriseId: a.entrepriseId }, include: { affectations: true, depenses: { where: { prevu: true } } } });
+  const projet = await prisma.projet.findFirst({ where: { id, entrepriseId: a.entrepriseId }, include: { affectations: true, depenses: { where: { prevu: true } }, jalons: true } });
   if (!projet) return NextResponse.json({ erreur: "Projet introuvable" }, { status: 404 });
   const b = await request.json().catch(() => ({}));
   const salarieOk = async (sid: unknown) => typeof sid === "string" && !!(await prisma.salarie.findFirst({ where: { id: sid, entrepriseId: a.entrepriseId }, select: { id: true } }));
@@ -118,15 +134,35 @@ export async function POST(request: NextRequest, { params }: Ctx) {
       if (!r.count) return NextResponse.json({ erreur: "Note de frais introuvable." }, { status: 404 });
       break;
     }
+    case "jalon": {
+      const date = lire.d(b.date), libelle = lire.t(b.libelle, 150), montant = lire.n(b.montant);
+      if (!libelle || !date) return NextResponse.json({ erreur: "Libellé et date sont obligatoires." }, { status: 400 });
+      const facturation = ["AUCUNE", "A_FACTURER", "FACTURE", "PAYE"].includes(b.facturation) ? b.facturation : montant ? "A_FACTURER" : "AUCUNE";
+      if (facturation !== "AUCUNE" && !a.voitCouts) return NextResponse.json({ erreur: "Vous ne voyez pas les montants de ce projet." }, { status: 403 });
+      await prisma.jalonProjet.create({ data: { projetId: id, libelle, date, montant: a.voitCouts ? montant : null, facturation } });
+      break;
+    }
+    case "jalonMaj": {
+      const data: { etat?: string; faitLe?: Date | null; facturation?: string } = {};
+      if (b.etat === "FAIT" || b.etat === "A_FAIRE") { data.etat = b.etat; data.faitLe = b.etat === "FAIT" ? new Date() : null; }
+      if (["AUCUNE", "A_FACTURER", "FACTURE", "PAYE"].includes(b.facturation)) {
+        if (!a.voitCouts) return NextResponse.json({ erreur: "Vous ne voyez pas les montants de ce projet." }, { status: 403 });
+        data.facturation = b.facturation;
+      }
+      const r = await prisma.jalonProjet.updateMany({ where: { id: String(b.jalonId), projetId: id }, data });
+      if (!r.count) return NextResponse.json({ erreur: "Jalon introuvable." }, { status: 404 });
+      break;
+    }
     case "dupliquer": {
       const decalage = Date.now() - projet.dateDebut.getTime();
       const decale = (x: Date) => new Date(x.getTime() + decalage);
-      const { id: _i, createdAt: _c, updatedAt: _u, affectations, depenses, ...base } = projet;
+      const { id: _i, createdAt: _c, updatedAt: _u, affectations, depenses, jalons, ...base } = projet;
       const copie = await prisma.projet.create({
         data: {
           ...base, nom: `${projet.nom} (copie)`, statut: "PREVU", dateDebut: decale(projet.dateDebut), dateFin: projet.dateFin ? decale(projet.dateFin) : null,
           affectations: { create: affectations.map((x) => ({ salarieId: x.salarieId, du: decale(x.du), au: decale(x.au), heuresSemaine: x.heuresSemaine, role: x.role })) },
           depenses: { create: depenses.map((x) => ({ libelle: x.libelle, categorie: x.categorie, montant: x.montant, date: decale(x.date), prevu: true })) },
+          jalons: { create: jalons.map((x) => ({ libelle: x.libelle, date: decale(x.date), montant: x.montant, facturation: x.facturation === "AUCUNE" ? "AUCUNE" : "A_FACTURER" })) },
         },
       });
       return NextResponse.json({ succes: true, id: copie.id });
@@ -148,6 +184,7 @@ export async function DELETE(request: NextRequest, { params }: Ctx) {
   if (quoi === "affectation") await prisma.affectationProjet.deleteMany({ where: { id: cle, projetId: id } });
   else if (quoi === "temps") await prisma.tempsProjet.deleteMany({ where: { id: cle, projetId: id } });
   else if (quoi === "depense") await prisma.depenseProjet.deleteMany({ where: { id: cle, projetId: id } });
+  else if (quoi === "jalon") await prisma.jalonProjet.deleteMany({ where: { id: cle, projetId: id } });
   else if (quoi === "frais") await prisma.noteFrais.updateMany({ where: { id: cle, projetId: id }, data: { projetId: null } });
   else await prisma.projet.delete({ where: { id } });
   return NextResponse.json({ succes: true });

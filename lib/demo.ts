@@ -336,6 +336,11 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
         entrepriseId, nom: "Audit maintenance usine Lille", code: "P-001", client: "Industries du Nord", couleur: "#2563eb", statut: "EN_COURS",
         dateDebut: jj(-30), dateFin: jj(30), modeVente: "FORFAIT", prixVente: 18000, responsableId: lucas.id, seuilAlerte: 80,
         description: "Audit complet des lignes et plan de maintenance préventive.",
+        jalons: { create: [
+          { libelle: "Acompte 30 %", date: jj(-30), montant: 5400, facturation: "PAYE", etat: "FAIT", faitLe: jj(-30) },
+          { libelle: "Rapport intermédiaire", date: jj(-3), montant: 5400, facturation: "A_FACTURER", etat: "FAIT", faitLe: jj(-3) },
+          { libelle: "Plan de maintenance final", date: jj(28), montant: 7200, facturation: "A_FACTURER" },
+        ] },
         affectations: { create: [
           { salarieId: thomas.id, du: jj(-30), au: jj(30), heuresSemaine: 24, role: "Technicien" },
           { salarieId: sophie.id, du: jj(-30), au: jj(30), heuresSemaine: 6, role: "Suivi administratif" },
@@ -352,6 +357,10 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
       await prisma.projet.create({ data: {
         entrepriseId, nom: "Salon Expo Paris 2026", code: "P-002", client: "Client Événementiel SAS", couleur: "#db2777", statut: "EN_COURS",
         dateDebut: jj(-20), dateFin: jj(10), modeVente: "REGIE", tauxJournalier: 350, joursVendus: 12, budgetHeures: 84, responsableId: lucas.id, seuilAlerte: 80,
+        jalons: { create: [
+          { libelle: "Montage du stand", date: jj(-8), etat: "A_FAIRE" },
+          { libelle: "Facture régie (12 jours)", date: jj(10), montant: 4200, facturation: "FACTURE" },
+        ] },
         affectations: { create: [
           { salarieId: julie.id, du: jj(-20), au: jj(10), heuresSemaine: 21, role: "Accueil stand" },
           { salarieId: emma.id, du: jj(-20), au: jj(10), heuresSemaine: 14, role: "Communication" },

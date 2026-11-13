@@ -6,7 +6,7 @@
 // Pour une nouvelle mise à jour : changez VERSION et les textes ci-dessous.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const VERSION = "V17 · novembre 2026";
+export const VERSION = "V19 · novembre 2026";
 
 export const NOUVEAUTES_CLIENTS = `Voici ce qui change dans votre espace :
 
@@ -15,7 +15,8 @@ export const NOUVEAUTES_CLIENTS = `Voici ce qui change dans votre espace :
 • Gestion RH › Badge & présences : qui est présent aujourd'hui, l'adresse de chaque pointage, les oublis, le journal complet et l'export Excel.
 • Arrêts de travail : vos salariés peuvent déclarer un arrêt depuis leur espace ; il vous est envoyé par e-mail avec le document en pièce jointe.
 • Vos salariés peuvent pointer directement depuis leur tableau de bord (position requise au moment du pointage).
-• Buddy apprend : les questions auxquelles il ne sait pas répondre sont transmises à FRANEO RH, qui lui apprend la réponse.`;
+• Buddy apprend : les questions auxquelles il ne sait pas répondre sont transmises à FRANEO RH, qui lui apprend la réponse.
+• Avantages mensuels : déclarez dans Mon entreprise vos tickets restaurant (valeur et part patronale), paniers repas et autres avantages (transport…), puis le montant de chacun dans la fiche du salarié. Ils sont ajoutés au coût employeur dans le suivi de la masse salariale.`;
 
 export const NOUVEAUTES_SALARIES = `Nouveau dans votre espace salarié :
 

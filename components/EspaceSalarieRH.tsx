@@ -6,6 +6,7 @@ import { fmtH, NOMS_MOIS } from "@/lib/heures";
 import RelevesEquipe from "@/components/RelevesEquipe";
 import BadgeSalarie from "@/components/BadgeSalarie";
 import HistoriqueBadge from "@/components/HistoriqueBadge";
+import MesProjetsSalarie from "@/components/MesProjetsSalarie";
 import TableauPresences from "@/components/TableauPresences";
 import BoutonTheme from "@/components/BoutonTheme";
 import Image from "next/image";
@@ -37,7 +38,7 @@ type Question = { id: string; sujet: string; statut: string; versFraneo: boolean
 type Frais = { id: string; date: string; montant: number; motif: string; statut: string; motifRefus: string | null };
 
 /** Espace salarié : organisation, notes de frais, questions au N+1 et, pour les managers et dirigeants, la validation de l'équipe */
-export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, prenom, avecBadge = false, avecFrais = true, avecQuestions = true }: { avecPaie: boolean; accueil: React.ReactNode; absences?: React.ReactNode; releve?: React.ReactNode; prenom: string; avecBadge?: boolean; avecFrais?: boolean; avecQuestions?: boolean }) {
+export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, prenom, avecBadge = false, avecProjets = false, avecFrais = true, avecQuestions = true }: { avecPaie: boolean; accueil: React.ReactNode; absences?: React.ReactNode; releve?: React.ReactNode; prenom: string; avecBadge?: boolean; avecProjets?: boolean; avecFrais?: boolean; avecQuestions?: boolean }) {
   const [onglet, setOnglet] = useState("accueil");
   const [menu, setMenu] = useState(false);
   useEffect(() => { try { const o = sessionStorage.getItem("fr-onglet-salarie"); if (o) setOnglet(o); } catch {} }, []);
@@ -259,7 +260,7 @@ export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, p
   type Module = { id: string; label: string; logo: string; badge?: number; rubriques: Rubrique[] };
   const modules: Module[] = [
     { id: "accueil", label: "Dashboard", logo: "/DASHBOARD-LOGO.png", rubriques: [{ id: "accueil", label: "Tableau de bord", icone: "📊", contenu: <>{avecBadge && <BadgeSalarie compact />}{accueil}{avecBadge && <HistoriqueBadge />}{blocOrga}</> }] },
-    ...(avecBadge ? [{ id: "badge", label: "Badge", logo: "/TICKET-LOGO.png", rubriques: [{ id: "badge", label: "Pointer", icone: "📍", contenu: <BadgeSalarie /> }, { id: "badge-historique", label: "Mon historique", icone: "🕓", contenu: <HistoriqueBadge /> }] }] : []),
+    ...(avecBadge ? [{ id: "badge", label: "Badge", logo: "/TICKET-LOGO.png", rubriques: [{ id: "badge", label: "Pointer", icone: "📍", contenu: <BadgeSalarie /> }, { id: "badge-historique", label: "Mon historique", icone: "🕓", contenu: <HistoriqueBadge /> }, ...(avecProjets ? [{ id: "badge-projets", label: "Mes projets", icone: "📐", contenu: <MesProjetsSalarie /> }] : [])] }] : []),
     ...(valideur ? [{
       id: "equipe", label: "Mon équipe", logo: "/SALARIE-LOGO.png", badge: nbAValider, rubriques: [
         { id: "valider", label: "À valider", icone: "✅", badge: nbAValider, contenu: blocValidation },

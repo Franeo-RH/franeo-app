@@ -92,6 +92,7 @@ export default async function EspaceSalarie() {
         <EspaceSalarieRH
           prenom={s.salarie.prenom}
           avecBadge={aDroit(permsEnt, "espace.badge")}
+          avecProjets={aDroit(permsEnt, "espace.projets")}
           avecFrais={aDroit(permsEnt, "espace.frais")}
           avecQuestions={aDroit(permsEnt, "espace.questions")}
           avecPaie={!!s.utilisateur.entreprise?.abonnementPaieId}

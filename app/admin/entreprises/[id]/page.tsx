@@ -11,6 +11,7 @@ import BoutonsDecisionPaie from "@/components/BoutonsDecisionPaie";
 import SelectAbonnementPaieEntreprise from "@/components/SelectAbonnementPaieEntreprise";
 import ChampTauxCharges from "@/components/ChampTauxCharges";
 import GestionDroits from "@/components/GestionDroits";
+import AvantagesEntreprise from "@/components/AvantagesEntreprise";
 
 export const dynamic = "force-dynamic";
 
@@ -133,6 +134,8 @@ export default async function FicheEntrepriseAdmin({
                 formules={formulesPaie.map((f) => ({ id: f.id, nom: f.nom }))}
               />
             </div>
+
+            <AvantagesEntreprise entrepriseId={id} />
 
             <div className="bg-white rounded-xl shadow p-6">
               <h2 className="text-lg font-bold mb-4">👤 Accès client</h2>

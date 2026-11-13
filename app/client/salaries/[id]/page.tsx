@@ -10,6 +10,7 @@ import RappelsSalarie, { type RappelLite } from "@/components/RappelsSalarie";
 import { versISO } from "@/lib/rappels";
 import { aDroit, passeParValidation } from "@/lib/droits";
 import EspaceSalarieFiche from "@/components/EspaceSalarieFiche";
+import AvantagesSalarie from "@/components/AvantagesSalarie";
 
 export default async function FicheSalarie({
   params,
@@ -159,6 +160,8 @@ export default async function FicheSalarie({
             </div>
 
           </div>
+
+          {voitSalaires && <div className="mt-6"><AvantagesSalarie salarieId={salarie.id} modifiable={peutModifier} lienEntreprise="/client/entreprise" /></div>}
 
           <div className="bg-white rounded-xl shadow p-6 mt-6">
             <h2 className="text-lg font-bold mb-3">📱 Espace salarié</h2>

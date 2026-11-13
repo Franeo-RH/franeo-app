@@ -99,7 +99,7 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
         { href: "/client/salaries/tableau-de-bord", label: "Gestion RH", icon: "/SALARIE-LOGO.png", visible: a("salaries") || a("absences"), actifSur: ["/client/salaries"] },
         { href: "/client/paie", label: "Paie", icon: "/PAIE-LOGO.png", visible: moi ? moi.aPaie : a("paie") },
         { href: "/client/tickets", label: "Tickets RH", icon: "/TICKET-LOGO.png", visible: a("tickets") },
-        { href: "/client/projets", label: "Projets", icon: "/INDICATEURS-LOGO.png", visible: a("projets") && !perms.includes("-projets.voir") },
+        { href: "/client/projets/tableau-de-bord", label: "Projets", icon: "/INDICATEURS-LOGO.png", visible: a("projets") && !perms.includes("-projets.voir"), actifSur: ["/client/projets"] },
         { href: "/client/actualites", label: "Communication", icon: "/COMMUNICATION-LOGO.png", visible: true, actifSur: ["/client/faq"] },
         { href: "/client/helpdesk", label: "Helpdesk", icon: "/HELPDESK-LOGO.png", visible: true },
       ];

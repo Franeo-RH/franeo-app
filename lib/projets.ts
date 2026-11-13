@@ -93,6 +93,41 @@ export function heuresPointees(pointages: { salarieId: string; jour: string; typ
   return res;
 }
 
+/** Même calcul, mais détaillé par jour : [{ projetId, salarieId, jour, heures }] */
+export function heuresPointeesParJour(pointages: { salarieId: string; jour: string; type: string; at: Date; projetId: string | null }[]) {
+  const res = new Map<string, number>(); // clé projetId|salarieId|jour
+  const tri = [...pointages].sort((a, b) => a.salarieId.localeCompare(b.salarieId) || a.jour.localeCompare(b.jour) || a.at.getTime() - b.at.getTime());
+  let debut: { at: Date; projetId: string | null; cle: string } | null = null;
+  for (const p of tri) {
+    const cleJour = `${p.salarieId}|${p.jour}`;
+    if (debut && debut.cle !== cleJour) debut = null;
+    if (p.type === "ARRIVEE" || p.type === "REPRISE") debut = { at: p.at, projetId: p.projetId, cle: cleJour };
+    else if (debut) {
+      if (debut.projetId) {
+        const k = `${debut.projetId}|${p.salarieId}|${p.jour}`;
+        res.set(k, (res.get(k) ?? 0) + (p.at.getTime() - debut.at.getTime()) / 3600000);
+      }
+      debut = null;
+    }
+  }
+  return [...res.entries()].map(([k, heures]) => { const [projetId, salarieId, jour] = k.split("|"); return { projetId, salarieId, jour, heures: arrondi(heures) }; });
+}
+
+/** Toutes les heures datées (pointées + saisies) des projets donnés */
+export async function heuresDatees(projetIds: string[]) {
+  if (!projetIds.length) return [];
+  const avecProjet = await prisma.pointage.findMany({ where: { projetId: { in: projetIds } }, select: { salarieId: true, jour: true } });
+  const cles = [...new Set(avecProjet.map((x) => `${x.salarieId}|${x.jour}`))];
+  const [pointages, temps] = await Promise.all([
+    cles.length ? prisma.pointage.findMany({ where: { OR: cles.map((c) => { const [salarieId, jour] = c.split("|"); return { salarieId, jour }; }) }, select: { salarieId: true, jour: true, type: true, at: true, projetId: true } }) : Promise.resolve([]),
+    prisma.tempsProjet.findMany({ where: { projetId: { in: projetIds } }, select: { projetId: true, salarieId: true, jour: true, heures: true, commentaire: true } }),
+  ]);
+  return [
+    ...heuresPointeesParJour(pointages).filter((x) => projetIds.includes(x.projetId)).map((x) => ({ ...x, source: "Badge" as const, commentaire: null as string | null })),
+    ...temps.map((t) => ({ ...t, source: "Saisie" as const })),
+  ];
+}
+
 export type LigneSalarieProjet = {
   salarieId: string; salarie: string; coutHoraire: number | null;
   heuresPrevues: number; heuresReelles: number; coutPrevu: number; coutReel: number;
@@ -107,6 +142,8 @@ export type Synthese = {
   avancementTemps: number | null; // % du calendrier écoulé
   projectionCout: number; projectionMarge: number; tauxProjection: number | null;
   sansCout: string[]; // salariés sans salaire ni coût standard
+  facture: number; paye: number; aFacturer: number; resteAFacturer: number; // échéancier de facturation (jalons)
+  jalonsFaits: number; jalonsTotal: number; jalonsEnRetard: number;
   alertes: { niveau: "info" | "attention" | "danger"; texte: string }[];
   parSalarie: LigneSalarieProjet[];
 };
@@ -119,6 +156,7 @@ type ProjetCalcul = {
   depenses: { montant: number; prevu: boolean }[];
   temps: { salarieId: string; heures: number; salarie: SalarieCout }[];
   notesFrais: { montant: number; statut: string }[];
+  jalons?: { libelle: string; date: Date; etat: string; montant: number | null; facturation: string }[];
 };
 type SalarieCout = { id: string; prenom: string; nom: string; coutHoraireStandard: number | null; salaireMensuel: number | null; heuresHebdomadaires: number | null };
 
@@ -185,6 +223,16 @@ export function synthese(p: ProjetCalcul, tauxCharges: number | null | undefined
   if (p.modeVente === "REGIE" && p.joursVendus && heuresReelles / HEURES_JOUR > p.joursVendus) alertes.push({ niveau: "attention", texte: `Plus de jours passés (${arrondi(heuresReelles / HEURES_JOUR, 1)}) que de jours vendus (${p.joursVendus}) : pensez à facturer le complément.` });
   if (p.statut === "EN_COURS" && p.dateFin && p.dateFin < aujourdhui) alertes.push({ niveau: "attention", texte: "La date de fin est passée mais le projet est toujours en cours." });
   if (sansCout.length) alertes.push({ niveau: "info", texte: `Coût horaire inconnu pour ${sansCout.join(", ")} : renseignez le salaire ou un coût standard dans la fiche.` });
+  const jalons = p.jalons ?? [];
+  const sommeJ = (f: (j: (typeof jalons)[number]) => boolean) => arrondi(jalons.filter(f).reduce((t, j) => t + (j.montant ?? 0), 0));
+  const facture = sommeJ((j) => j.facturation === "FACTURE" || j.facturation === "PAYE");
+  const paye = sommeJ((j) => j.facturation === "PAYE");
+  const aFacturer = sommeJ((j) => j.facturation === "A_FACTURER");
+  const enRetard = jalons.filter((j) => j.etat !== "FAIT" && j.date < aujourdhui);
+  const aFacturerEchus = jalons.filter((j) => j.facturation === "A_FACTURER" && (j.etat === "FAIT" || j.date < aujourdhui));
+  if (enRetard.length) alertes.push({ niveau: "attention", texte: `Jalon(s) en retard : ${enRetard.map((j) => j.libelle).join(", ")}.` });
+  if (aFacturerEchus.length) alertes.push({ niveau: "attention", texte: `À facturer maintenant : ${aFacturerEchus.map((j) => `${j.libelle}${j.montant ? ` (${j.montant.toLocaleString("fr-FR")} €)` : ""}`).join(", ")}.` });
+  if (facture - paye > 0) alertes.push({ niveau: "info", texte: `${(facture - paye).toLocaleString("fr-FR")} € facturés en attente de paiement.` });
   if (!p.affectations.length && p.statut !== "TERMINE" && p.statut !== "ANNULE") alertes.push({ niveau: "info", texte: "Aucun salarié planifié sur ce projet." });
 
   return {
@@ -194,6 +242,8 @@ export function synthese(p: ProjetCalcul, tauxCharges: number | null | undefined
     consommation, avancementTemps,
     projectionCout, projectionMarge: arrondi(vendu - projectionCout), tauxProjection: taux(vendu - projectionCout),
     sansCout, alertes, parSalarie,
+    facture, paye, aFacturer, resteAFacturer: arrondi(Math.max(0, vendu - facture)),
+    jalonsFaits: jalons.filter((j) => j.etat === "FAIT").length, jalonsTotal: jalons.length, jalonsEnRetard: enRetard.length,
   };
 }
 
@@ -212,6 +262,7 @@ export async function projetsAvecSynthese(entrepriseId: string, where: { id?: st
         depenses: { orderBy: { date: "desc" } },
         temps: { include: { salarie: { select: SELECT_COUT } }, orderBy: { jour: "desc" } },
         notesFrais: { select: { id: true, montant: true, statut: true, motif: true, date: true, salarie: { select: { prenom: true, nom: true } } } },
+        jalons: { orderBy: { date: "asc" } },
       },
     }),
   ]);
@@ -238,10 +289,12 @@ export function masquerCouts<T extends { synthese: Synthese; prixVente?: number 
   return {
     ...p, prixVente: null, tauxJournalier: null,
     depenses: [], notesFrais: [],
+    ...("jalons" in p ? { jalons: (p as unknown as { jalons: Record<string, unknown>[] }).jalons.map((j) => ({ ...j, montant: null })) } : {}),
     synthese: {
       ...s, vendu: 0, budgetMO: 0, budgetFrais: 0, budgetTotal: 0, margePrevue: 0, tauxMargePrevue: null, coutMO: 0, fraisReels: 0, coutReel: 0,
       margeReelle: 0, tauxMargeReelle: null, projectionCout: 0, projectionMarge: 0, tauxProjection: null, consommation: null,
-      alertes: s.alertes.filter((a) => !/budget|perte|coût|facturer/i.test(a.texte)),
+      facture: 0, paye: 0, aFacturer: 0, resteAFacturer: 0,
+      alertes: s.alertes.filter((a) => !/budget|perte|coût|factur|paiement/i.test(a.texte)),
       parSalarie: s.parSalarie.map((l) => ({ ...l, coutHoraire: null, coutPrevu: 0, coutReel: 0 })),
     },
   };

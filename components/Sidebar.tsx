@@ -117,6 +117,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
   }
   if (dans("/client/projets")) {
     return { titre: "Projets 🚧", items: [
+      { href: "/client/projets/tableau-de-bord", label: "📊 Tableau de bord" },
       { href: "/client/projets", label: "📐 Projets" },
       { href: "/client/projets/planning", label: "🗓️ Planning" },
       { href: "/client/projets/rentabilite", label: "📈 Rentabilité & coûts" },
