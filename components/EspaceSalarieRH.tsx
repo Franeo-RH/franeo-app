@@ -4,6 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { LIBELLES_ABSENCE } from "@/lib/espace-salarie";
 import { fmtH, NOMS_MOIS } from "@/lib/heures";
 import RelevesEquipe from "@/components/RelevesEquipe";
+import BadgeSalarie from "@/components/BadgeSalarie";
+import HistoriqueBadge from "@/components/HistoriqueBadge";
+import TableauPresences from "@/components/TableauPresences";
 import BoutonTheme from "@/components/BoutonTheme";
 import Image from "next/image";
 
@@ -34,7 +37,7 @@ type Question = { id: string; sujet: string; statut: string; versFraneo: boolean
 type Frais = { id: string; date: string; montant: number; motif: string; statut: string; motifRefus: string | null };
 
 /** Espace salarié : organisation, notes de frais, questions au N+1 et, pour les managers et dirigeants, la validation de l'équipe */
-export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, prenom }: { avecPaie: boolean; accueil: React.ReactNode; absences?: React.ReactNode; releve?: React.ReactNode; prenom: string }) {
+export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, prenom, avecBadge = false, avecFrais = true, avecQuestions = true }: { avecPaie: boolean; accueil: React.ReactNode; absences?: React.ReactNode; releve?: React.ReactNode; prenom: string; avecBadge?: boolean; avecFrais?: boolean; avecQuestions?: boolean }) {
   const [onglet, setOnglet] = useState("accueil");
   const [menu, setMenu] = useState(false);
   useEffect(() => { try { const o = sessionStorage.getItem("fr-onglet-salarie"); if (o) setOnglet(o); } catch {} }, []);
@@ -255,11 +258,13 @@ export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, p
   type Rubrique = { id: string; label: string; icone: string; badge?: number; contenu: React.ReactNode };
   type Module = { id: string; label: string; logo: string; badge?: number; rubriques: Rubrique[] };
   const modules: Module[] = [
-    { id: "accueil", label: "Dashboard", logo: "/DASHBOARD-LOGO.png", rubriques: [{ id: "accueil", label: "Tableau de bord", icone: "📊", contenu: <>{accueil}{blocOrga}</> }] },
+    { id: "accueil", label: "Dashboard", logo: "/DASHBOARD-LOGO.png", rubriques: [{ id: "accueil", label: "Tableau de bord", icone: "📊", contenu: <>{accueil}{avecBadge && <HistoriqueBadge />}{blocOrga}</> }] },
+    ...(avecBadge ? [{ id: "badge", label: "Badge", logo: "/TICKET-LOGO.png", rubriques: [{ id: "badge", label: "Pointer", icone: "📍", contenu: <BadgeSalarie /> }, { id: "badge-historique", label: "Mon historique", icone: "🕓", contenu: <HistoriqueBadge /> }] }] : []),
     ...(valideur ? [{
       id: "equipe", label: "Mon équipe", logo: "/SALARIE-LOGO.png", badge: nbAValider, rubriques: [
         { id: "valider", label: "À valider", icone: "✅", badge: nbAValider, contenu: blocValidation },
         { id: "rma", label: "Relevés de l'équipe", icone: "⏱️", contenu: <RelevesEquipe /> },
+        ...(avecBadge ? [{ id: "presences", label: "Présences du jour", icone: "📍", contenu: <TableauPresences api="/api/espace-salarie/presences" /> }] : []),
         ...(eq?.peutSaisirVariables && avecPaie ? [{ id: "variables", label: "Saisir une variable", icone: "✏️", contenu: blocVariables }] : []),
       ],
     }] : []),
@@ -269,8 +274,8 @@ export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, p
         ...(releve ? [{ id: "releve", label: "Relevé mensuel", icone: "⏱️", contenu: releve }] : []),
       ],
     }] : []),
-    { id: "frais", label: "Notes de frais", logo: "/ENTREPRISE-LOGO.png", rubriques: [{ id: "frais", label: "Mes notes de frais", icone: "🧾", contenu: blocFrais }] },
-    { id: "questions", label: "Questions", logo: "/HELPDESK-LOGO.png", badge: questionsEnAttente, rubriques: [{ id: "questions", label: "Mes questions", icone: "💬", badge: questionsEnAttente, contenu: blocQuestions }] },
+    ...(avecFrais ? [{ id: "frais", label: "Notes de frais", logo: "/ENTREPRISE-LOGO.png", rubriques: [{ id: "frais", label: "Mes notes de frais", icone: "🧾", contenu: blocFrais }] }] : []),
+    ...(avecQuestions ? [{ id: "questions", label: "Questions", logo: "/HELPDESK-LOGO.png", badge: questionsEnAttente, rubriques: [{ id: "questions", label: "Mes questions", icone: "💬", badge: questionsEnAttente, contenu: blocQuestions }] }] : []),
   ];
   const moduleCourant = modules.find((m) => m.rubriques.some((r) => r.id === onglet)) ?? modules[0];
   const courant = moduleCourant.rubriques.find((r) => r.id === onglet) ?? moduleCourant.rubriques[0];

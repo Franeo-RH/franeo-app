@@ -11,7 +11,7 @@ export const GRILLE_RH = [
       "Application RH : ajouter, modifier, importer et supprimer vos salariés",
       "Mouvements du personnel", "Saisie des absences", "Communication & helpdesk",
       "Ticket RH à la demande : 70 € / demande",
-      "Option espace salarié : 3 € / salarié / mois (demandes d'absence, relevés d'heures, communication salariés)",
+      "Espace salarié inclus (absences, relevés, badge, notes de frais)",
     ],
   },
   {
@@ -20,7 +20,7 @@ export const GRILLE_RH = [
     features: [
       "Toutes les fonctionnalités Basic", "Jusqu'à 25 salariés inclus", "4 € / salarié supplémentaire",
       "3 tickets RH / mois", "Conseil RH ponctuel illimité", "Suivi complet des échéances", "Suivi des périodes d'essai", "SharePoint inclus",
-      "Option espace salarié : 15 € / mois (jusqu'à 25 salariés)",
+      "Espace salarié inclus",
     ],
   },
   {

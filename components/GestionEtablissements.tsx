@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type E = { id: string; nom: string; rue: string | null; codePostal: string | null; ville: string | null; siret: string | null };
-const VIDE = { nom: "", rue: "", codePostal: "", ville: "", siret: "" };
+type E = { id: string; nom: string; rue: string | null; codePostal: string | null; ville: string | null; siret: string | null; latitude: number | null; longitude: number | null; rayon: number };
+const VIDE = { nom: "", rue: "", codePostal: "", ville: "", siret: "", rayon: "200", latitude: "", longitude: "" };
 
 /** Établissements de l'entreprise : ajout gratuit, au moins un avec adresse */
 export default function GestionEtablissements({ modifiable }: { modifiable: boolean }) {
@@ -51,9 +51,10 @@ export default function GestionEtablissements({ modifiable }: { modifiable: bool
             <p className="font-bold">{e.nom}</p>
             <p className="text-gray-600">{e.rue}<br />{e.codePostal} {e.ville}</p>
             {e.siret && <p className="text-gray-400 text-xs">SIRET {e.siret}</p>}
+            <p className="text-xs mt-1" style={{ color: e.latitude != null ? "#15803d" : "#c2410c" }}>{e.latitude != null ? `📍 Zone de badge : ${e.rayon} m autour de l'adresse` : "📍 Zone de badge non localisée : modifiez l'établissement"}</p>
             {modifiable && (
               <div className="flex gap-3 mt-2">
-                <button type="button" onClick={() => { setEdition(e.id); setForm({ nom: e.nom, rue: e.rue || "", codePostal: e.codePostal || "", ville: e.ville || "", siret: e.siret || "" }); setOuvert(true); }} className="text-orange-500 font-semibold">Modifier</button>
+                <button type="button" onClick={() => { setEdition(e.id); setForm({ nom: e.nom, rue: e.rue || "", codePostal: e.codePostal || "", ville: e.ville || "", siret: e.siret || "", rayon: String(e.rayon || 200), latitude: "", longitude: "" }); setOuvert(true); }} className="text-orange-500 font-semibold">Modifier</button>
                 <button type="button" onClick={() => supprimer(e.id)} className="text-red-600">Supprimer</button>
               </div>
             )}
@@ -67,6 +68,17 @@ export default function GestionEtablissements({ modifiable }: { modifiable: bool
           <input required placeholder="Rue" value={form.rue} onChange={(e) => setForm({ ...form, rue: e.target.value })} className={`${chp} col-span-2`} aria-label="Rue" />
           <input required placeholder="Code postal" value={form.codePostal} onChange={(e) => setForm({ ...form, codePostal: e.target.value })} className={chp} aria-label="Code postal" />
           <input required placeholder="Ville" value={form.ville} onChange={(e) => setForm({ ...form, ville: e.target.value })} className={chp} aria-label="Ville" />
+          <label className="text-sm font-semibold">Rayon de la zone de badge (mètres)
+            <input type="number" min={50} max={2000} step={50} value={form.rayon} onChange={(e) => setForm({ ...form, rayon: e.target.value })} className={`${chp} mt-1 font-normal`} />
+          </label>
+          <div className="text-sm">
+            <p className="font-semibold">Position de la zone</p>
+            <p className="text-gray-500 text-xs mb-1">{form.latitude ? "✅ Position actuelle enregistrée" : "Calculée automatiquement depuis l'adresse. Sur place, vous pouvez utiliser votre position."}</p>
+            <button type="button" onClick={() => navigator.geolocation?.getCurrentPosition(
+              (p) => setForm((f) => ({ ...f, latitude: String(p.coords.latitude), longitude: String(p.coords.longitude) })),
+              () => setMsg({ ok: false, t: "Position refusée par le navigateur." }), { enableHighAccuracy: true, timeout: 10000 })}
+              className="border rounded-lg px-3 py-1 font-semibold">📍 Utiliser ma position actuelle</button>
+          </div>
           <div className="col-span-2 flex gap-2">
             <button type="submit" className="bg-black text-white px-4 py-2 rounded-lg font-semibold">Enregistrer</button>
             <button type="button" onClick={() => setOuvert(false)} className="border px-4 py-2 rounded-lg">Annuler</button>

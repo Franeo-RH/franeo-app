@@ -140,6 +140,7 @@ export async function PUT(
         ...(data.managerId !== undefined ? { managerId: data.managerId && data.managerId !== id ? String(data.managerId) : null } : {}),
         ...(data.voitSalairesEquipe !== undefined ? { voitSalairesEquipe: data.voitSalairesEquipe === true } : {}),
         ...(data.saisieVariables !== undefined ? { saisieVariables: data.saisieVariables === true } : {}),
+        ...(data.badgeSansZone !== undefined ? { badgeSansZone: data.badgeSansZone === true } : {}),
         salaireMensuel: data.salaireMensuel ? parseFloat(data.salaireMensuel) : null,
         salaireAnnuel: data.salaireAnnuel ? parseFloat(data.salaireAnnuel) : null,
         primes: data.primes ? parseFloat(data.primes) : null,

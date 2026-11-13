@@ -70,7 +70,7 @@ export default function ModifierSalarie() {
           primes: data.primes?.toString() || "",
           avantages: data.avantages || "",
         });
-        setRh({ roleRH: data.roleRH || "SALARIE", managerId: data.managerId || "", voitSalairesEquipe: !!data.voitSalairesEquipe, saisieVariables: !!data.saisieVariables });
+        setRh({ roleRH: data.roleRH || "SALARIE", managerId: data.managerId || "", voitSalairesEquipe: !!data.voitSalairesEquipe, saisieVariables: !!data.saisieVariables, badgeSansZone: !!data.badgeSansZone });
         setChargementInitial(false);
       });
   }, [id]);

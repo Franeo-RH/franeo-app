@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionSalarie } from "@/lib/session";
+import { aDroit } from "@/lib/droits";
 
 /** GET : mes notes de frais ; POST { date, montant, motif } : nouvelle note (sans justificatif stocké) */
 export async function GET() {
   const s = await getSessionSalarie();
   if (!s.ok) return NextResponse.json({ erreur: "Accès refusé" }, { status: 401 });
+  if (!aDroit(s.utilisateur.entreprise?.permissions, "espace.frais")) return NextResponse.json({ erreur: "Les notes de frais ne sont pas activées par votre employeur." }, { status: 403 });
   const frais = await prisma.noteFrais.findMany({ where: { salarieId: s.salarie.id }, orderBy: { date: "desc" }, take: 50 });
   return NextResponse.json(frais);
 }
@@ -13,6 +15,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const s = await getSessionSalarie();
   if (!s.ok) return NextResponse.json({ erreur: "Accès refusé" }, { status: 401 });
+  if (!aDroit(s.utilisateur.entreprise?.permissions, "espace.frais")) return NextResponse.json({ erreur: "Les notes de frais ne sont pas activées par votre employeur." }, { status: 403 });
   const { date, montant, motif } = await request.json().catch(() => ({}));
   const m = parseFloat(String(montant ?? "").replace(",", "."));
   const d = typeof date === "string" ? new Date(`${date}T12:00:00`) : null;
@@ -29,6 +32,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const s = await getSessionSalarie();
   if (!s.ok) return NextResponse.json({ erreur: "Accès refusé" }, { status: 401 });
+  if (!aDroit(s.utilisateur.entreprise?.permissions, "espace.frais")) return NextResponse.json({ erreur: "Les notes de frais ne sont pas activées par votre employeur." }, { status: 403 });
   const id = request.nextUrl.searchParams.get("id") || "";
   const f = await prisma.noteFrais.findUnique({ where: { id } });
   if (!f || f.salarieId !== s.salarie.id) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });

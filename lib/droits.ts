@@ -11,7 +11,7 @@ export const MODULES = [
   { id: "tickets", label: "🎫 Tickets RH" },
   { id: "helpdesk", label: "🆘 Helpdesk" },
   { id: "entreprise", label: "🏢 Mon entreprise (infos, abonnements, factures)" },
-  { id: "espace-salaries", label: "📱 Espace salarié (option)" },
+  { id: "espace-salaries", label: "📱 Espace salarié (inclus dans toutes les formules)" },
 ] as const;
 
 export const ACTIONS = [
@@ -54,6 +54,9 @@ export const ACTIONS = [
   { id: "espace.gerer", module: "espace-salaries", label: "Le client gère les accès de ses salariés" },
   { id: "espace.absences", module: "espace-salaries", label: "Salariés : demander leurs absences" },
   { id: "espace.heures", module: "espace-salaries", label: "Salariés : relevé d'heures" },
+  { id: "espace.badge", module: "espace-salaries", label: "Salariés : badge (pointage horaire avec contrôle de zone)" },
+  { id: "espace.frais", module: "espace-salaries", label: "Salariés : notes de frais" },
+  { id: "espace.questions", module: "espace-salaries", label: "Salariés : questions à leur N+1" },
   { id: "espace.echeances", module: "espace-salaries", label: "Salariés : voir leurs échéances" },
   { id: "espace.communications", module: "espace-salaries", label: "Salariés : voir les communications" },
   // Partout
@@ -82,6 +85,7 @@ export const DROITS_PAGES: { prefixe: string; droit: ActionId }[] = [
   { prefixe: "/client/salaries/releves", droit: "paie.releves" },
   { prefixe: "/client/salaries/services", droit: "rh.services" },
   { prefixe: "/client/salaries/documents", droit: "rh.documents" },
+  { prefixe: "/client/salaries/pointages", droit: "espace.badge" },
   { prefixe: "/client/salaries/contrats", droit: "rh.contrats" },
   { prefixe: "/client/salaries/frais", droit: "rh.frais" },
   { prefixe: "/client/salaries/questions", droit: "rh.questions" },
@@ -157,7 +161,7 @@ export function aAccesContrats(entreprise: { permissions?: string[] | null; abon
 
 // ── Accès par formule (bloc « Accès & droits » de l'admin) ──
 export const ACCES_FORMULES = [
-  { id: "BASIC", label: "Basic", detail: "Salariés (ajout, modif, import, suppression), mouvements, absences. Pas d'échéances, pas de question RH simple, pas de paie. Tickets à 70 €." },
+  { id: "BASIC", label: "Basic", detail: "Salariés (ajout, modif, import, suppression), mouvements, absences, espace salarié. Pas d'échéances, pas de question RH simple, pas de paie. Tickets à 70 €." },
   { id: "ESSENTIEL", label: "Essentiel", detail: "Basic + 3 tickets RH, échéances complètes, conseil RH ponctuel illimité." },
   { id: "SERENITE", label: "Sérénité", detail: "Essentiel + 5 tickets RH, saisie des informations de paie, contrats depuis modèle." },
   { id: "PREMIUM", label: "Premium", detail: "Sérénité + 10 tickets RH, saisie des informations de paie, Franeo Analytics sur demande." },
@@ -171,8 +175,9 @@ export function permissionsFormule(niveau: string, actuelles: string[] = [], ave
   if (niveau === "BASIC") retirer.push("salaries.echeances", "salaries.echeances-modifier", "tickets.questions", "rh.contrats", "rh.documents");
   if (niveau === "ESSENTIEL") retirer.push("rh.contrats");
   const modules = niveau === "SERENITE" || niveau === "PREMIUM" || avecFormulePaie ? [...base, "paie"] : base;
-  const garder = actuelles.filter((p) => p === "espace-salaries");
-  return [...modules, ...garder, ...retirer.map((a) => `-${a}`), `@acces:${niveau}`];
+  // L'espace salarié est inclus dans toutes les formules ; les fonctions retirées par l'admin restent retirées
+  const garder = actuelles.filter((p) => p.startsWith("-espace."));
+  return [...modules, "espace-salaries", ...garder, ...retirer.map((a) => `-${a}`), `@acces:${niveau}`];
 }
 
 export const accesChoisi = (permissions: string[] | null | undefined) => (permissions || []).find((p) => p.startsWith("@acces:"))?.slice(7) ?? null;

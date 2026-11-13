@@ -81,7 +81,7 @@ export default function GestionDroits({
         ))}
       </div>
       <div style={{ marginBottom: "14px", padding: "10px 12px", border: "1px solid #e5e7eb", borderRadius: "12px", background: "#f9fafb" }}>
-        {case_(moduleActif("espace-salaries"), () => { setEtat(""); setPerms((p) => (p.includes("espace-salaries") ? p.filter((x) => x !== "espace-salaries") : [...p, "espace-salaries"])); }, "📱 Option espace salarié (Basic : 3 €/salarié/mois ; Essentiel et + : 15 €/mois jusqu'à 25 salariés) — demandes d'absence, relevés d'heures, communication salariés")}
+        {case_(moduleActif("espace-salaries"), () => { setEtat(""); setPerms((p) => (p.includes("espace-salaries") ? p.filter((x) => x !== "espace-salaries") : [...p, "espace-salaries"])); }, "📱 Espace salarié (inclus dans toutes les formules) — détaillez ci-dessous ce que les salariés peuvent faire")}
       </div>
       {choix !== "PERSO" && (
         <p style={{ fontSize: "13px", color: "#6b7280", margin: "0 0 10px" }}>Le détail ci-dessous est réglé par la formule. Modifier une case passe en accès personnalisé.</p>

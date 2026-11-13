@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionSalarie } from "@/lib/session";
+import { aDroit } from "@/lib/droits";
 import { destinataireN1 } from "@/lib/hierarchie";
 import { notifierAdmin } from "@/lib/notifications";
 
@@ -13,6 +14,7 @@ import { notifierAdmin } from "@/lib/notifications";
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const s = await getSessionSalarie();
   if (!s.ok) return NextResponse.json({ erreur: "Accès refusé" }, { status: 401 });
+  if (!aDroit(s.utilisateur.entreprise?.permissions, "espace.questions")) return NextResponse.json({ erreur: "Les questions ne sont pas activées par votre employeur." }, { status: 403 });
   const { id } = await params;
   const q = await prisma.questionInterne.findUnique({ where: { id }, include: { messages: { orderBy: { createdAt: "asc" } } } });
   if (!q || (q.auteurId !== s.salarie.id && q.destinataireId !== s.salarie.id)) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });

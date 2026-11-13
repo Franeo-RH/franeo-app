@@ -14,7 +14,7 @@ type FormulePaie = {
 
 /** Accès de base gratuit (sans pack RH ni formule paie) : chaque ticket RH est facturé à l'unité */
 export const PRIX_TICKET_SANS_ABONNEMENT = 70;
-/** Option espace salarié : 3 €/salarié/mois en Basic, forfait 15 €/mois (25 salariés max) à partir d'Essentiel */
+/** Anciens prix de l'option espace salarié (désormais incluse dans toutes les formules, plus facturée) */
 export const PRIX_ESPACE_PAR_SALARIE = 3;
 export const PRIX_ESPACE_FORFAIT = 15;
 
@@ -145,18 +145,7 @@ export async function lignesFacture(entrepriseId: string, mois: number, annee: n
     if (nbSorties > 0) ajouter({ categorie: "SORTIES", libelle: `${nbSorties} sortie(s) / solde de tout compte`, quantite: nbSorties, prixUnitaire: paie.prixSortie });
   }
 
-  // ── Option Espace salarié ──
-  // RH Basic (ou sans formule RH) : 3 € par salarié ayant un compte ; Essentiel et au-delà : 15 € par mois (jusqu'à 25 salariés)
-  if (avecEspace && nbComptes > 0) {
-    const nomAbo = (abo?.nom || "").toLowerCase();
-    const forfait = !!abo && !nomAbo.includes("basic");
-    if (forfait) {
-      ajouter({ categorie: "ESPACE_SALARIE", libelle: `Espace salarié : forfait mensuel (${nbComptes} salarié(s), jusqu'à 25)`, quantite: 1, prixUnitaire: PRIX_ESPACE_FORFAIT });
-      if (nbComptes > 25) ajouter({ categorie: "ESPACE_SALARIE", libelle: `Espace salarié : ${nbComptes - 25} salarié(s) au-delà de 25`, quantite: nbComptes - 25, prixUnitaire: PRIX_ESPACE_PAR_SALARIE });
-    } else {
-      ajouter({ categorie: "ESPACE_SALARIE", libelle: `Espace salarié : ${nbComptes} salarié(s)`, quantite: nbComptes, prixUnitaire: PRIX_ESPACE_PAR_SALARIE });
-    }
-  }
+  // Espace salarié : inclus dans toutes les formules (plus de supplément)
 
   // ── Prestations commandées dans le mois (non annulées) ──
   for (const pr of prestations) {

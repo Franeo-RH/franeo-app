@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionSalarie } from "@/lib/session";
+import { aDroit } from "@/lib/droits";
 import { destinataireN1 } from "@/lib/hierarchie";
 
 /** GET : questions posées par moi et questions reçues (je suis le destinataire) */
 export async function GET() {
   const s = await getSessionSalarie();
   if (!s.ok) return NextResponse.json({ erreur: "Accès refusé" }, { status: 401 });
+  if (!aDroit(s.utilisateur.entreprise?.permissions, "espace.questions")) return NextResponse.json({ erreur: "Les questions ne sont pas activées par votre employeur." }, { status: 403 });
   const questions = await prisma.questionInterne.findMany({
     where: { OR: [{ auteurId: s.salarie.id }, { destinataireId: s.salarie.id, versFraneo: false }] },
     include: { messages: { orderBy: { createdAt: "asc" } } },
@@ -28,6 +30,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const s = await getSessionSalarie();
   if (!s.ok) return NextResponse.json({ erreur: "Accès refusé" }, { status: 401 });
+  if (!aDroit(s.utilisateur.entreprise?.permissions, "espace.questions")) return NextResponse.json({ erreur: "Les questions ne sont pas activées par votre employeur." }, { status: 403 });
   const { sujet, contenu } = await request.json().catch(() => ({}));
   if (typeof contenu !== "string" || !contenu.trim()) return NextResponse.json({ erreur: "Écrivez votre question." }, { status: 400 });
   const q = await prisma.questionInterne.create({

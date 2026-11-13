@@ -10,7 +10,7 @@ import BandeauDemo from "@/components/BandeauDemo";
 import ReleveHeuresSalarie from "@/components/ReleveHeuresSalarie";
 import EspaceSalarieRH from "@/components/EspaceSalarieRH";
 import { libelleRappel, typeDe } from "@/lib/rappels";
-import { BoutonAnnulerAbsence, FormulaireAbsenceSalarie } from "@/components/EspaceSalarieActions";
+import { BoutonAnnulerAbsence, FormulaireAbsenceSalarie, FormulaireArretSalarie } from "@/components/EspaceSalarieActions";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +91,9 @@ export default async function EspaceSalarie() {
 
         <EspaceSalarieRH
           prenom={s.salarie.prenom}
+          avecBadge={aDroit(permsEnt, "espace.badge")}
+          avecFrais={aDroit(permsEnt, "espace.frais")}
+          avecQuestions={aDroit(permsEnt, "espace.questions")}
           avecPaie={!!s.utilisateur.entreprise?.abonnementPaieId}
           accueil={
             <>
@@ -131,6 +134,10 @@ export default async function EspaceSalarie() {
               <section style={carte} aria-labelledby="t-demande">
                 <h2 id="t-demande" style={{ margin: "0 0 12px", fontSize: "18px" }}>📅 Demander une absence</h2>
                 <FormulaireAbsenceSalarie />
+              </section>
+              <section style={carte} aria-labelledby="t-arret">
+                <h2 id="t-arret" style={{ margin: "0 0 12px", fontSize: "18px" }}>🤒 Déclarer un arrêt de travail</h2>
+                <FormulaireArretSalarie />
               </section>
               <section style={carte} aria-labelledby="t-absences">
                 <h2 id="t-absences" style={{ margin: "0 0 4px", fontSize: "18px" }}>Mes absences à venir</h2>

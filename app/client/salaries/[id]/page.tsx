@@ -174,7 +174,7 @@ export default async function FicheSalarie({
               />
             ) : (
               <p className="text-sm text-gray-600">
-                Vos salariés peuvent déclarer leurs absences et leurs heures depuis leur téléphone (option à 1 €/salarié/mois, incluse en Premium et Entreprise). Pour l&apos;activer, contactez FRANEO RH par ticket.
+                Vos salariés peuvent déclarer leurs absences et leurs heures depuis leur téléphone (inclus dans votre formule). Pour l&apos;activer, contactez FRANEO RH par ticket.
               </p>
             )}
           </div>

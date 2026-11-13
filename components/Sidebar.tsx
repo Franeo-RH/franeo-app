@@ -49,6 +49,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/salaries/acces", label: "📱 Gestion des accès" },
         { href: "/admin/salaries/absences", label: "🏖️ Absences" },
         { href: "/admin/salaries/contrats", label: "📝 Contrats générés" },
+        { href: "/admin/salaries/pointages", label: "📍 Journal des pointages" },
       ] };
     }
     if (dans("/admin/paie")) {
@@ -104,6 +105,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
       { href: "/client/salaries/documents", label: "📁 Documents" },
       { href: "/client/salaries/contrats", label: "📝 Contrats" },
       { href: "/client/salaries/releves", label: "⏱️ Relevés" },
+      { href: "/client/salaries/pointages", label: "📍 Badge & présences" },
       { href: "/client/salaries/absences", label: "🏖️ Absences" },
       { href: "/client/salaries/frais", label: "🧾 Notes de frais" },
       { href: "/client/salaries/questions", label: "💬 Questions des salariés" },

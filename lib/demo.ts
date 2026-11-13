@@ -255,9 +255,9 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
   {
     await prisma.etablissement.createMany({
       data: [
-        { entrepriseId, nom: "Siège Paris", rue: "10 rue de la Paix", codePostal: "75002", ville: "Paris" },
-        { entrepriseId, nom: "Agence Lyon", rue: "5 place Bellecour", codePostal: "69002", ville: "Lyon" },
-        { entrepriseId, nom: "Agence Lille", rue: "2 rue Nationale", codePostal: "59000", ville: "Lille" },
+        { entrepriseId, nom: "Siège Paris", rue: "10 rue de la Paix", codePostal: "75002", ville: "Paris", latitude: 48.8691, longitude: 2.3315 },
+        { entrepriseId, nom: "Agence Lyon", rue: "5 place Bellecour", codePostal: "69002", ville: "Lyon", latitude: 45.7578, longitude: 4.832 },
+        { entrepriseId, nom: "Agence Lille", rue: "2 rue Nationale", codePostal: "59000", ville: "Lille", latitude: 50.6366, longitude: 3.0587 },
       ],
     });
     await prisma.service.createMany({
@@ -268,6 +268,21 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
     await prisma.salarie.update({ where: { id: karim.id }, data: { roleRH: "MANAGER", managerId: lucas.id, voitSalairesEquipe: true, saisieVariables: true, coefficient: "250", position: "2.3" } });
     await prisma.salarie.updateMany({ where: { id: { in: [sophie.id, julie.id, chloe.id, emma.id] } }, data: { managerId: karim.id } });
     await prisma.salarie.update({ where: { id: thomas.id }, data: { managerId: lucas.id } });
+
+    // Badge : quelques pointages du jour pour l'équipe de Karim
+    {
+      const j = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(new Date());
+      const a = (h: number, m: number) => { const d = new Date(); d.setHours(h, m, 0, 0); return d; };
+      if (new Date().getHours() >= 10) {
+        await prisma.pointage.createMany({
+          data: [
+            { salarieId: sophie.id, entrepriseId, type: "ARRIVEE", at: a(8, 52), jour: j, dansZone: true, etablissement: "Siège Paris" },
+            { salarieId: julie.id, entrepriseId, type: "ARRIVEE", at: a(9, 6), jour: j, dansZone: false, etablissement: "Siège Paris", motif: "Hors zone (environ 850 m au-delà de « Siège Paris »)" },
+            { salarieId: emma.id, entrepriseId, type: "ARRIVEE", at: a(9, 30), jour: j, dansZone: true, etablissement: "Siège Paris" },
+          ],
+        });
+      }
+    }
 
     // Compte démo manager (Karim Benali)
     await prisma.utilisateur.create({

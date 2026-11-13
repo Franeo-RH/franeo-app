@@ -45,6 +45,10 @@ async function main() {
     await prisma.abonnementPaie.delete({ where: { id: ent.id } });
     console.log("Ancienne formule Entreprise retirée");
   }
+  // L'espace salarié est inclus dans toutes les formules : on l'active pour tous les clients
+  const sans = await prisma.entreprise.findMany({ where: { NOT: { permissions: { has: "espace-salaries" } } }, select: { id: true, permissions: true } });
+  for (const e of sans) await prisma.entreprise.update({ where: { id: e.id }, data: { permissions: [...e.permissions, "espace-salaries"] } });
+  if (sans.length) console.log(`Espace salarié activé pour ${sans.length} client(s)`);
   console.log("✅ Grille tarifaire mise à jour");
 }
 

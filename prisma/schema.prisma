@@ -88,6 +88,7 @@ model Entreprise {
   trames            TrameContrat[]
   contrats          DemandeContrat[]
   piecesJointes     PieceJointe[]
+  pointages         Pointage[]
 }
 
 model Facturation {
@@ -235,6 +236,9 @@ model Salarie {
   // Droits du manager, cochés dans sa fiche
   voitSalairesEquipe    Boolean        @default(false)
   saisieVariables       Boolean        @default(false)
+  // Badge : salarié itinérant, pointage sans contrôle de zone
+  badgeSansZone         Boolean        @default(false)
+  pointages             Pointage[]
   notesFrais            NoteFrais[]
 
   salaireMensuel        Float?
@@ -738,6 +742,10 @@ model Etablissement {
   codePostal   String?
   ville        String?
   siret        String?
+  // Badge : zone de pointage (centre + rayon en mètres)
+  latitude     Float?
+  longitude    Float?
+  rayon        Int        @default(200)
   createdAt    DateTime   @default(now())
 
   @@index([entrepriseId])
@@ -899,4 +907,25 @@ model DemandeContrat {
   createdAt    DateTime   @default(now())
 
   @@index([entrepriseId, createdAt])
+}
+
+
+// Badge : un pointage (arrivée, pause, reprise, départ). La position GPS n'est JAMAIS conservée :
+// seul le résultat « dans la zone / hors zone » est enregistré (null = sans contrôle ou position non partagée).
+model Pointage {
+  id            String     @id @default(cuid())
+  salarieId     String
+  salarie       Salarie    @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+  entrepriseId  String
+  entreprise    Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  type          String     // ARRIVEE | PAUSE | REPRISE | DEPART
+  at            DateTime   @default(now())
+  jour          String     // AAAA-MM-JJ (heure de Paris)
+  dansZone      Boolean?
+  etablissement String?
+  motif         String?    // « position non partagée », « salarié itinérant »…
+  commentaire   String?
+
+  @@index([entrepriseId, jour])
+  @@index([salarieId, jour])
 }

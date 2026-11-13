@@ -1,10 +1,29 @@
 import { prisma } from "@/lib/prisma";
 
+import { NOUVEAUTES_CLIENTS, NOUVEAUTES_SALARIES, titreNouveautes } from "@/lib/nouveautes";
+
 export { CIBLES } from "@/lib/communications-cibles";
+
+let nouveautesPubliees = false;
+/** Publie une seule fois la communication « Nouveautés » de la version déployée (clients et salariés) */
+async function publierNouveautes() {
+  if (nouveautesPubliees) return;
+  try {
+    for (const [cible, contenu] of [["CLIENTS", NOUVEAUTES_CLIENTS], ["SALARIES", NOUVEAUTES_SALARIES]] as const) {
+      const titre = titreNouveautes(cible);
+      const existe = await prisma.communication.findFirst({ where: { titre, cible }, select: { id: true } });
+      if (!existe) await prisma.communication.create({ data: { titre, contenu, cible, importante: true } });
+    }
+    nouveautesPubliees = true;
+  } catch (e) {
+    console.error("Nouveautés non publiées :", e);
+  }
+}
 
 /** Communications pas encore validées (« J'ai lu ») par cet utilisateur */
 export async function communicationsNonLues(u: { id: string; role: string; entrepriseId: string | null }) {
   if (!u.entrepriseId || (u.role !== "CLIENT" && u.role !== "SALARIE")) return [];
+  await publierNouveautes();
   const cibles = u.role === "CLIENT" ? ["CLIENTS", "TOUS"] : ["SALARIES", "TOUS"];
   return prisma.communication.findMany({
     where: {

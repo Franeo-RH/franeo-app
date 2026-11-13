@@ -110,7 +110,7 @@ export default async function AdminAbonnementPaie({ searchParams }: { searchPara
                   { label: "Tickets RH inclus / mois", v: (f: (typeof formules)[number]) => String(f.ticketsRHInclus) },
                   { label: "Ticket RH en plus", v: (f: (typeof formules)[number]) => eur(f.prixTicketSupp) },
                   { label: "Arrivée / sortie", v: (f: (typeof formules)[number]) => (f.entreesSortiesIncluses ? "incluses" : `${eur(f.prixEntree)} / ${eur(f.prixSortie)}`) },
-                  { label: "Espace salarié", v: (f: (typeof formules)[number]) => (f.espaceSalarieInclus ? "inclus" : `${eur(f.prixEspaceSalarie)}/salarié`) },
+                  { label: "Espace salarié", v: (f: (typeof formules)[number]) => "inclus" },
                 ].map((r) => (
                   <tr key={r.label} className="border-t">
                     <td className="py-2 font-semibold text-gray-600">{r.label}</td>
