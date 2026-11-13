@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { CATEGORIES_DEPENSE, MODES_VENTE } from "@/lib/projets-constantes";
+import ConflitsAbsences from "./ConflitsAbsences";
 import { couleurMarge, dateFR, eur, FormulaireProjet, h, iso, Jauge, PastilleStatut, pct, Tuile, type ValeursProjet } from "./outils";
 
 type Sal = { id: string; prenom: string; nom: string; coutHoraire?: number | null };
@@ -170,11 +171,10 @@ export default function FicheProjet({ id }: { id: string }) {
 
       <div className={carte}>
         <h2 className="text-xl font-bold mb-3">🗓️ Planning du projet</h2>
-        {d.conflits.length > 0 && (
-          <div className="rounded-lg px-4 py-3 mb-3 text-sm" style={{ background: "#fff7ed", color: "#c2410c" }}>
-            ⚠️ Absences pendant le planning : {d.conflits.map((c) => `${c.salarie} (${c.type.toLowerCase().replace(/_/g, " ")} du ${dateFR(c.du)} au ${dateFR(c.au)}, ${c.statut.toLowerCase()})`).join(" · ")}
-          </div>
-        )}
+        <ConflitsAbsences
+          conflits={d.conflits.map((c) => ({ ...c, projetId: p.id, salarieId: p.affectations.find((a) => a.id === c.affectationId)?.salarieId }))}
+          salaries={d.salaries.map((x) => ({ id: x.id, nom: `${x.prenom} ${x.nom}` }))}
+          peutGerer={peutGerer} onChange={charger} />
         {p.affectations.length === 0 ? <p className="text-gray-500 text-sm mb-3">Aucune affectation.</p> : (
           <ul className="divide-y mb-3">
             {p.affectations.map((a) => (

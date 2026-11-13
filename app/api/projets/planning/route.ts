@@ -47,5 +47,11 @@ export async function GET(request: NextRequest) {
     return { salarieId: s.id, salarie: `${s.prenom} ${s.nom}`, poste: s.poste, service: s.service, capaciteSemaine, cases };
   });
 
-  return NextResponse.json({ semaines: semaines.map(jourISO), lignes, peutGerer: a.peutGerer });
+  // Absences (validées ou en attente) pendant une affectation de la période : à ajuster en 1 clic
+  const noms = new Map(salaries.map((s) => [s.id, `${s.prenom} ${s.nom}`]));
+  const conflits = affectations.flatMap((af) => absences
+    .filter((ab) => ab.salarieId === af.salarieId && ab.dateDebut <= af.au && ab.dateFin >= af.du)
+    .map((ab) => ({ projetId: af.projet.id, projet: af.projet.nom, affectationId: af.id, salarieId: af.salarieId, salarie: noms.get(af.salarieId) ?? "Salarié", du: jourISO(ab.dateDebut > af.du ? ab.dateDebut : af.du), au: jourISO(ab.dateFin < af.au ? ab.dateFin : af.au), type: ab.type, statut: ab.statut })));
+
+  return NextResponse.json({ semaines: semaines.map(jourISO), lignes, conflits, peutGerer: a.peutGerer });
 }

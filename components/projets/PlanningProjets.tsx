@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { h } from "./outils";
+import ConflitsAbsences, { type Conflit } from "./ConflitsAbsences";
 
 type Case = { semaine: string; projets: { projetId: string; nom: string; code: string | null; couleur: string; heures: number }[]; joursAbsence: number; absences: string[]; capacite: number; planifie: number; charge: number; conflit: boolean };
 type Ligne = { salarieId: string; salarie: string; poste: string; service: string | null; capaciteSemaine: number; cases: Case[] };
@@ -15,7 +16,7 @@ const fondCharge = (c: number) => (c === 0 ? "#f9fafb" : c > 100 ? "#fee2e2" : c
 export default function PlanningProjets() {
   const [du, setDu] = useState(lundiDe(new Date()));
   const [nb, setNb] = useState(8);
-  const [d, setD] = useState<{ semaines: string[]; lignes: Ligne[] } | null>(null);
+  const [d, setD] = useState<{ semaines: string[]; lignes: Ligne[]; conflits: Conflit[]; peutGerer: boolean } | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [filtre, setFiltre] = useState("");
   const [seulementCharges, setSeulementCharges] = useState(false);
@@ -41,7 +42,6 @@ export default function PlanningProjets() {
     return [...m.entries()];
   }, [d]);
   const surcharges = (d?.lignes || []).flatMap((l) => l.cases.filter((c) => c.charge > 100).map((c) => ({ l, c })));
-  const conflits = (d?.lignes || []).flatMap((l) => l.cases.filter((c) => c.conflit).map((c) => ({ l, c })));
 
   if (erreur) return <div className="bg-white rounded-xl shadow p-6 text-red-700">{erreur}</div>;
 
@@ -59,10 +59,10 @@ export default function PlanningProjets() {
         <label className="text-sm flex items-center gap-1"><input type="checkbox" checked={seulementCharges} onChange={(e) => setSeulementCharges(e.target.checked)} /> Seulement les salariés planifiés</label>
       </div>
 
-      {(surcharges.length > 0 || conflits.length > 0) && (
+      {d && <ConflitsAbsences conflits={d.conflits} salaries={d.lignes.map((l) => ({ id: l.salarieId, nom: l.salarie }))} peutGerer={d.peutGerer} onChange={charger} />}
+      {surcharges.length > 0 && (
         <div className="bg-white rounded-xl shadow p-4 text-sm space-y-1">
           {surcharges.length > 0 && <p className="text-red-700 font-semibold">🔴 Surcharge : {surcharges.map(({ l, c }) => `${l.salarie} (sem. du ${new Date(c.semaine).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })} : ${c.charge} %)`).join(" · ")}</p>}
-          {conflits.length > 0 && <p className="text-orange-700 font-semibold">🟠 Planifié pendant une absence : {conflits.map(({ l, c }) => `${l.salarie} (sem. du ${new Date(c.semaine).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })})`).join(" · ")}</p>}
         </div>
       )}
 

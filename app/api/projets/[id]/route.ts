@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { accesProjets, lire, lireProjet } from "@/lib/projets-serveur";
+import { retirerJoursAbsence } from "@/lib/projets-planning";
 import { CATEGORIES_DEPENSE, coutHoraire, heuresDatees, masquerCouts, projetsAvecSynthese } from "@/lib/projets";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -152,6 +153,19 @@ export async function POST(request: NextRequest, { params }: Ctx) {
       const r = await prisma.jalonProjet.updateMany({ where: { id: String(b.jalonId), projetId: id }, data });
       if (!r.count) return NextResponse.json({ erreur: "Jalon introuvable." }, { status: 404 });
       break;
+    }
+    case "retirerAbsence": {
+      // Retire du planning les jours d'absence (une absence précise, ou toutes) ; option : remplaçant sur ces jours
+      const ok = (x: unknown) => typeof x === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x);
+      const periode = ok(b.du) && ok(b.au) ? { du: b.du as string, au: b.au as string } : undefined;
+      let remplacantId: string | null = null;
+      if (typeof b.remplacantId === "string" && b.remplacantId) {
+        if (!(await salarieOk(b.remplacantId))) return NextResponse.json({ erreur: "Remplaçant introuvable." }, { status: 400 });
+        remplacantId = b.remplacantId;
+      }
+      if (b.affectationId && !projet.affectations.some((x) => x.id === b.affectationId)) return NextResponse.json({ erreur: "Affectation introuvable." }, { status: 404 });
+      const jours = await retirerJoursAbsence(id, { affectationId: typeof b.affectationId === "string" ? b.affectationId : undefined, periode, remplacantId });
+      return NextResponse.json({ succes: true, jours, message: jours ? `${jours} jour(s) retiré(s) du planning${remplacantId ? " et confié(s) au remplaçant" : ""}.` : "Aucun jour à retirer." });
     }
     case "dupliquer": {
       const decalage = Date.now() - projet.dateDebut.getTime();
