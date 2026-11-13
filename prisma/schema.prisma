@@ -929,3 +929,20 @@ model Pointage {
   @@index([entrepriseId, jour])
   @@index([salarieId, jour])
 }
+
+// Questions auxquelles Buddy n'a pas su répondre, et réponses rédigées par l'admin (Communication › Questions Buddy)
+// statut : A_TRAITER -> REPONDUE (Buddy réutilise la réponse) ou IGNOREE
+model BuddyQuestion {
+  id           String   @id @default(cuid())
+  question     String
+  normalisee   String   @unique
+  motsCles     String[]
+  reponse      String?
+  statut       String   @default("A_TRAITER")
+  occurrences  Int      @default(1)
+  entreprises  String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([statut])
+}

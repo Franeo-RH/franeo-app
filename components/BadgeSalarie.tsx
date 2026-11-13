@@ -27,7 +27,7 @@ function position(): Promise<{ latitude: number; longitude: number; precision: n
 }
 
 /** Badge du salarié : arrivée, pause, reprise, départ, avec contrôle de zone au moment du pointage */
-export default function BadgeSalarie() {
+export default function BadgeSalarie({ compact = false }: { compact?: boolean }) {
   const [etat, setEtat] = useState<Etat | null>(null);
   const [occupe, setOccupe] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
@@ -43,10 +43,15 @@ export default function BadgeSalarie() {
   async function pointer(type: string) {
     setOccupe(type); setMsg(null);
     const pos = etat?.controleZone ? await position() : null;
+    if (etat?.controleZone && !pos) {
+      setOccupe(null);
+      setMsg({ ok: false, t: "📍 Votre position est nécessaire pour pointer. Autorisez la localisation pour ce site dans les réglages de votre navigateur (ou de votre téléphone), puis réessayez." });
+      return;
+    }
     const res = await fetch("/api/espace-salarie/badge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, ...(pos ?? {}) }) });
     const d = await res.json().catch(() => ({}));
     setOccupe(null);
-    setMsg(res.ok ? { ok: true, t: d.message + (etat?.controleZone && !pos ? " Position non partagée : le pointage est signalé à votre manager." : "") } : { ok: false, t: d.erreur || "Pointage impossible" });
+    setMsg(res.ok ? { ok: true, t: d.message } : { ok: false, t: d.erreur || "Pointage impossible" });
     charger();
   }
 
@@ -70,7 +75,7 @@ export default function BadgeSalarie() {
         {msg && <p style={{ margin: "12px 0 0", fontSize: "14px", fontWeight: 600, color: msg.ok ? "#15803d" : "#b91c1c" }}>{msg.t}</p>}
       </section>
 
-      {etat && etat.pointages.length > 0 && (
+      {!compact && etat && etat.pointages.length > 0 && (
         <section style={carte}>
           <h2 style={{ margin: "0 0 8px", fontSize: "17px" }}>Mes pointages du jour</h2>
           <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
@@ -87,11 +92,11 @@ export default function BadgeSalarie() {
         </section>
       )}
 
-      <p style={{ margin: 0, fontSize: "12px", color: "#6b7280", lineHeight: 1.5 }}>
+      {!compact && <p style={{ margin: 0, fontSize: "12px", color: "#6b7280", lineHeight: 1.5 }}>
         🔒 {etat?.controleZone
           ? "Votre position est demandée uniquement au moment où vous pointez, pour vérifier que vous êtes sur votre lieu de travail. Elle n'est ni suivie ni conservée : seul le résultat « dans la zone / hors zone » est enregistré, pendant un an maximum."
           : "Aucune position n'est demandée pour vos pointages."} Pour toute question, adressez-vous à votre employeur.
-      </p>
+      </p>}
     </>
   );
 }

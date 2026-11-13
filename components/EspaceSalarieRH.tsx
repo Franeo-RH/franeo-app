@@ -258,7 +258,7 @@ export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, p
   type Rubrique = { id: string; label: string; icone: string; badge?: number; contenu: React.ReactNode };
   type Module = { id: string; label: string; logo: string; badge?: number; rubriques: Rubrique[] };
   const modules: Module[] = [
-    { id: "accueil", label: "Dashboard", logo: "/DASHBOARD-LOGO.png", rubriques: [{ id: "accueil", label: "Tableau de bord", icone: "📊", contenu: <>{accueil}{avecBadge && <HistoriqueBadge />}{blocOrga}</> }] },
+    { id: "accueil", label: "Dashboard", logo: "/DASHBOARD-LOGO.png", rubriques: [{ id: "accueil", label: "Tableau de bord", icone: "📊", contenu: <>{avecBadge && <BadgeSalarie compact />}{accueil}{avecBadge && <HistoriqueBadge />}{blocOrga}</> }] },
     ...(avecBadge ? [{ id: "badge", label: "Badge", logo: "/TICKET-LOGO.png", rubriques: [{ id: "badge", label: "Pointer", icone: "📍", contenu: <BadgeSalarie /> }, { id: "badge-historique", label: "Mon historique", icone: "🕓", contenu: <HistoriqueBadge /> }] }] : []),
     ...(valideur ? [{
       id: "equipe", label: "Mon équipe", logo: "/SALARIE-LOGO.png", badge: nbAValider, rubriques: [

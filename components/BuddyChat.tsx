@@ -224,7 +224,7 @@ export default function BuddyChat() {
     <div className="fr-buddy" style={{ position: "fixed", bottom: "24px", right: "24px", zIndex: 9999 }}>
       {ouvert && (
         <div
-          className="fr-buddy-fenetre"
+          className="fr-buddy-fenetre fr-garder-couleurs"
           style={{
             position: "fixed", bottom: "110px", right: "24px",
             width: "380px", maxWidth: "calc(100vw - 32px)", height: "540px", maxHeight: "calc(100vh - 140px)", zIndex: 9999,
@@ -386,7 +386,7 @@ export default function BuddyChat() {
       {/* Bouton flottant animé */}
       <button
         onClick={() => setOuvert(!ouvert)}
-        className="fr-buddy-bouton"
+        className="fr-buddy-bouton fr-garder-couleurs"
         aria-label={ouvert ? "Fermer Buddy" : "Ouvrir Buddy"}
         style={{
           width: "72px", height: "72px", borderRadius: "50%",

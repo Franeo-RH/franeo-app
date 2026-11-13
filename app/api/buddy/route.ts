@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { analyser, aPrefixe, aujourdhui, a, matchSalaries, type Msg } from "@/lib/buddy/outils";
+import { noterQuestion, reponseApprise } from "@/lib/buddy/apprentissage";
 import { chargerCtx, sauverCtx, viderFlux } from "@/lib/buddy/contexte";
 import { continuerFlux, demarrerFlux, rep } from "@/lib/buddy/moteur";
 import { detecter, moduleDe, type Intention } from "@/lib/buddy/intentions";
@@ -370,7 +371,14 @@ async function traiter(m: Msg, env: Env, ctx: Ctx): Promise<ReponseBuddy> {
   const actu = (await actusInterdites(env)) ? null : await chercherDansActus(m, ctx);
   if (actu) return actu;
 
-  return rep("Je n'ai pas bien compris 🤔 Pouvez-vous reformuler ?\nTapez « aide » pour voir tout ce que je sais faire, ou je peux transmettre votre question à l'équipe via un ticket.", {
+  // Réponses rédigées par l'équipe Franeo pour des questions déjà posées
+  const apprise = await reponseApprise(m.brut);
+  if (apprise) return rep(apprise, { humeur: "content", suggestions: ["Aide"] });
+
+  // Question notée pour que l'équipe Franeo puisse y répondre (Communication › Questions Buddy)
+  await noterQuestion(m.brut, env.session.entrepriseId);
+
+  return rep("Je n'ai pas encore la réponse 🤔 J'ai transmis votre question à l'équipe Franeo pour enrichir mes réponses.\nEn attendant, reformulez-la, tapez « aide » pour voir ce que je sais faire, ou ouvrez un ticket.", {
     humeur: "triste",
     suggestions: ["Aide", "Ouvrir un ticket", "Actualités RH"],
   });

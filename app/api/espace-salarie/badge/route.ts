@@ -59,7 +59,9 @@ export async function POST(request: NextRequest) {
     const zones = await prisma.etablissement.findMany({ where: { entrepriseId, latitude: { not: null }, longitude: { not: null } }, select: { nom: true, latitude: true, longitude: true, rayon: true } });
     const lat = Number(b.latitude), lon = Number(b.longitude), precision = Math.min(Math.max(Number(b.precision) || 0, 0), 1000);
     if (zones.length === 0) motif = "Aucune zone configurée par l'employeur";
-    else if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) motif = "Position non partagée";
+    else if (b.latitude == null || b.longitude == null || !Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+      return NextResponse.json({ erreur: "📍 Votre position est nécessaire pour pointer : autorisez la localisation puis réessayez." }, { status: 400 });
+    }
     else {
       // L'établissement du salarié en priorité, sinon le plus proche
       const mesures = zones.map((z) => ({ nom: z.nom, ecart: distanceM({ lat, lon }, { lat: z.latitude!, lon: z.longitude! }) - Math.min(precision, 150) - z.rayon }));
