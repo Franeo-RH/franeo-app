@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionSalarie } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
 import { adresseDe } from "@/lib/geocodage";
+import { projetsPourPointage } from "@/lib/projets";
 import { actionsPossibles, heuresDuJour, jourParis, majReleveDepuisPointages, purgerPointages, TYPES_POINTAGE } from "@/lib/badge";
 
 async function acces() {
@@ -17,12 +18,18 @@ export async function GET() {
   const { s, refus } = await acces();
   if (!s) return refus!;
   const jour = jourParis();
-  const pointages = await prisma.pointage.findMany({ where: { salarieId: s.salarie.id, jour }, orderBy: { at: "asc" }, select: { id: true, type: true, at: true, adresse: true } });
+  const avecProjets = aDroit(s.utilisateur.entreprise?.permissions, "espace.projets");
+  const [pointages, choix] = await Promise.all([
+    prisma.pointage.findMany({ where: { salarieId: s.salarie.id, jour }, orderBy: { at: "asc" }, select: { id: true, type: true, at: true, adresse: true, projet: { select: { nom: true, couleur: true } } } }),
+    avecProjets ? projetsPourPointage(s.utilisateur.entrepriseId!, s.salarie.id) : Promise.resolve(null),
+  ]);
   return NextResponse.json({
     jour, pointages,
     actions: actionsPossibles(pointages[pointages.length - 1]?.type ?? null),
     heures: heuresDuJour(pointages),
     controleZone: true,
+    projets: choix?.projets ?? [],
+    projetsPlanifies: choix?.planifie ?? false,
   });
 }
 
@@ -50,11 +57,17 @@ export async function POST(request: NextRequest) {
   if (b.latitude == null || b.longitude == null || !Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
     return NextResponse.json({ erreur: "📍 Votre position est nécessaire pour pointer : autorisez la localisation puis réessayez." }, { status: 400 });
   }
+  // Projet choisi (option Projets) : seulement à l'arrivée ou à la reprise
+  let projetId: string | null = null;
+  if ((type === "ARRIVEE" || type === "REPRISE") && typeof b.projetId === "string" && b.projetId && aDroit(s.utilisateur.entreprise?.permissions, "espace.projets")) {
+    const pr = await prisma.projet.findFirst({ where: { id: b.projetId, entrepriseId, statut: { in: ["PREVU", "EN_COURS"] } }, select: { id: true } });
+    projetId = pr?.id ?? null;
+  }
   const adresse = (await adresseDe(lat, lon)) ?? `Position GPS ${lat.toFixed(5)}, ${lon.toFixed(5)} (adresse introuvable)`;
 
   await prisma.pointage.create({
     data: {
-      salarieId: s.salarie.id, entrepriseId, type, jour, adresse,
+      salarieId: s.salarie.id, entrepriseId, type, jour, adresse, projetId,
       commentaire: typeof b.commentaire === "string" && b.commentaire.trim() ? b.commentaire.trim().slice(0, 200) : null,
     },
   });

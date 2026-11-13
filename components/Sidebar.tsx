@@ -115,6 +115,13 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
       { href: "/client/salaries/demandes", label: "📝 Mes demandes", aussi: ["/client/salaries/nouveau"] },
     ] };
   }
+  if (dans("/client/projets")) {
+    return { titre: "Projets 🚧", items: [
+      { href: "/client/projets", label: "📐 Projets" },
+      { href: "/client/projets/planning", label: "🗓️ Planning" },
+      { href: "/client/projets/rentabilite", label: "📈 Rentabilité & coûts" },
+    ] };
+  }
   if (dans("/client/paie")) {
     return { titre: "Paie", items: [
       { href: "/client/paie", label: "📊 Tableau de bord" },

@@ -12,6 +12,7 @@ export const MODULES = [
   { id: "helpdesk", label: "🆘 Helpdesk" },
   { id: "entreprise", label: "🏢 Mon entreprise (infos, abonnements, factures)" },
   { id: "espace-salaries", label: "📱 Espace salarié (inclus dans toutes les formules)" },
+  { id: "projets", label: "📐 Projets, planning & rentabilité (option · 🚧 en cours de développement)" },
 ] as const;
 
 export const ACTIONS = [
@@ -59,6 +60,11 @@ export const ACTIONS = [
   { id: "espace.questions", module: "espace-salaries", label: "Salariés : questions à leur N+1" },
   { id: "espace.echeances", module: "espace-salaries", label: "Salariés : voir leurs échéances" },
   { id: "espace.communications", module: "espace-salaries", label: "Salariés : voir les communications" },
+  // Projets (option)
+  { id: "projets.voir", module: "projets", label: "Voir les projets et le planning" },
+  { id: "projets.gerer", module: "projets", label: "Créer / modifier les projets, le planning et les temps" },
+  { id: "projets.couts", module: "projets", label: "Voir les coûts, budgets, marges et la rentabilité" },
+  { id: "espace.projets", module: "projets", label: "Salariés : choisir le projet au moment du pointage" },
   // Partout
   { id: "global.exports", module: "global", label: "Exporter en Excel" },
   { id: "global.couts", module: "global", label: "Voir les coûts Franeo sur le tableau de bord" },
@@ -90,6 +96,8 @@ export const DROITS_PAGES: { prefixe: string; droit: ActionId }[] = [
   { prefixe: "/client/salaries/frais", droit: "rh.frais" },
   { prefixe: "/client/salaries/questions", droit: "rh.questions" },
   { prefixe: "/client/paie/import", droit: "paie.import" },
+  { prefixe: "/client/projets", droit: "projets.voir" },
+  { prefixe: "/client/projets/rentabilite", droit: "projets.couts" },
   { prefixe: "/client/paie/journal", droit: "paie.historique" },
   { prefixe: "/client/paie/controle", droit: "paie.variables" },
   { prefixe: "/client/tickets/historique", droit: "tickets.creer" },
@@ -176,7 +184,8 @@ export function permissionsFormule(niveau: string, actuelles: string[] = [], ave
   if (niveau === "ESSENTIEL") retirer.push("rh.contrats");
   const modules = niveau === "SERENITE" || niveau === "PREMIUM" || avecFormulePaie ? [...base, "paie"] : base;
   // L'espace salarié est inclus dans toutes les formules ; les fonctions retirées par l'admin restent retirées
-  const garder = actuelles.filter((p) => p.startsWith("-espace."));
+  // L'option Projets n'est liée à aucune formule : elle est conservée telle quelle
+  const garder = actuelles.filter((p) => p.startsWith("-espace.") || p === "projets" || p.startsWith("-projets."));
   return [...modules, "espace-salaries", ...garder, ...retirer.map((a) => `-${a}`), `@acces:${niveau}`];
 }
 

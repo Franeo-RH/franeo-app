@@ -89,6 +89,7 @@ model Entreprise {
   contrats          DemandeContrat[]
   piecesJointes     PieceJointe[]
   pointages         Pointage[]
+  projets           Projet[]
 }
 
 model Facturation {
@@ -240,6 +241,11 @@ model Salarie {
   badgeSansZone         Boolean        @default(false)
   pointages             Pointage[]
   notesFrais            NoteFrais[]
+  // Projets (option) : coût horaire standard saisi à la main (sinon calculé depuis le salaire et le taux de charges)
+  coutHoraireStandard   Float?
+  affectations          AffectationProjet[]
+  tempsProjets          TempsProjet[]
+  projetsResponsable    Projet[]       @relation("ResponsableProjet")
 
   salaireMensuel        Float?
   salaireAnnuel         Float?
@@ -778,6 +784,8 @@ model NoteFrais {
   motifRefus   String?
   traitePar    String?
   variableId   String?
+  projetId     String?    // projet sur lequel la dépense est refacturée / imputée
+  projet       Projet?    @relation(fields: [projetId], references: [id], onDelete: SetNull)
   createdAt    DateTime   @default(now())
 
   @@index([entrepriseId, statut])
@@ -923,6 +931,8 @@ model Pointage {
   dansZone      Boolean?
   etablissement String?
   adresse       String?
+  projetId      String?    // projet choisi au pointage (option Projets)
+  projet        Projet?    @relation(fields: [projetId], references: [id], onDelete: SetNull)
   motif         String?    // « position non partagée », « salarié itinérant »…
   commentaire   String?
 
@@ -945,4 +955,85 @@ model BuddyQuestion {
   updatedAt    DateTime @updatedAt
 
   @@index([statut])
+}
+
+// ───────── Option « Projets, planning & rentabilité » (en cours de développement) ─────────
+// statut : PREVU | EN_COURS | TERMINE | ANNULE ; modeVente : FORFAIT | REGIE (taux journalier × jours vendus) | INTERNE
+model Projet {
+  id              String     @id @default(cuid())
+  entrepriseId    String
+  entreprise      Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  nom             String
+  code            String?
+  client          String?
+  description     String?
+  couleur         String     @default("#ea580c")
+  statut          String     @default("PREVU")
+  dateDebut       DateTime
+  dateFin         DateTime?
+  modeVente       String     @default("FORFAIT")
+  prixVente       Float?
+  tauxJournalier  Float?
+  joursVendus     Float?
+  budgetHeures    Float?     // enveloppe d'heures (facultative)
+  seuilAlerte     Int        @default(80) // % du budget consommé qui déclenche l'alerte
+  responsableId   String?
+  responsable     Salarie?   @relation("ResponsableProjet", fields: [responsableId], references: [id], onDelete: SetNull)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  affectations    AffectationProjet[]
+  depenses        DepenseProjet[]
+  temps           TempsProjet[]
+  pointages       Pointage[]
+  notesFrais      NoteFrais[]
+
+  @@index([entrepriseId, statut])
+}
+
+// Planning : un salarié affecté à un projet sur une période, X heures par semaine
+model AffectationProjet {
+  id            String   @id @default(cuid())
+  projetId      String
+  projet        Projet   @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  salarieId     String
+  salarie       Salarie  @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+  du            DateTime
+  au            DateTime
+  heuresSemaine Float
+  role          String?
+  createdAt     DateTime @default(now())
+
+  @@index([salarieId, du])
+  @@index([projetId])
+}
+
+// Frais du projet : prévus (budget) ou réels (dépensés) ; categorie : DEPLACEMENT | MATERIEL | SOUS_TRAITANCE | AUTRE
+model DepenseProjet {
+  id        String   @id @default(cuid())
+  projetId  String
+  projet    Projet   @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  libelle   String
+  categorie String   @default("AUTRE")
+  montant   Float
+  date      DateTime
+  prevu     Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([projetId])
+}
+
+// Temps passé saisi à la main (en plus des heures pointées avec le projet)
+model TempsProjet {
+  id          String   @id @default(cuid())
+  projetId    String
+  projet      Projet   @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  salarieId   String
+  salarie     Salarie  @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+  jour        String   // AAAA-MM-JJ
+  heures      Float
+  commentaire String?
+  createdAt   DateTime @default(now())
+
+  @@index([projetId])
+  @@index([salarieId, jour])
 }

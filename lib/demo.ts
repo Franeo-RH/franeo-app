@@ -79,6 +79,10 @@ async function assurerEntrepriseEtUtilisateur() {
   if (!entreprise.permissions.includes("espace-salaries")) {
     entreprise = await prisma.entreprise.update({ where: { id: entreprise.id }, data: { permissions: { push: "espace-salaries" } } });
   }
+  // L'option Projets (en cours de développement) est visible dans la démo
+  if (!entreprise.permissions.includes("projets")) {
+    entreprise = await prisma.entreprise.update({ where: { id: entreprise.id }, data: { permissions: { push: "projets" } } });
+  }
   // Les indicateurs RH sont visibles dans la démo
   if (!entreprise.permissions.includes("indicateurs-rh")) {
     entreprise = await prisma.entreprise.update({ where: { id: entreprise.id }, data: { permissions: { push: "indicateurs-rh" } } });
@@ -104,6 +108,7 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
   await prisma.demandeService.deleteMany({ where: { entrepriseId } });
   await prisma.etablissement.deleteMany({ where: { entrepriseId } });
   await prisma.service.deleteMany({ where: { entrepriseId } });
+  await prisma.projet.deleteMany({ where: { entrepriseId } }); // planning, temps et frais du projet suivent
   await prisma.salarie.deleteMany({ where: { entrepriseId } }); // supprime aussi échéances et documents
   await prisma.ticket.deleteMany({ where: { entrepriseId } }); // supprime aussi les messages
   await prisma.ticketSupport.deleteMany({ where: { entrepriseId, NOT: { categorie: "SUGGESTION" } } }); // on garde les suggestions des visiteurs
@@ -322,6 +327,52 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
         ] },
       },
     });
+
+    // Option Projets : un projet rentable, un projet qui dérape, un projet interne
+    {
+      const jj = (n: number) => new Date(jour(n).toISOString().slice(0, 10) + "T00:00:00Z");
+      const ref = (n: number) => jour(n).toISOString().slice(0, 10);
+      const p1 = await prisma.projet.create({ data: {
+        entrepriseId, nom: "Audit maintenance usine Lille", code: "P-001", client: "Industries du Nord", couleur: "#2563eb", statut: "EN_COURS",
+        dateDebut: jj(-30), dateFin: jj(30), modeVente: "FORFAIT", prixVente: 18000, responsableId: lucas.id, seuilAlerte: 80,
+        description: "Audit complet des lignes et plan de maintenance préventive.",
+        affectations: { create: [
+          { salarieId: thomas.id, du: jj(-30), au: jj(30), heuresSemaine: 24, role: "Technicien" },
+          { salarieId: sophie.id, du: jj(-30), au: jj(30), heuresSemaine: 6, role: "Suivi administratif" },
+        ] },
+        depenses: { create: [
+          { libelle: "Déplacements Lille", categorie: "DEPLACEMENT", montant: 900, date: jj(-30), prevu: true },
+          { libelle: "Train + hôtel semaine 1", categorie: "DEPLACEMENT", montant: 412.5, date: jj(-25), prevu: false },
+        ] },
+        temps: { create: [-29, -22, -15, -8, -1].flatMap((n) => [
+          { salarieId: thomas.id, jour: ref(n), heures: 21, commentaire: "Relevés sur site (semaine)" },
+          { salarieId: sophie.id, jour: ref(n), heures: 5, commentaire: "Comptes rendus" },
+        ]) },
+      } });
+      await prisma.projet.create({ data: {
+        entrepriseId, nom: "Salon Expo Paris 2026", code: "P-002", client: "Client Événementiel SAS", couleur: "#db2777", statut: "EN_COURS",
+        dateDebut: jj(-20), dateFin: jj(10), modeVente: "REGIE", tauxJournalier: 350, joursVendus: 12, budgetHeures: 84, responsableId: lucas.id, seuilAlerte: 80,
+        affectations: { create: [
+          { salarieId: julie.id, du: jj(-20), au: jj(10), heuresSemaine: 21, role: "Accueil stand" },
+          { salarieId: emma.id, du: jj(-20), au: jj(10), heuresSemaine: 14, role: "Communication" },
+        ] },
+        depenses: { create: [
+          { libelle: "Location stand", categorie: "MATERIEL", montant: 1200, date: jj(-18), prevu: true },
+          { libelle: "Location stand (facture)", categorie: "MATERIEL", montant: 1450, date: jj(-15), prevu: false },
+        ] },
+        temps: { create: [-19, -12, -5].flatMap((n) => [
+          { salarieId: julie.id, jour: ref(n), heures: 26, commentaire: "Préparation et salon" },
+          { salarieId: emma.id, jour: ref(n), heures: 16 },
+        ]) },
+      } });
+      await prisma.projet.create({ data: {
+        entrepriseId, nom: "Migration du logiciel comptable", code: "INT-01", couleur: "#16a34a", statut: "PREVU",
+        dateDebut: jj(14), dateFin: jj(60), modeVente: "INTERNE", responsableId: karim.id,
+        affectations: { create: [{ salarieId: karim.id, du: jj(14), au: jj(60), heuresSemaine: 10, role: "Pilote" }] },
+      } });
+      // Le train Paris-Lille de Julie (note de frais validée) est imputé à l'audit de Lille
+      await prisma.noteFrais.updateMany({ where: { entrepriseId, salarieId: julie.id, statut: "Validé" }, data: { projetId: p1.id } });
+    }
   }
 
   return { entrepriseId, userId: utilisateur.id };
