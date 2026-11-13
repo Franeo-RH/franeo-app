@@ -138,7 +138,8 @@ export type Synthese = {
   heuresPrevues: number; heuresReelles: number; heuresRestantes: number;
   budgetMO: number; budgetFrais: number; budgetTotal: number; margePrevue: number; tauxMargePrevue: number | null;
   coutMO: number; fraisReels: number; coutReel: number; margeReelle: number; tauxMargeReelle: number | null;
-  consommation: number | null; // % du budget total déjà consommé
+  consommation: number | null; // % du budget total déjà consommé (coût réel ÷ budget)
+  sourceBudget: "planning" | "enveloppe" | "devis" | null;
   avancementTemps: number | null; // % du calendrier écoulé
   projectionCout: number; projectionMarge: number; tauxProjection: number | null;
   sansCout: string[]; // salariés sans salaire ni coût standard
@@ -158,6 +159,7 @@ type ProjetCalcul = {
   notesFrais: { montant: number; statut: string }[];
   jalons?: { id?: string; libelle: string; date: Date; etat: string; montant: number | null; facturation: string }[];
   montantMensuel?: number | null;
+  devis?: { statut: string; coutTotal: number }[];
   factures?: { jalonId: string | null; totalHT: number; statut: string; echeance: Date; numero: string }[];
 };
 type SalarieCout = { id: string; prenom: string; nom: string; coutHoraireStandard: number | null; salaireMensuel: number | null; heuresHebdomadaires: number | null };
@@ -223,8 +225,16 @@ export function synthese(p: ProjetCalcul, tauxCharges: number | null | undefined
   const venduContrat = arrondi(prixVendu(p, "contrat", maintenant));
   const heuresPrevues = somme((l) => l.heuresPrevues);
   const heuresReelles = somme((l) => l.heuresReelles);
-  const budgetMO = somme((l) => l.coutPrevu);
+  // Budget de main-d'œuvre : planning du projet ; à défaut, enveloppe d'heures × coût horaire moyen de l'équipe ;
+  // et jamais moins que le coût de revient des devis acceptés (le devis est l'engagement de départ).
   const budgetFrais = arrondi(p.depenses.filter((d) => d.prevu).reduce((t, d) => t + d.montant, 0));
+  let budgetMO = somme((l) => l.coutPrevu);
+  let sourceBudget: Synthese["sourceBudget"] = budgetMO > 0 ? "planning" : null;
+  const coutsConnus = parSalarie.map((l) => l.coutHoraire).filter((c): c is number => c != null && c > 0);
+  const coutMoyenEquipe = coutsConnus.length ? coutsConnus.reduce((t, c) => t + c, 0) / coutsConnus.length : null;
+  if (budgetMO === 0 && p.budgetHeures && coutMoyenEquipe) { budgetMO = arrondi(p.budgetHeures * coutMoyenEquipe); sourceBudget = "enveloppe"; }
+  const budgetDevis = arrondi((p.devis ?? []).filter((d) => d.statut === "ACCEPTE").reduce((t, d) => t + (d.coutTotal ?? 0), 0));
+  if (budgetDevis > budgetMO + budgetFrais) { budgetMO = arrondi(budgetDevis - budgetFrais); sourceBudget = "devis"; }
   const budgetTotal = arrondi(budgetMO + budgetFrais);
   const coutMO = somme((l) => l.coutReel);
   const fraisReels = arrondi(p.depenses.filter((d) => !d.prevu).reduce((t, d) => t + d.montant, 0) + p.notesFrais.filter((n) => /valid|rembours|paie/i.test(n.statut)).reduce((t, n) => t + n.montant, 0));
@@ -235,9 +245,12 @@ export function synthese(p: ProjetCalcul, tauxCharges: number | null | undefined
 
   let avancementTemps: number | null = null;
   if (p.dateFin && p.dateFin > p.dateDebut) avancementTemps = arrondi(Math.min(100, Math.max(0, ((maintenant.getTime() - p.dateDebut.getTime()) / (p.dateFin.getTime() - p.dateDebut.getTime())) * 100)), 0);
-  const consommation = budgetTotal > 0 ? arrondi((coutReel / budgetTotal) * 100, 0) : null;
+  // Sans budget de main-d'œuvre, on ne compare pas des heures travaillées à un budget de frais seul (cela donnait des % absurdes)
+  const budgetIncomplet = sourceBudget === null && coutMO > 0;
+  const consommation = budgetTotal > 0 && !budgetIncomplet ? arrondi((coutReel / budgetTotal) * 100, 0) : null;
 
   const alertes: Synthese["alertes"] = [];
+  if (budgetIncomplet && p.statut !== "TERMINE" && p.statut !== "ANNULE") alertes.push({ niveau: "info", texte: "Pas de budget de main-d'œuvre : planifiez les salariés (Planning du projet) ou indiquez une enveloppe d'heures pour suivre le budget consommé." });
   const sansCout = parSalarie.filter((l) => l.coutHoraire == null).map((l) => l.salarie);
   if (consommation != null && consommation >= 100) alertes.push({ niveau: "danger", texte: `Budget dépassé : ${consommation} % consommé.` });
   else if (consommation != null && consommation >= p.seuilAlerte) alertes.push({ niveau: "attention", texte: `${consommation} % du budget consommé (seuil d'alerte ${p.seuilAlerte} %).` });
@@ -270,7 +283,7 @@ export function synthese(p: ProjetCalcul, tauxCharges: number | null | undefined
     venduContrat,
     budgetMO, budgetFrais, budgetTotal, margePrevue: arrondi(venduContrat - budgetTotal), tauxMargePrevue: taux(venduContrat - budgetTotal, venduContrat),
     coutMO, fraisReels, coutReel, margeReelle: arrondi(vendu - coutReel), tauxMargeReelle: taux(vendu - coutReel),
-    consommation, avancementTemps,
+    consommation, avancementTemps, sourceBudget,
     projectionCout, projectionMarge: arrondi(venduContrat - projectionCout), tauxProjection: taux(venduContrat - projectionCout, venduContrat),
     sansCout, alertes, parSalarie,
     facture, paye, aFacturer, resteAFacturer: arrondi(Math.max(0, (p.modeVente === "RECURRENT" ? vendu : venduContrat) - facture)),
@@ -295,7 +308,7 @@ export async function projetsAvecSynthese(entrepriseId: string, where: { id?: st
         notesFrais: { select: { id: true, montant: true, statut: true, motif: true, date: true, salarie: { select: { prenom: true, nom: true } } } },
         jalons: { orderBy: { date: "asc" } },
         factures: { orderBy: { date: "desc" }, select: { id: true, numero: true, type: true, date: true, echeance: true, totalHT: true, totalTTC: true, tauxTva: true, statut: true, jalonId: true, payeeLe: true, relances: true, periodeDu: true, periodeAu: true } },
-        devis: { orderBy: { createdAt: "desc" }, select: { id: true, numero: true, objet: true, statut: true, totalHT: true, supplementaire: true, createdAt: true } },
+        devis: { orderBy: { createdAt: "desc" }, select: { id: true, numero: true, objet: true, statut: true, totalHT: true, coutTotal: true, supplementaire: true, createdAt: true } },
       },
     }),
   ]);

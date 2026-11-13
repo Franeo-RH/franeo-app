@@ -24,7 +24,7 @@ type Projet = {
     venduContrat: number; facture: number; paye: number; aFacturer: number; resteAFacturer: number; jalonsFaits: number; jalonsTotal: number; jalonsEnRetard: number;
     vendu: number; heuresPrevues: number; heuresReelles: number; heuresRestantes: number; budgetMO: number; budgetFrais: number; budgetTotal: number;
     margePrevue: number; tauxMargePrevue: number | null; coutMO: number; fraisReels: number; coutReel: number; margeReelle: number; tauxMargeReelle: number | null;
-    consommation: number | null; avancementTemps: number | null; projectionCout: number; projectionMarge: number; tauxProjection: number | null;
+    consommation: number | null; avancementTemps: number | null; sourceBudget: string | null; projectionCout: number; projectionMarge: number; tauxProjection: number | null;
     alertes: { niveau: string; texte: string }[]; parSalarie: Ligne[];
   };
 };
@@ -143,7 +143,11 @@ export default function FicheProjet({ id }: { id: string }) {
                 <td className="p-2" style={{ color: couleurMarge(s.tauxProjection) }}>{eur(s.projectionMarge)} ({pct(s.tauxProjection)})</td></tr>
             </tbody>
           </table>
-          <div className="mt-3 max-w-sm"><p className="text-sm text-gray-500 mb-1">Budget consommé</p><Jauge valeur={s.consommation} seuil={p.seuilAlerte} /></div>
+          <div className="mt-3 max-w-md">
+            <p className="text-sm text-gray-500 mb-1">Budget consommé (coût réel ÷ budget){s.sourceBudget ? ` · budget issu ${s.sourceBudget === "devis" ? "du devis accepté" : s.sourceBudget === "enveloppe" ? "de l'enveloppe d'heures" : "du planning"}` : ""}</p>
+            <Jauge valeur={s.consommation} seuil={p.seuilAlerte} />
+            {s.consommation == null && <p className="text-xs text-gray-500 mt-1">Pas encore de budget de main-d&apos;œuvre : planifiez les salariés ou indiquez une enveloppe d&apos;heures.</p>}
+          </div>
         </div>
       )}
 
