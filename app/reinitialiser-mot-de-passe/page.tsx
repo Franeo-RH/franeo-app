@@ -27,8 +27,8 @@ function FormulaireReinit() {
       return;
     }
 
-    if (form.motDePasse.length < 6) {
-      setErreur("Le mot de passe doit faire au moins 6 caractères");
+    if (form.motDePasse.length < 10 || !/[A-Za-zÀ-ÿ]/.test(form.motDePasse) || !/\d/.test(form.motDePasse)) {
+      setErreur("Le mot de passe doit contenir au moins 10 caractères, dont une lettre et un chiffre.");
       return;
     }
 
@@ -87,7 +87,7 @@ function FormulaireReinit() {
                 value={form.motDePasse}
                 onChange={(e) => setForm({ ...form, motDePasse: e.target.value })}
                 className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-orange-500 focus:outline-none"
-                placeholder="Au moins 6 caractères"
+                placeholder="10 caractères minimum, avec une lettre et un chiffre"
                 required
               />
             </div>

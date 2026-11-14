@@ -9,7 +9,6 @@ import { aDroit, ajoutParValidation } from "@/lib/droits";
 import { creerDemande } from "@/lib/demandes-salaries";
 import { analyserTableau, type LigneErreur } from "@/lib/import-salaries";
 import { fabriquerFichierErreurs, lireFichierExcel } from "@/lib/import-salaries-xlsx";
-import { brander } from "@/lib/excel-marque";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -93,7 +92,7 @@ export async function POST(req: NextRequest) {
       await creerDemande({ entrepriseId, type: "AJOUT", donnees: v.donnees as unknown as Record<string, unknown>, auteur: `${session.prenom} (${session.email}) — import Excel` });
     }
     let fichierErreursD: string | null = null;
-    if (erreurs.length > 0) fichierErreursD = (await brander(await fabriquerFichierErreurs(erreurs), { entrepriseId })).toString("base64");
+    if (erreurs.length > 0) fichierErreursD = (await fabriquerFichierErreurs(erreurs, { entrepriseId })).toString("base64");
     return NextResponse.json({
       crees: 0,
       demandes: analyse.valides.length,
@@ -116,7 +115,7 @@ export async function POST(req: NextRequest) {
 
   let fichierErreurs: string | null = null;
   if (erreurs.length > 0) {
-    fichierErreurs = (await brander(await fabriquerFichierErreurs(erreurs), { entrepriseId })).toString("base64");
+    fichierErreurs = (await fabriquerFichierErreurs(erreurs, { entrepriseId })).toString("base64");
   }
 
   return NextResponse.json({

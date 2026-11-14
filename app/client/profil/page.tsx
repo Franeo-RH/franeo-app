@@ -39,8 +39,8 @@ export default function ProfilClient() {
       return;
     }
 
-    if (form.nouveauMotDePasse.length < 6) {
-      setErreur("Le nouveau mot de passe doit faire au moins 6 caractères");
+    if (form.nouveauMotDePasse.length < 10 || !/[A-Za-zÀ-ÿ]/.test(form.nouveauMotDePasse) || !/\d/.test(form.nouveauMotDePasse)) {
+      setErreur("Le mot de passe doit contenir au moins 10 caractères, dont une lettre et un chiffre.");
       return;
     }
 
@@ -105,7 +105,7 @@ export default function ProfilClient() {
                 value={form.nouveauMotDePasse}
                 onChange={handleChange}
                 className="w-full border-2 border-gray-200 rounded-lg px-4 py-3 focus:border-orange-500 focus:outline-none"
-                placeholder="Au moins 6 caractères"
+                placeholder="10 caractères minimum, avec une lettre et un chiffre"
                 required
               />
             </div>

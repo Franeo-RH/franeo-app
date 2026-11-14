@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { erreurMotDePasse } from "@/lib/securite";
 import { getSession } from "@/lib/session";
 import bcrypt from "bcryptjs";
 
@@ -19,7 +20,11 @@ export async function PUT(
 
   if (data.prenom) updateData.prenom = data.prenom;
   if (data.email) updateData.email = data.email;
-  if (data.motDePasse) updateData.motDePasse = await bcrypt.hash(data.motDePasse, 10);
+  if (data.motDePasse) {
+    const regle = erreurMotDePasse(data.motDePasse);
+    if (regle) return NextResponse.json({ erreur: regle }, { status: 400 });
+    updateData.motDePasse = await bcrypt.hash(data.motDePasse, 12);
+  }
 
   const utilisateur = await prisma.utilisateur.update({
     where: { id },

@@ -11,7 +11,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   }
 
-  const { entrepriseId, abonnementId } = await request.json();
+  const corps = await request.json().catch(() => ({}));
+  // Un client ne peut faire une demande que pour sa propre entreprise
+  const entrepriseId = session.role === "ADMIN" ? String(corps.entrepriseId || "") : session.entrepriseId;
+  const abonnementId = String(corps.abonnementId || "");
+  if (!entrepriseId || !(await prisma.abonnement.findUnique({ where: { id: abonnementId }, select: { id: true } }))) {
+    return NextResponse.json({ erreur: "Demande invalide" }, { status: 400 });
+  }
 
   const demande = await prisma.demandeEvolution.create({
     data: {

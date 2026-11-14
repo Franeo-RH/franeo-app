@@ -5,6 +5,8 @@ import { matriculeDejaPris, nettoyerMatricule } from "@/lib/matricule";
 import { estSessionDemo } from "@/lib/demo";
 import { aDroit, passeParValidation } from "@/lib/droits";
 import { creerDemande } from "@/lib/demandes-salaries";
+import { supprimerSalarieComplet } from "@/lib/rgpd";
+import { journaliser } from "@/lib/securite";
 
 export async function GET(
   request: NextRequest,
@@ -193,7 +195,9 @@ export async function DELETE(
     }
   }
 
-  await prisma.salarie.delete({ where: { id } });
+  // Suppression complète, y compris les documents stockés chez OVH (RGPD)
+  await supprimerSalarieComplet(id);
+  await journaliser({ action: "SALARIE_SUPPR", utilisateur: session, entrepriseId: salarie.entrepriseId, cible: `${salarie.prenom} ${salarie.nom}`, request });
 
   return NextResponse.json({ succes: true });
 }

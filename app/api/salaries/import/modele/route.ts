@@ -4,7 +4,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { fabriquerModele } from "@/lib/import-salaries-xlsx";
-import { brander } from "@/lib/excel-marque";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +11,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ erreur: "Non autorisé." }, { status: 401 });
-  const contenu = await brander(await fabriquerModele(), { entrepriseId: session.role === "CLIENT" ? session.entrepriseId : null });
+  const contenu = await fabriquerModele({ entrepriseId: session.role === "CLIENT" ? session.entrepriseId : null });
   return new NextResponse(contenu as any, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { creerJetonLien, estBloque, journaliser, noterEchec } from "@/lib/securite";
 import { Resend } from "resend";
-import crypto from "crypto";
 import { EMAIL_DEMO } from "@/lib/demo";
 
 // Expéditeur : une adresse du domaine validé sur Resend (franeo-rh.com).
@@ -21,6 +21,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ succes: true });
   }
 
+  // 3 demandes par heure et par adresse (évite d'inonder une boîte mail)
+  const cle = `reset:email:${email}`;
+  if (await estBloque(cle, 3, 60 * 60 * 1000)) return NextResponse.json({ succes: true });
+  await noterEchec(cle, 3, 60 * 60 * 1000);
+
   // Recherche sans tenir compte des majuscules (« Prenom.Nom@… » = « prenom.nom@… »)
   const utilisateur = await prisma.utilisateur.findFirst({ where: { email: { equals: email, mode: "insensitive" }, actif: true } });
 
@@ -29,16 +34,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ succes: true });
   }
 
-  // Supprimer les anciens tokens pour cet email
-  await prisma.tokenReset.deleteMany({ where: { email: utilisateur.email } });
-
-  // Créer un nouveau token
-  const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 heure
-
-  await prisma.tokenReset.create({
-    data: { token, email: utilisateur.email, expiresAt },
-  });
+  // Lien à usage unique valable 1 heure (seule son empreinte est enregistrée)
+  const token = await creerJetonLien(utilisateur.email, 1000 * 60 * 60);
+  await journaliser({ action: "MDP_OUBLIE", utilisateur, request });
 
   // Adresse de l'app : variable Vercel, sinon l'adresse sur laquelle la demande a été faite
   const base = (process.env.NEXT_PUBLIC_URL || process.env.APP_URL || request.nextUrl.origin).replace(/\/$/, "");

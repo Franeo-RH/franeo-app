@@ -3,6 +3,7 @@ import { niveauRH, permissionsFormule } from "@/lib/droits";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { creerJetonLien } from "@/lib/securite";
 import { getSession } from "@/lib/session";
 
 /**
@@ -46,9 +47,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   await prisma.utilisateur.create({
     data: { email: d.email, prenom: d.prenom, role: "CLIENT", entrepriseId: entreprise.id, motDePasse: await bcrypt.hash(crypto.randomBytes(24).toString("hex"), 10) },
   });
-  await prisma.tokenReset.deleteMany({ where: { email: d.email } });
-  const token = crypto.randomBytes(32).toString("hex");
-  await prisma.tokenReset.create({ data: { token, email: d.email, expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000) } });
+  const token = await creerJetonLien(d.email, 7 * 24 * 3600 * 1000);
   await prisma.demandeInscription.update({ where: { id }, data: { statut: "VALIDEE", traiteeAt: new Date(), entrepriseId: entreprise.id } });
 
   const base = (process.env.NEXT_PUBLIC_URL || process.env.APP_URL || request.nextUrl.origin).replace(/\/$/, "");

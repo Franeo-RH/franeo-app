@@ -3,6 +3,7 @@
 
 import ExcelJS from "exceljs";
 import { COLONNES, CONTRATS_IMPORT, type LigneErreur } from "./import-salaries";
+import { classeurMarque, LIGNE_TITRES, styliserTitres, type OptionsMarque } from "./excel-marque";
 
 function valeurCellule(v: any): unknown {
   if (v === null || v === undefined) return null;
@@ -38,18 +39,6 @@ export async function lireFichierExcel(contenu: ArrayBuffer | Buffer): Promise<u
 
 const VERT = "FF1F6F5C";
 
-function styleEntetes(ws: ExcelJS.Worksheet, nb: number, rouge?: number) {
-  const row = ws.getRow(1);
-  row.height = 22;
-  for (let c = 1; c <= nb; c++) {
-    const cell = row.getCell(c);
-    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: c === rouge ? "FFB91C1C" : VERT } };
-    cell.alignment = { vertical: "middle" };
-  }
-  ws.views = [{ state: "frozen", ySplit: 1 }];
-}
-
 function formaterColonnes(ws: ExcelJS.Worksheet) {
   COLONNES.forEach((col, i) => {
     const c = ws.getColumn(i + 1);
@@ -59,15 +48,21 @@ function formaterColonnes(ws: ExcelJS.Worksheet) {
   });
 }
 
-export async function fabriquerModele(): Promise<Buffer> {
-  const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet("Salariés");
-  ws.addRow(COLONNES.map((c) => c.titre));
-  formaterColonnes(ws);
-  styleEntetes(ws, COLONNES.length);
+function figerTitres(ws: ExcelJS.Worksheet) {
+  ws.views = [{ state: "frozen", xSplit: 0, ySplit: LIGNE_TITRES, topLeftCell: `A${LIGNE_TITRES + 1}`, activeCell: `A${LIGNE_TITRES + 1}` }];
+}
 
-  const contrat = COLONNES.findIndex((c) => c.champ === "typeContrat") + 1;
-  for (let r = 2; r <= 1001; r++) {
+/** Modèle d'import vierge (en-tête FRANEO RH, titres de colonnes ligne 4, liste déroulante des contrats). */
+export async function fabriquerModele(opts: OptionsMarque = {}): Promise<Buffer> {
+  const c = await classeurMarque({ ...opts, titre: opts.titre ?? "FRANEO RH · Modèle d'import des salariés" });
+  const ws = c.feuille("Salariés");
+  ws.addRow(COLONNES.map((col) => col.titre));
+  formaterColonnes(ws);
+  styliserTitres(ws, LIGNE_TITRES, COLONNES.length, VERT);
+  figerTitres(ws);
+
+  const contrat = COLONNES.findIndex((col) => col.champ === "typeContrat") + 1;
+  for (let r = LIGNE_TITRES + 1; r <= LIGNE_TITRES + 1000; r++) {
     ws.getCell(r, contrat).dataValidation = {
       type: "list",
       allowBlank: true,
@@ -75,34 +70,36 @@ export async function fabriquerModele(): Promise<Buffer> {
     };
   }
 
-  const aide = wb.addWorksheet("Mode d'emploi");
+  const aide = c.feuille("Mode d'emploi");
   aide.getColumn(1).width = 24;
   aide.getColumn(2).width = 70;
   aide.addRow(["Colonne", "À savoir"]);
-  COLONNES.forEach((c) => aide.addRow([c.titre + (c.requis ? " *" : ""), c.aide]));
+  COLONNES.forEach((col) => aide.addRow([col.titre + (col.requis ? " *" : ""), col.aide]));
   aide.addRow([]);
   aide.addRow(["Exemple", "Jean | Dupont | Comptable | CDI | 01/09/2026 | | 35 | 2500 | | jean@exemple.fr"]);
   aide.addRow([]);
-  aide.addRow(["Règles", "* = obligatoire. Une ligne avec une erreur n'est pas importée : vous récupérez un fichier d'erreurs à corriger et à renvoyer. Un matricule déjà utilisé est refusé."]);
-  aide.getRow(1).font = { bold: true };
+  aide.addRow(["Règles", "* = obligatoire. Remplissez l'onglet « Salariés » à partir de la ligne 5 (une ligne par salarié). Une ligne avec une erreur n'est pas importée : vous récupérez un fichier d'erreurs à corriger et à renvoyer. Un matricule déjà utilisé est refusé."]);
+  styliserTitres(aide, LIGNE_TITRES, 2, VERT);
   aide.getColumn(2).alignment = { wrapText: true, vertical: "top" };
 
-  return Buffer.from(await wb.xlsx.writeBuffer());
+  return c.terminer();
 }
 
 /** Fichier des lignes refusées : mêmes colonnes que le modèle + colonne « Erreur » à droite. */
-export async function fabriquerFichierErreurs(erreurs: LigneErreur[]): Promise<Buffer> {
-  const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet("Salariés");
-  ws.addRow([...COLONNES.map((c) => c.titre), "Erreur"]);
+export async function fabriquerFichierErreurs(erreurs: LigneErreur[], opts: OptionsMarque = {}): Promise<Buffer> {
+  const c = await classeurMarque({ ...opts, titre: opts.titre ?? "FRANEO RH · Lignes à corriger" });
+  const ws = c.feuille("Salariés");
+  ws.addRow([...COLONNES.map((col) => col.titre), "Erreur"]);
   formaterColonnes(ws);
   for (const e of erreurs) ws.addRow([...e.valeurs, e.raisons.join(" ; ")]);
   const colErreur = COLONNES.length + 1;
   ws.getColumn(colErreur).width = 70;
-  styleEntetes(ws, colErreur, colErreur);
-  for (let r = 2; r <= erreurs.length + 1; r++) {
+  styliserTitres(ws, LIGNE_TITRES, colErreur, VERT);
+  ws.getRow(LIGNE_TITRES).getCell(colErreur).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFB91C1C" } };
+  figerTitres(ws);
+  for (let r = LIGNE_TITRES + 1; r <= LIGNE_TITRES + erreurs.length; r++) {
     ws.getCell(r, colErreur).font = { color: { argb: "FFB91C1C" } };
     ws.getCell(r, colErreur).alignment = { wrapText: true, vertical: "top" };
   }
-  return Buffer.from(await wb.xlsx.writeBuffer());
+  return c.terminer();
 }

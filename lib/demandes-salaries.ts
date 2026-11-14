@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { lireRappel } from "@/lib/rappels";
 import { matriculeDejaPris, nettoyerMatricule } from "@/lib/matricule";
 import { notifierAdmin } from "@/lib/notifications";
+import { supprimerSalarieComplet } from "@/lib/rgpd";
 
 export type TypeDemande = "AJOUT" | "MODIFICATION" | "SUPPRESSION";
 
@@ -190,7 +191,7 @@ export async function appliquerDemande(demandeId: string): Promise<{ erreur?: st
     }
     await prisma.salarie.update({ where: { id: salarie.id }, data: { ...champs, ...(modifierMatricule ? { matricule } : {}) } });
   } else if (d.type === "SUPPRESSION") {
-    await prisma.salarie.delete({ where: { id: salarie.id } });
+    await supprimerSalarieComplet(salarie.id);
   }
 
   await prisma.demandeSalarie.update({ where: { id: d.id }, data: { statut: "VALIDEE", traiteAt: new Date() } });

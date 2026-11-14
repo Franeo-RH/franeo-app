@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { erreurMotDePasse } from "@/lib/securite";
 import { getSession } from "@/lib/session";
 import bcrypt from "bcryptjs";
 
@@ -29,6 +30,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ erreur: "Le nom est obligatoire" }, { status: 400 });
   }
 
+  const regle = data.motDePasseClient ? erreurMotDePasse(data.motDePasseClient) : null;
+  if (regle) return NextResponse.json({ erreur: regle }, { status: 400 });
   if (!data.emailClient || !data.motDePasseClient) {
     return NextResponse.json({ erreur: "Email et mot de passe client obligatoires" }, { status: 400 });
   }

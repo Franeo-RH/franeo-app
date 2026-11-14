@@ -63,6 +63,8 @@ export async function getSession() {
   const utilisateur = await getSessionBrute();
   if (!utilisateur) return null;
   if (utilisateur.role === "SALARIE") return null;
+  // Compte désactivé par l'admin : plus aucun accès
+  if (utilisateur.actif === false) return null;
   if (utilisateur.role === "CLIENT" && utilisateur.entreprise && utilisateur.entreprise.actif === false) {
     return null;
   }

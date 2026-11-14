@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { creerJetonLien } from "@/lib/securite";
 import { getSession } from "@/lib/session";
 import { refuserSansDroit } from "@/lib/droits-serveur";
 
@@ -66,9 +67,7 @@ export async function POST(request: NextRequest, { params }: Ctx) {
   }
 
   // Lien de création du mot de passe, valable 7 jours
-  await prisma.tokenReset.deleteMany({ where: { email } });
-  const token = crypto.randomBytes(32).toString("hex");
-  await prisma.tokenReset.create({ data: { token, email, expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000) } });
+  const token = await creerJetonLien(email, 7 * 24 * 3600 * 1000);
   const base = (process.env.NEXT_PUBLIC_URL || process.env.APP_URL || request.nextUrl.origin).replace(/\/$/, "");
   const lien = `${base}/reinitialiser-mot-de-passe?token=${token}`;
 

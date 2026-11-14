@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { erreurMotDePasse } from "@/lib/securite";
 import { getSession } from "@/lib/session";
 import bcrypt from "bcryptjs";
 
@@ -11,6 +12,8 @@ export async function POST(request: NextRequest) {
 
   const { prenom, email, motDePasse, entrepriseId } = await request.json();
 
+  const regle = motDePasse ? erreurMotDePasse(motDePasse) : null;
+  if (regle) return NextResponse.json({ erreur: regle }, { status: 400 });
   if (!prenom || !email || !motDePasse || !entrepriseId) {
     return NextResponse.json({ erreur: "Tous les champs sont obligatoires" }, { status: 400 });
   }

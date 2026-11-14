@@ -204,6 +204,8 @@ model FAQ {
 
 model Salarie {
   id                    String         @id @default(cuid())
+  // RGPD : date d'anonymisation (identité, coordonnées, n° SS et IBAN effacés ; données de paie conservées pour les obligations légales)
+  anonymiseLe           DateTime?
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
   statut                String         @default("Actif")
@@ -1161,4 +1163,31 @@ model LogoEntreprise {
   largeur      Int
   hauteur      Int
   updatedAt    DateTime   @updatedAt
+}
+
+// ───────── Sécurité & RGPD ─────────
+// Compteur de tentatives (connexion, mot de passe oublié) partagé entre tous les serveurs : anti-force brute
+model TentativeConnexion {
+  cle       String   @id // ex. « login:email:x@y.fr », « login:ip:1.2.3.4 », « reset:email:… »
+  essais    Int      @default(0)
+  debut     DateTime @default(now())
+  bloqueJusqua DateTime?
+}
+
+// Journal d'audit : connexions, exports, suppressions, changements de droits, actions RGPD (conservé 1 an)
+model JournalAudit {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  action        String   // LOGIN, LOGIN_ECHEC, LOGIN_BLOQUE, EXPORT, MDP_CHANGE, MDP_RESET, DROITS, SALARIE_SUPPR, RGPD_EXPORT, RGPD_ANONYMISATION…
+  utilisateurId String?
+  email         String?
+  role          String?
+  entrepriseId  String?
+  cible         String?  // ex. « Salarié Sophie Martin », « Export salariés »
+  details       String?
+  ip            String?
+
+  @@index([createdAt])
+  @@index([entrepriseId, createdAt])
+  @@index([action, createdAt])
 }

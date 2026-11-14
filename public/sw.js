@@ -2,13 +2,14 @@
 // - rend l'app installable ;
 // - hors connexion : les pages déjà consultées restent visibles (lecture seule) ;
 // - tout est effacé à la déconnexion (message "vider-cache" envoyé par l'app).
-const VERSION = "v3";
+const VERSION = "v4";
 const CACHE_STATIQUE = "franeo-statique-" + VERSION;
 const CACHE_PAGES = "franeo-pages-" + VERSION;
 const HORS_LIGNE = "/hors-ligne.html";
 
 // Ce qui n'est jamais mis en cache
-const EXCLUS = ["/api/auth", "/api/logout", "/api/export", "/api/buddy", "/api/demo", "/api/cron", "/login", "/mot-de-passe-oublie", "/reinitialiser-mot-de-passe"];
+// (exports et données personnelles complètes : jamais gardés sur l'appareil)
+const EXCLUS = ["/api/auth", "/api/logout", "/api/export", "/api/admin", "/api/rgpd", "/api/me", "/api/fichier-excel", "/api/salaries/import", "/api/buddy", "/api/demo", "/api/cron", "/login", "/mot-de-passe-oublie", "/reinitialiser-mot-de-passe"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_STATIQUE).then((c) => c.addAll([HORS_LIGNE, "/icon-192.png"])));
