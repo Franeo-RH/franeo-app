@@ -49,6 +49,8 @@ import {
   salut,
 } from "@/lib/buddy/lectures";
 import { nomComplet } from "@/lib/buddy/slots";
+import { lireProjets } from "@/lib/buddy/projets";
+import { repondreAvecIA } from "@/lib/buddy/ia";
 import { ticketsDuMois } from "@/lib/facturation";
 import type { Ctx, Env, Flow, ReponseBuddy } from "@/lib/buddy/types";
 
@@ -213,7 +215,7 @@ async function traiter(m: Msg, env: Env, ctx: Ctx): Promise<ReponseBuddy> {
 
   // « Comment déclarer un arrêt maladie ? » : c'est une question de procédure → la FAQ d'abord
   if (estQuestionProcedure(m)) {
-    const faq = await lireFaq(m);
+    const faq = await lireFaq(m, env.entreprise.id);
     if (faq) return faq;
     const exemple = EXEMPLES[i.id];
     if (exemple) {
@@ -353,6 +355,10 @@ async function traiter(m: Msg, env: Env, ctx: Ctx): Promise<ReponseBuddy> {
       return lireFiche(m, env);
     case "salarie_liste":
       return lireSalaries(m, env);
+    /* Projets (option) */
+    case "projets_info":
+      return lireProjets(m, env);
+
     case "precision_retrait": {
       const s = matchSalaries(m, env.salaries)[0]?.s;
       const nom = s ? nomComplet(s) : "ce salarié";
@@ -364,7 +370,7 @@ async function traiter(m: Msg, env: Env, ctx: Ctx): Promise<ReponseBuddy> {
   }
 
   /* 4) Rien de reconnu : la FAQ, puis une réponse d'aide */
-  const faq = await lireFaq(m);
+  const faq = await lireFaq(m, env.entreprise.id);
   if (faq) return faq;
 
   // Un sujet RH qui figure dans les actualités : on sort l'actualité complète
@@ -374,6 +380,15 @@ async function traiter(m: Msg, env: Env, ctx: Ctx): Promise<ReponseBuddy> {
   // Réponses rédigées par l'équipe Franeo pour des questions déjà posées
   const apprise = await reponseApprise(m.brut);
   if (apprise) return rep(apprise, { humeur: "content", suggestions: ["Aide"] });
+
+  // Réponse rédigée par l'IA (si la clé Anthropic est configurée), appuyée sur la FAQ
+  const ia = await repondreAvecIA(m.brut, { entrepriseId: env.entreprise.id, salaries: env.salaries });
+  if (ia) {
+    return rep(`${ia}\n\n🤖 Réponse rédigée automatiquement : pour un cas particulier, ouvrez un ticket RH.`, {
+      humeur: "content",
+      suggestions: ["Ouvrir un ticket", "Aide"],
+    });
+  }
 
   // Question notée pour que l'équipe Franeo puisse y répondre (Communication › Questions Buddy)
   await noterQuestion(m.brut, env.session.entrepriseId);

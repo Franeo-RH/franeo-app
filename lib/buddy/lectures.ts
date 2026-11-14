@@ -52,6 +52,7 @@ const NOMS_MODULES: Record<ModuleBuddy, string> = {
   tickets: "Tickets RH",
   helpdesk: "Helpdesk",
   entreprise: "Entreprise (abonnement, facturation)",
+  projets: "Projets, planning & rentabilité",
   libre: "",
 };
 
@@ -829,8 +830,13 @@ export function numeroDansMessage(m: Msg, max: number): number | null {
    FAQ
    ════════════════════════════════════════════════════════════════ */
 
-export async function lireFaq(m: Msg): Promise<ReponseBuddy | null> {
-  const faqs = await prisma.fAQ.findMany({ orderBy: { ordre: "asc" }, take: 300 });
+export async function lireFaq(m: Msg, entrepriseId?: string): Promise<ReponseBuddy | null> {
+  // FAQ communes + celles réservées à cette entreprise (jamais celles d'un autre client)
+  const faqs = await prisma.fAQ.findMany({
+    where: entrepriseId ? { OR: [{ entrepriseId: null }, { entrepriseId }] } : { entrepriseId: null },
+    orderBy: { ordre: "asc" },
+    take: 300,
+  });
   const trouve = chercherFaq(m, faqs);
   if (!trouve) return null;
   return rep(`💡 ${trouve.faq.question}\n\n${trouve.faq.reponse}`, {
@@ -922,6 +928,9 @@ export function aide(env: Env): ReponseBuddy {
   }
   if (aAcces(env, "entreprise") || aAcces(env, "paie")) {
     blocs.push(`💳 Abonnement & facturation\n• « Mon abonnement » · « Quelles sont les formules ? »\n• « Je veux passer à la formule Premium » · « Annule ma demande d'évolution »\n• « Ma facture du mois »`);
+  }
+  if (aAcces(env, "projets")) {
+    blocs.push(`📁 Projets\n• « Mes projets » · « Projets en alerte » · « Rentabilité des projets »\n• « Où en est le projet Dupont ? »`);
   }
   blocs.push(`📰 Actualité RH & FAQ\n• « Actualités paie » · « Résume l'actu juridique » · « Quoi de neuf en recrutement ? »\n• Posez-moi une question : « Comment déclarer un arrêt maladie ? »`);
   blocs.push(`🧭 Navigation\n• « Va sur la facturation » · « Ouvre les absences »`);

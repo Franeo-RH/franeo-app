@@ -137,6 +137,13 @@ export default function ProfilClient() {
           </form>
         </div>
 
+        <p className="text-sm text-gray-500 mt-6">
+          🔐 Vos données et celles de vos salariés :{" "}
+          <a href="/confidentialite" className="underline">politique de confidentialité</a>
+          {" · "}
+          <a href="/mentions-legales" className="underline">mentions légales</a>.
+          {" "}Pour exporter ou anonymiser les données d&apos;un salarié, ouvrez sa fiche (bloc « Données personnelles »).
+        </p>
       </main>
     </div>
   );

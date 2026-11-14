@@ -9,20 +9,14 @@
 import { prisma } from "@/lib/prisma";
 import { supprimerFichierStocke } from "@/lib/stockage";
 import { classeurMarque } from "@/lib/excel-marque";
+import { CONSERVATION } from "@/lib/legal";
 
 const J = 86400000;
 const fr = (d: Date | null | undefined) => (d ? new Date(d).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" }) : "");
 const frH = (d: Date | null | undefined) => (d ? new Date(d).toLocaleString("fr-FR", { timeZone: "Europe/Paris" }) : "");
 
-/** Durées de conservation appliquées automatiquement (affichées dans la politique de confidentialité) */
-export const CONSERVATION = {
-  pointagesJours: 365,
-  journalAuditJours: 365,
-  tentativesJours: 2,
-  questionsBuddyIgnoreesJours: 365,
-  contexteBuddyJours: 30,
-  anonymisationApresSortieAns: 5,
-} as const;
+// Durées de conservation : définies dans lib/legal.ts (affichées sur la page Confidentialité)
+export { CONSERVATION };
 
 /** Fichier Excel avec toutes les données d'un salarié (une feuille par type de données) */
 export async function exporterDonneesSalarie(salarieId: string): Promise<{ buffer: Buffer; nom: string } | null> {
@@ -61,7 +55,10 @@ export async function exporterDonneesSalarie(salarieId: string): Promise<{ buffe
   feuille("Absences", [["Type", "Du", "Au", "Statut", "Commentaire"], ...s.absences.map((a) => [a.type, fr(a.dateDebut), fr(a.dateFin), a.statut, a.commentaire])]);
   feuille("Variables de paie", [["Type", "Valeur", "Mois", "Année", "Statut", "Commentaire"], ...s.variablesPaie.map((v) => [v.type, v.valeur, v.mois, v.annee, v.statut, v.commentaire])]);
   feuille("Relevés d'heures", [["Mois", "Année", "Statut", "Jour", "Heures", "Heures supp.", "Télétravail", "Commentaire"],
-    ...s.releves.flatMap((r) => (r.jours.length ? r.jours : [null]).map((j) => [r.mois, r.annee, r.statut, j ? fr(j.date) : "", j?.heures ?? "", j?.heuresSupp ?? "", j?.teletravail ? "oui" : "", j?.commentaire ?? ""]))]);
+    ...s.releves.flatMap((r) => {
+      const jours: ((typeof r.jours)[number] | null)[] = r.jours.length ? r.jours : [null];
+      return jours.map((j) => [r.mois, r.annee, r.statut, j ? fr(j.date) : "", j?.heures ?? "", j?.heuresSupp ?? "", j?.teletravail ? "oui" : "", j?.commentaire ?? ""]);
+    })]);
   feuille("Pointages", [["Date et heure", "Type", "Adresse", "Projet"], ...s.pointages.map((p) => [frH(p.at), p.type, p.adresse, p.projet?.nom])]);
   feuille("Notes de frais", [["Date", "Montant (€)", "Motif", "Statut"], ...s.notesFrais.map((n) => [fr(n.date), n.montant, n.motif, n.statut])]);
   feuille("Échéances", [["Type", "Libellé", "Échéance", "Traité"], ...s.rappels.map((r) => [r.type, r.libelle, fr(r.dateEcheance), r.traite ? "oui" : "non"])]);

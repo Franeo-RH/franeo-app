@@ -128,6 +128,16 @@ export default async function EspaceSalarie() {
                   <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>{aVenir.slice(0, 3).map((a) => ligneAbsence(a, false))}</ul>
                 </section>
               )}
+              <section style={carte} aria-labelledby="t-donnees">
+                <h2 id="t-donnees" style={{ margin: "0 0 6px", fontSize: "18px" }}>🔐 Mes données personnelles</h2>
+                <p style={{ margin: "0 0 12px", color: "#4b5563", fontSize: "14px" }}>
+                  Téléchargez tout ce que l&apos;application connaît de vous (fiche, absences, heures, pointages, frais…). Pour corriger une information, adressez-vous à votre employeur.
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center" }}>
+                  <a href="/api/rgpd/moi" style={{ background: "#111827", color: "#ffffff", borderRadius: "10px", padding: "10px 16px", fontWeight: 600, fontSize: "14px", textDecoration: "none" }}>⬇️ Télécharger mes données</a>
+                  <a href="/confidentialite" style={{ color: "#2563eb", fontSize: "14px", textDecoration: "underline" }}>Politique de confidentialité</a>
+                </div>
+              </section>
             </>
           }
           absences={voit.absences ? (

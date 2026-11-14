@@ -10,6 +10,8 @@ import RappelsSalarie, { type RappelLite } from "@/components/RappelsSalarie";
 import { versISO } from "@/lib/rappels";
 import EspaceSalarieFiche from "@/components/EspaceSalarieFiche";
 import AvantagesSalarie from "@/components/AvantagesSalarie";
+import RgpdSalarie from "@/components/RgpdSalarie";
+import { estSorti } from "@/lib/rgpd";
 
 export default async function FicheSalarieAdmin({
   params,
@@ -136,6 +138,15 @@ export default async function FicheSalarieAdmin({
           </div>
 
           <div className="mt-6"><AvantagesSalarie salarieId={salarie.id} lienEntreprise={`/admin/entreprises/${salarie.entrepriseId}`} /></div>
+
+          <div className="mt-6">
+            <RgpdSalarie
+              salarieId={salarie.id}
+              sorti={estSorti(salarie)}
+              anonymiseLe={salarie.anonymiseLe ? salarie.anonymiseLe.toISOString() : null}
+              peutAnonymiser={!salarie.entreprise.demo}
+            />
+          </div>
 
           <div className="bg-white rounded-xl shadow p-6 mt-6">
             <h2 className="text-lg font-bold mb-3">📱 Espace salarié</h2>

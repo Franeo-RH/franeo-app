@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, oublierSessions } from "@/lib/session";
 import { ACCES_FORMULES, ACTIONS, MODULES } from "@/lib/droits";
+import { journaliser } from "@/lib/securite";
 
 const AUTORISES = new Set<string>([...MODULES.map((m) => m.id), ...ACTIONS.map((a) => `-${a.id}`), ...ACCES_FORMULES.map((f) => `@acces:${f.id}`)]);
 
@@ -34,5 +35,10 @@ export async function PUT(
 
   await prisma.entreprise.update({ where: { id }, data: { permissions } });
   oublierSessions();
+  const ajoutes = permissions.filter((x) => !entreprise.permissions.includes(x));
+  const retires = entreprise.permissions.filter((x) => !permissions.includes(x));
+  if (ajoutes.length || retires.length) {
+    await journaliser({ action: "DROITS", utilisateur: session, entrepriseId: id, cible: entreprise.nom, details: `ajoutés : ${ajoutes.join(", ") || "—"} · retirés : ${retires.join(", ") || "—"}`, request });
+  }
   return NextResponse.json({ succes: true, permissions });
 }

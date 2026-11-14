@@ -81,7 +81,7 @@ export interface Env {
   dernierSalarieId?: string;
 }
 
-export type ModuleBuddy = "salaries" | "absences" | "paie" | "tickets" | "helpdesk" | "entreprise" | "libre";
+export type ModuleBuddy = "salaries" | "absences" | "paie" | "tickets" | "helpdesk" | "entreprise" | "projets" | "libre";
 
 /* ───────────── Moteur de flux (conversation guidée) ───────────── */
 

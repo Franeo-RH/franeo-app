@@ -157,6 +157,12 @@ export default function LoginPage() {
         <InstallerApp
           style={{ width: "100%", marginTop: "16px", background: "#111827", color: "#ffffff", border: "none", borderRadius: "8px", padding: "12px", fontWeight: 600, cursor: "pointer" }}
         />
+
+        <p className="text-xs text-gray-400 text-center mt-6">
+          <Link href="/mentions-legales" className="hover:underline">Mentions légales</Link>
+          {" · "}
+          <Link href="/confidentialite" className="hover:underline">Confidentialité</Link>
+        </p>
       </div>
     </main>
   );

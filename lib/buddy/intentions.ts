@@ -59,6 +59,7 @@ export type IntentionId =
   | "salarie_modif"
   | "salarie_suppr"
   | "salarie_fiche"
+  | "projets_info"
   | "salarie_liste"
   | "paie_recap"
   | "precision_retrait"
@@ -276,6 +277,9 @@ export function detecter(m: Msg, env: Env, ctx: Ctx): Intention {
   /* 12bis) « Qui est en CDD ? » */
   if (detecterContrat(m) && a(m, "qui", "combien", "liste", "quels", "quelles", "montre", "affiche")) return intention("salarie_liste");
 
+  /* 12ter) Projets (option) : « mes projets », « projets en alerte », « rentabilité » */
+  if (aPrefixe(m, "projet", "chantier", "rentab") || a(m, "marge des projets", "marges des projets")) return intention("projets_info");
+
   /* 13) Paie (récapitulatif) */
   if (aPrefixe(m, "paie", "bulletin") || a(m, "cout", "couts", "masse salariale")) return intention("paie_recap");
 
@@ -285,6 +289,8 @@ export function detecter(m: Msg, env: Env, ctx: Ctx): Intention {
 /** Module à contrôler (permissions) pour chaque intention. */
 export function moduleDe(id: IntentionId, canal: Intention["canal"]): ModuleBuddy {
   switch (id) {
+    case "projets_info":
+      return "projets";
     case "salarie_ajout":
     case "salarie_modif":
     case "salarie_suppr":

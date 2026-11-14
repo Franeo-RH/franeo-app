@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { getSession } from "@/lib/session";
 import { brander, reponseExcel } from "@/lib/excel-marque";
 import { feuilles, JEUX } from "@/lib/export-complet";
+import { journaliser } from "@/lib/securite";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -30,5 +31,6 @@ export async function GET(request: NextRequest) {
   }
   const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
   const date = new Date().toISOString().slice(0, 10);
+  await journaliser({ action: "EXPORT", utilisateur: session, entrepriseId: p.get("entrepriseId") || p.get("entreprise"), cible: `Export complet « ${jeu} »`, request });
   return reponseExcel(await brander(buffer, { entrepriseId: p.get("entrepriseId") || p.get("entreprise") }), `franeo-${jeu}-${date}`);
 }

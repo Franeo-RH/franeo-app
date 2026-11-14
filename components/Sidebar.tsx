@@ -50,6 +50,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/salaries/absences", label: "🏖️ Absences" },
         { href: "/admin/salaries/contrats", label: "📝 Contrats générés" },
         { href: "/admin/salaries/pointages", label: "📍 Journal des pointages" },
+        { href: "/admin/salaries/rgpd", label: "🔐 RGPD & sécurité" },
       ] };
     }
     if (dans("/admin/paie")) {

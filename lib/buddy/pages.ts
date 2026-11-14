@@ -24,6 +24,8 @@ export const PAGE = {
   actualites: "/client/actualites",
   faq: "/client/faq",
   profil: "/client/profil",
+  projets: "/client/projets",
+  rentabilite: "/client/projets/rentabilite",
 } as const;
 
 export type ClePage = keyof typeof PAGE;
@@ -47,6 +49,8 @@ export const NAVIGATION: { cle: ClePage; label: string; mots: string[]; module: 
   { cle: "abonnementPaie", label: "Abonnement paie", mots: ["abonnement paie", "formule paie", "formules paie"], module: "paie" },
   { cle: "abonnement", label: "Abonnement RH", mots: ["abonnement", "abonnement rh", "formule rh", "mon abonnement"], module: "entreprise" },
   { cle: "entreprise", label: "Mon entreprise", mots: ["entreprise", "mon entreprise", "societe", "fiche entreprise"], module: "entreprise" },
+  { cle: "rentabilite", label: "Rentabilité des projets", mots: ["rentabilite", "rentabilite des projets"], module: "projets" },
+  { cle: "projets", label: "Projets", mots: ["projets", "projet", "planning des projets", "chantiers"], module: "projets" },
   { cle: "actualites", label: "Actualité RH", mots: ["actualites", "actualite", "actus", "actualite rh", "news"], module: "libre" },
   { cle: "faq", label: "FAQ", mots: ["faq", "foire aux questions"], module: "libre" },
   { cle: "profil", label: "Mon profil", mots: ["profil", "mon profil", "mon compte", "mot de passe"], module: "libre" },

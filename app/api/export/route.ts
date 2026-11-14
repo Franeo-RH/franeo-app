@@ -5,6 +5,7 @@ import { brander, reponseExcel } from "@/lib/excel-marque";
 import * as XLSX from "xlsx";
 import { quotaTickets, ticketsDuMois, ticketsDuMoisParEntreprise } from "@/lib/facturation";
 import { aDroit } from "@/lib/droits";
+import { journaliser } from "@/lib/securite";
 
 function calculerCout(type: string, valeur: number, salarie: {
   salaireMensuel: number | null;
@@ -570,5 +571,6 @@ export async function GET(request: NextRequest) {
   const ws = XLSX.utils.json_to_sheet(data);
   XLSX.utils.book_append_sheet(wb, ws, "Export");
   const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  await journaliser({ action: "EXPORT", utilisateur: session, cible: nomFichier, request });
   return reponseExcel(await brander(buffer, { entrepriseId: (session as { entrepriseId?: string | null }).entrepriseId ?? null }), nomFichier);
 }
