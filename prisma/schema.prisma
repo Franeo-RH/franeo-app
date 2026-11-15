@@ -1205,3 +1205,13 @@ model JournalAudit {
   @@index([entrepriseId, createdAt])
   @@index([action, createdAt])
 }
+
+// Textes des formules affichés aux clients, modifiés par l'admin (✏️ dans Abonnements).
+// Prioritaires sur la grille par défaut (lib/grille.ts) et jamais écrasés par les mises à jour.
+// cle : "rh:<nom de la formule>", "paie:<code>" ou "mention"
+model TexteFormule {
+  cle       String   @id
+  message   String?
+  lignes    String[] @default([])
+  updatedAt DateTime @updatedAt
+}

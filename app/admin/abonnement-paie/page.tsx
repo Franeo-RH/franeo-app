@@ -8,7 +8,9 @@ import Sidebar from "@/components/Sidebar";
 import BoutonAbonnementPaie from "@/components/BoutonAbonnementPaie";
 import OngletsAbonnements from "@/components/OngletsAbonnements";
 import ExportCSV from "@/components/ExportCSV";
-import { detailPaie, MENTION_VISITE_MEDICALE } from "@/lib/grille";
+import { detailPaie } from "@/lib/grille";
+import EditeurTexteFormule from "@/components/EditeurTexteFormule";
+import { clePaie, CLE_MENTION, texteMention, textePaie, textesModifies } from "@/lib/textes-formules";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +41,7 @@ export default async function AdminAbonnementPaie({ searchParams }: { searchPara
   const debut = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1);
   const fin = new Date(maintenant.getFullYear(), maintenant.getMonth() + 1, 0, 23, 59, 59);
 
-  const [formules, entreprises, comptes] = await Promise.all([
+  const [formules, entreprises, comptes, modifs] = await Promise.all([
     prisma.abonnementPaie.findMany({ orderBy: { prixMensuel: "asc" } }),
     prisma.entreprise.findMany({ where: { demo: false }, select: { id: true, nom: true, actif: true, abonnementPaieId: true }, orderBy: { nom: "asc" } }),
     prisma.salarie.groupBy({
@@ -47,7 +49,9 @@ export default async function AdminAbonnementPaie({ searchParams }: { searchPara
       where: { statut: "Actif", dateDebut: { lte: fin }, OR: [{ dateFin: null }, { dateFin: { gte: debut } }], entreprise: { demo: false } },
       _count: { _all: true },
     }),
+    textesModifies(),
   ]);
+  const mention = texteMention(modifs);
 
   const lignes = entreprises.map((e) => {
     const f = formules.find((x) => x.id === e.abonnementPaieId) ?? null;
@@ -132,15 +136,14 @@ export default async function AdminAbonnementPaie({ searchParams }: { searchPara
               </tbody>
             </table>
             <div className="grid gap-3 mt-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
-              {formules.map((f) => { const d = detailPaie(f.code); return d ? (
+              {formules.map((f) => { const t = textePaie(modifs, f.code); return detailPaie(f.code) ? (
                 <div key={f.id} className="rounded-lg border p-3 text-xs">
-                  <p className="font-bold text-sm mb-1">Ce que voit le client — {f.nom}</p>
-                  <ul className="flex flex-col gap-1">{[...d.features, ...d.options.map((o) => `€ ${o}`)].map((x) => <li key={x}><span style={{ color: "#16a34a", fontWeight: 700 }}>✓</span> {x}</li>)}</ul>
+                  <EditeurTexteFormule cle={clePaie(f.code)} titre={`Ce que voit le client — ${f.nom}`} message={t.message} lignes={t.lignes} modifie={t.modifie} />
                 </div>
               ) : null; })}
             </div>
-            <p className="text-xs text-gray-500 mt-3">🩺 {MENTION_VISITE_MEDICALE}</p>
-            <p className="text-xs text-gray-400 mt-1">Mêmes formules, prix et textes que la page client (grille dans lib/grille.ts, appliquée par prisma/grille-2026.ts à chaque mise à jour).</p>
+            <div className="text-xs text-gray-500 mt-3"><EditeurTexteFormule cle={CLE_MENTION} titre="🩺 Mention sous les formules (RH et paie)" message={mention.message} lignes={[]} modifie={mention.modifie} avecLignes={false} /></div>
+            <p className="text-xs text-gray-400 mt-1">Mêmes formules et prix que la page client. Les textes modifiés avec ✏️ remplacent ceux de la grille et ne sont jamais écrasés par une mise à jour.</p>
           </div>
 
           {/* Clients */}

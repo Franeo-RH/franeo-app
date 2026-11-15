@@ -8,14 +8,12 @@ import BoutonDemandeEvolutionPaie from "@/components/BoutonDemandeEvolutionPaie"
 import MentionsFacturation from "@/components/MentionsFacturation";
 import OngletsAbonnements from "@/components/OngletsAbonnements";
 import Link from "next/link";
-import { detailPaie, GRILLE_PAIE, MENTION_VISITE_MEDICALE } from "@/lib/grille";
+import { detailPaie, GRILLE_PAIE } from "@/lib/grille";
+import { texteMention, textePaie, textesModifies } from "@/lib/textes-formules";
 
 export const dynamic = "force-dynamic";
 
-// Contenu des formules : lib/grille.ts (grille de novembre 2026)
-const FORMULES_DETAIL: Record<string, string[]> = Object.fromEntries(
-  GRILLE_PAIE.map((g): [string, string[]] => [g.code, [...g.features, ...g.options.map((o) => `€ ${o}`)]])
-);
+// Contenu des formules : lib/grille.ts, remplacé par les textes modifiés par l'admin (✏️ Abonnements)
 
 
 export default async function ClientAbonnementPaie() {
@@ -32,9 +30,10 @@ export default async function ClientAbonnementPaie() {
 
   if (!entreprise) redirect("/login");
 
-  const formules = await prisma.abonnementPaie.findMany({
-    orderBy: { prixMensuel: "asc" },
-  });
+  const [formules, modifs] = await Promise.all([
+    prisma.abonnementPaie.findMany({ orderBy: { prixMensuel: "asc" } }),
+    textesModifies(),
+  ]);
 
   const demandeEnAttente = await prisma.demandeEvolutionPaie.findFirst({
     where: { entrepriseId: session.entrepriseId!, statut: "EN_ATTENTE" },
@@ -71,7 +70,8 @@ export default async function ClientAbonnementPaie() {
             {formules.filter((f) => GRILLE_PAIE.some((g) => g.code === f.code)).map((f) => {
               const estActuelle = f.id === entreprise.abonnementPaieId;
               const estDemandee = f.id === demandeEnAttente?.nouvelleFormuleId;
-              const features = FORMULES_DETAIL[f.code] || [];
+              const texte = textePaie(modifs, f.code);
+              const features = texte.lignes;
 
               return (
                 <div
@@ -92,6 +92,7 @@ export default async function ClientAbonnementPaie() {
                     </p>
                   </div>
 
+                  {texte.message && <p className="text-sm italic text-gray-600">{texte.message}</p>}
                   <ul className="flex flex-col gap-2 flex-1">
                     {features.map((feat, i) => (
                       <li
@@ -134,7 +135,7 @@ export default async function ClientAbonnementPaie() {
             })}
           </div>
 
-          <p className="text-sm text-gray-600 mt-6 bg-white rounded-xl shadow p-4">🩺 {MENTION_VISITE_MEDICALE}</p>
+          <p className="text-sm text-gray-600 mt-6 bg-white rounded-xl shadow p-4">🩺 {texteMention(modifs).message}</p>
 
           <div className="bg-white rounded-xl shadow p-6 mt-6 flex justify-between items-center gap-3 flex-wrap">
             <div>

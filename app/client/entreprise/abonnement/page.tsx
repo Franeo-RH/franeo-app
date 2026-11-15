@@ -8,7 +8,8 @@ import BoutonDemandeEvolution from "@/components/BoutonDemandeEvolution";
 import MentionsFacturation from "@/components/MentionsFacturation";
 import OngletsAbonnements from "@/components/OngletsAbonnements";
 import Link from "next/link";
-import { detailRH, MENTION_VISITE_MEDICALE } from "@/lib/grille";
+import { detailRH } from "@/lib/grille";
+import { texteMention, texteRH, textesModifies } from "@/lib/textes-formules";
 
 export default async function AbonnementClient() {
   await connection();
@@ -24,9 +25,10 @@ export default async function AbonnementClient() {
 
   if (!entreprise) redirect("/login");
 
-  const abonnements = await prisma.abonnement.findMany({
-    orderBy: { prixMensuel: "asc" },
-  });
+  const [abonnements, modifs] = await Promise.all([
+    prisma.abonnement.findMany({ orderBy: { prixMensuel: "asc" } }),
+    textesModifies(),
+  ]);
 
   const demandeEnAttente = await prisma.demandeEvolution.findFirst({
     where: {
@@ -82,9 +84,9 @@ export default async function AbonnementClient() {
                   </p>
                 </div>
 
-                {detailRH(a.nom)?.message && <p className="text-sm italic text-gray-600">{detailRH(a.nom)?.message}</p>}
+                {texteRH(modifs, a).message && <p className="text-sm italic text-gray-600">{texteRH(modifs, a).message}</p>}
                 <ul className="flex flex-col gap-2 flex-1">
-                  {a.features.map((f, i) => (
+                  {texteRH(modifs, a).lignes.map((f, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
                       <span className="text-orange-500 mt-0.5">✓</span>
                       {f}
@@ -107,7 +109,7 @@ export default async function AbonnementClient() {
             ))}
           </div>
 
-          <p className="text-sm text-gray-600 mt-6 bg-white rounded-xl shadow p-4">🩺 {MENTION_VISITE_MEDICALE}</p>
+          <p className="text-sm text-gray-600 mt-6 bg-white rounded-xl shadow p-4">🩺 {texteMention(modifs).message}</p>
 
           <div className="bg-white rounded-xl shadow p-6 mt-6 flex justify-between items-center gap-3 flex-wrap">
             <div>
