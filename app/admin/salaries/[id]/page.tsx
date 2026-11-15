@@ -11,6 +11,7 @@ import { versISO } from "@/lib/rappels";
 import EspaceSalarieFiche from "@/components/EspaceSalarieFiche";
 import AvantagesSalarie from "@/components/AvantagesSalarie";
 import RgpdSalarie from "@/components/RgpdSalarie";
+import CompteurConges from "@/components/CompteurConges";
 import { estSorti } from "@/lib/rgpd";
 
 export default async function FicheSalarieAdmin({
@@ -137,6 +138,7 @@ export default async function FicheSalarieAdmin({
 
           </div>
 
+          <div className="mt-6"><CompteurConges salarieId={salarie.id} /></div>
           <div className="mt-6"><AvantagesSalarie salarieId={salarie.id} lienEntreprise={`/admin/entreprises/${salarie.entrepriseId}`} /></div>
 
           <div className="mt-6">

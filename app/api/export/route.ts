@@ -6,6 +6,7 @@ import * as XLSX from "xlsx";
 import { quotaTickets, ticketsDuMois, ticketsDuMoisParEntreprise } from "@/lib/facturation";
 import { aDroit } from "@/lib/droits";
 import { journaliser } from "@/lib/securite";
+import { estBTP, joursOuvrables } from "@/lib/conges-btp";
 import { filtreSalaries, filtreViaSalarie } from "@/lib/perimetre";
 
 function calculerCout(type: string, valeur: number, salarie: {
@@ -486,16 +487,22 @@ export async function GET(request: NextRequest) {
         include: { salarie: true },
         orderBy: { dateDebut: "desc" },
       });
-      data = absences.map((a) => ({
-        "Matricule": a.salarie.matricule || "",
-        "Salarié": `${a.salarie.prenom} ${a.salarie.nom}`,
-        "Type": TYPES_ABSENCE[a.type] || a.type,
-        "Du": fr(a.dateDebut),
-        "Au": fr(a.dateFin),
-        "Jours": Math.ceil((new Date(a.dateFin).getTime() - new Date(a.dateDebut).getTime()) / 86400000) + 1,
-        "Commentaire": a.commentaire || "",
-        "Statut": a.statut,
-      }));
+      const ccnEntreprise = (await prisma.entreprise.findUnique({ where: { id: entrepriseId }, select: { ccn: true } }))?.ccn;
+      data = absences.map((a) => {
+        // BTP : congés payés décomptés en jours ouvrables et indemnisés par la caisse CIBTP
+        const btpCP = a.type === "CONGE_PAYE" && estBTP(a.salarie.conventionCollective, ccnEntreprise);
+        return {
+          "Matricule": a.salarie.matricule || "",
+          "Salarié": `${a.salarie.prenom} ${a.salarie.nom}`,
+          "Type": TYPES_ABSENCE[a.type] || a.type,
+          "Du": fr(a.dateDebut),
+          "Au": fr(a.dateFin),
+          "Jours": btpCP ? joursOuvrables(new Date(a.dateDebut), new Date(a.dateFin)) : Math.ceil((new Date(a.dateFin).getTime() - new Date(a.dateDebut).getTime()) / 86400000) + 1,
+          "Indemnisation": btpCP ? "Caisse congés BTP (CIBTP), jours ouvrables" : "",
+          "Commentaire": a.commentaire || "",
+          "Statut": a.statut,
+        };
+      });
       nomFichier = toutes ? "absences" : `absences_${suffixe}`;
 
     } else if (type === "client-tickets" && permissions.includes("tickets")) {

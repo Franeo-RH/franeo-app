@@ -12,6 +12,7 @@ import { aDroit, passeParValidation } from "@/lib/droits";
 import EspaceSalarieFiche from "@/components/EspaceSalarieFiche";
 import AvantagesSalarie from "@/components/AvantagesSalarie";
 import RgpdSalarie from "@/components/RgpdSalarie";
+import CompteurConges from "@/components/CompteurConges";
 import { estSorti } from "@/lib/rgpd";
 import { salarieVisible } from "@/lib/perimetre";
 
@@ -164,6 +165,7 @@ export default async function FicheSalarie({
 
           </div>
 
+          <div className="mt-6"><CompteurConges salarieId={salarie.id} /></div>
           {voitSalaires && <div className="mt-6"><AvantagesSalarie salarieId={salarie.id} modifiable={peutModifier} lienEntreprise="/client/entreprise" /></div>}
 
           {peutModifier && (

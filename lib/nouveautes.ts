@@ -15,12 +15,13 @@ export type MiseAJour = {
 
 export const MISES_A_JOUR: MiseAJour[] = [
   {
-    version: "V41",
+    version: "V42",
     date: "novembre 2026",
     titre: "Établissements, option Projets et fichiers Excel fiabilisés",
     clients: [
       "📐 Option Projets, planning & rentabilité (29 € HT / mois) : demandez-la en un clic dans Mon entreprise › Abonnement.",
       "💳 Formules RH : 2 € par salarié au-delà des salariés inclus, quelle que soit la formule.",
+      "🏗️ BTP : compteur de congés automatique dans la fiche de chaque salarié (caisse CIBTP, période du 1er avril au 31 mars, 2,5 jours par 150 heures, jours ouvrables).",
       "🔑 Accès dirigeants d'établissement : dans Mon entreprise, créez un accès pour le responsable de chaque établissement. Il ne voit que ses salariés, leurs absences, relevés, paie et les projets de son établissement.",
       "🏢 Établissements : ajoutez le SIRET de chacun (14 chiffres).",
       "📐 Projets : nouvelle présentation en cartes (ou en tableau), filtres par statut et par établissement, fiche projet organisée en onglets (synthèse, équipe & planning, étapes, temps, frais).",
@@ -30,6 +31,7 @@ export const MISES_A_JOUR: MiseAJour[] = [
       "🚀 Retrouvez l'historique des mises à jour dans Communication › Mises à jour.",
     ],
     salaries: [
+      "🏗️ BTP : vos congés (reste à prendre, en cours d'acquisition) sont calculés automatiquement sur votre tableau de bord.",
       "🔐 Mes données personnelles : téléchargez toutes vos informations depuis votre tableau de bord.",
       "🔑 Mot de passe : 10 caractères minimum, avec au moins une lettre et un chiffre.",
     ],
