@@ -9,6 +9,8 @@ function FormulaireReinit() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
+  // Lien reçu à la création du compte : « Activez votre compte » plutôt que « Nouveau mot de passe »
+  const activation = searchParams.get("activation") === "1";
 
   const [form, setForm] = useState({
     motDePasse: "",
@@ -68,7 +70,7 @@ function FormulaireReinit() {
       {succes ? (
         <div className="text-center">
           <p className="text-4xl mb-4">✅</p>
-          <h2 className="text-xl font-bold mb-2">Mot de passe modifié !</h2>
+          <h2 className="text-xl font-bold mb-2">{activation ? "Compte activé !" : "Mot de passe modifié !"}</h2>
           <p className="text-gray-500 mb-2">Vous allez être redirigé vers la connexion...</p>
           <Link href="/login" className="text-orange-500 font-semibold hover:underline">
             Se connecter →
@@ -76,8 +78,8 @@ function FormulaireReinit() {
         </div>
       ) : (
         <>
-          <h1 className="text-2xl font-bold mb-2 text-center">Nouveau mot de passe</h1>
-          <p className="text-gray-500 text-center mb-8">Choisissez un nouveau mot de passe sécurisé.</p>
+          <h1 className="text-2xl font-bold mb-2 text-center">{activation ? "Activez votre compte" : "Nouveau mot de passe"}</h1>
+          <p className="text-gray-500 text-center mb-8">{activation ? "Bienvenue sur FRANEO RH ! Choisissez votre mot de passe pour accéder à votre espace." : "Choisissez un nouveau mot de passe sécurisé."}</p>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>

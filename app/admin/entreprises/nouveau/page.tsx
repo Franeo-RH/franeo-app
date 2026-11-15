@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
+import ResultatActivation, { type Activation } from "@/components/ResultatActivation";
 
 const ONGLETS = ["Infos entreprise", "Coordonnées bancaires", "Accès client"];
 
@@ -15,6 +16,7 @@ export default function NouvelleEntreprise() {
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState("");
   const [abonnements, setAbonnements] = useState<Abonnement[]>([]);
+  const [cree, setCree] = useState<(Activation & { entrepriseId: string; nom: string }) | null>(null);
 
   const [form, setForm] = useState({
     // Infos entreprise
@@ -35,7 +37,6 @@ export default function NouvelleEntreprise() {
     // Accès client
     prenomClient: "",
     emailClient: "",
-    motDePasseClient: "",
   });
 
   useEffect(() => {
@@ -58,8 +59,8 @@ export default function NouvelleEntreprise() {
       return;
     }
 
-    if (!form.emailClient || !form.motDePasseClient) {
-      setErreur("L'email et le mot de passe du client sont obligatoires");
+    if (!form.emailClient) {
+      setErreur("L'email du client est obligatoire (onglet « Accès client »)");
       setChargement(false);
       return;
     }
@@ -70,14 +71,15 @@ export default function NouvelleEntreprise() {
       body: JSON.stringify(form),
     });
 
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const data = await res.json();
       setErreur(data.erreur || "Une erreur est survenue");
       setChargement(false);
       return;
     }
 
-    router.push("/admin/entreprises");
+    setChargement(false);
+    setCree({ entrepriseId: data.entreprise.id, nom: data.entreprise.nom, email: data.email, mailEnvoye: !!data.mailEnvoye, lien: data.lien ?? null });
   }
 
   return (
@@ -97,6 +99,16 @@ export default function NouvelleEntreprise() {
             </button>
           </div>
 
+          {cree ? (
+            <div className="bg-white rounded-xl shadow p-8 flex flex-col gap-5">
+              <h2 className="text-2xl font-bold">✅ {cree.nom} est créée</h2>
+              <ResultatActivation r={cree} />
+              <div className="flex gap-3">
+                <button onClick={() => router.push(`/admin/entreprises/${cree.entrepriseId}`)} className="bg-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-600 transition">Ouvrir la fiche entreprise</button>
+                <button onClick={() => router.push("/admin/entreprises")} className="bg-white border px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">Retour à la liste</button>
+              </div>
+            </div>
+          ) : (<>
           <div className="flex gap-2 mb-6">
             {ONGLETS.map((o, i) => (
               <button
@@ -145,11 +157,10 @@ export default function NouvelleEntreprise() {
             {onglet === 2 && (
               <div className="grid grid-cols-2 gap-6">
                 <p className="col-span-2 text-gray-500 text-sm">
-                  Ces informations serviront à créer l'accès de connexion pour le client.
+                  Dès l'enregistrement, le client reçoit un e-mail pour activer son compte et choisir lui-même son mot de passe. Vous ne le voyez jamais.
                 </p>
                 <Field label="Prénom" name="prenomClient" value={form.prenomClient} onChange={handleChange} />
                 <Field label="Email *" name="emailClient" value={form.emailClient} onChange={handleChange} type="email" />
-                <Field label="Mot de passe *" name="motDePasseClient" value={form.motDePasseClient} onChange={handleChange} type="password" />
               </div>
             )}
 
@@ -171,7 +182,7 @@ export default function NouvelleEntreprise() {
                 disabled={chargement}
                 className="bg-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-600 transition"
               >
-                {chargement ? "Enregistrement..." : "✅ Enregistrer"}
+                {chargement ? "Enregistrement..." : "✅ Enregistrer et envoyer l'invitation"}
               </button>
               {onglet < ONGLETS.length - 1 && (
                 <button
@@ -183,6 +194,7 @@ export default function NouvelleEntreprise() {
               )}
             </div>
           </div>
+          </>)}
 
         </main>
       </div>

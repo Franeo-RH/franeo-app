@@ -38,7 +38,7 @@ export default function NouveauxClients() {
     const r = await res.json().catch(() => ({}));
     setOccupe(false);
     if (!res.ok) { alert(r.erreur || "Erreur"); return; }
-    if (r.lien) setLiens((l) => ({ ...l, [d.id]: r.lien }));
+    if (action === "valider") setLiens((l) => ({ ...l, [d.id]: r.mailEnvoye ? "" : r.lien || "" }));
     charger();
   }
 
@@ -57,7 +57,7 @@ export default function NouveauxClients() {
         <main className="flex-1 p-6 md:p-10 flex flex-col gap-6" style={{ minWidth: 0 }}>
           <div className="bg-white rounded-xl shadow p-6">
             <h1 className="text-3xl font-bold">🆕 Nouveaux clients</h1>
-            <p className="text-gray-500 mt-1">Demandes d&apos;accès et de contact envoyées depuis la démo et la page de connexion. Valider crée l&apos;entreprise et le compte client, puis vous donne le lien à transmettre pour choisir le mot de passe.</p>
+            <p className="text-gray-500 mt-1">Demandes d&apos;accès et de contact envoyées depuis la démo et la page de connexion. Valider crée l&apos;entreprise et le compte client, puis envoie au client l&apos;e-mail pour activer son compte et choisir son mot de passe.</p>
             <div className="flex gap-2 mt-4 flex-wrap">
               {[["NOUVELLE", "🆕 À traiter"], ["VALIDEE", "✅ Validées"], ["REFUSEE", "Refusées"], ["", "Toutes"]].map(([v, l]) => (
                 <button key={v} type="button" onClick={() => setStatut(v)} className={`px-3 py-1 rounded-full text-sm font-semibold ${statut === v ? "bg-orange-500 text-white" : "bg-white border text-gray-600"}`}>{l}</button>
@@ -95,9 +95,14 @@ export default function NouveauxClients() {
                     <button type="button" disabled={occupe} onClick={() => agir(d, "refuser")} style={{ background: "#ffffff", color: "#b91c1c", border: "1px solid #fecaca", borderRadius: "8px", padding: "8px 14px", fontWeight: 700, cursor: "pointer" }}>Refuser</button>
                   </div>
                 )}
-                {liens[d.id] && (
+                {liens[d.id] === "" && (
                   <div className="mt-3 rounded-lg p-3" style={{ background: "#dcfce7" }}>
-                    <p className="text-sm font-semibold mb-2">✅ Accès créé. Transmettez ce lien au client (valable 7 jours) :</p>
+                    <p className="text-sm font-semibold">📧 Accès créé : {d.email} a reçu l&apos;e-mail pour activer son compte et choisir son mot de passe.</p>
+                  </div>
+                )}
+                {liens[d.id] && (
+                  <div className="mt-3 rounded-lg p-3" style={{ background: "#fef3c7" }}>
+                    <p className="text-sm font-semibold mb-2">⚠️ Accès créé, mais l&apos;e-mail n&apos;a pas pu partir. Transmettez ce lien au client (valable 7 jours) :</p>
                     <div className="flex gap-2 flex-wrap">
                       <input readOnly value={liens[d.id]} onFocus={(e) => e.target.select()} className="border rounded px-2 py-1 text-xs flex-1" style={{ minWidth: "200px" }} aria-label="Lien d'accès" />
                       <button type="button" onClick={() => navigator.clipboard?.writeText(liens[d.id])} className="bg-gray-900 text-white rounded px-3 py-1 text-sm font-semibold">📋 Copier</button>

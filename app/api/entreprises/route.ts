@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { erreurMotDePasse } from "@/lib/securite";
 import { getSession } from "@/lib/session";
-import bcrypt from "bcryptjs";
+import { emailPropre, emailValide, envoyerActivation, motDePasseProvisoire } from "@/lib/invitation";
 
 export async function GET() {
   const session = await getSession();
@@ -30,17 +29,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ erreur: "Le nom est obligatoire" }, { status: 400 });
   }
 
-  const regle = data.motDePasseClient ? erreurMotDePasse(data.motDePasseClient) : null;
-  if (regle) return NextResponse.json({ erreur: regle }, { status: 400 });
-  if (!data.emailClient || !data.motDePasseClient) {
-    return NextResponse.json({ erreur: "Email et mot de passe client obligatoires" }, { status: 400 });
+  // Le client choisit lui-même son mot de passe grâce au lien reçu par e-mail
+  const emailClient = emailPropre(data.emailClient);
+  if (!emailValide(emailClient)) {
+    return NextResponse.json({ erreur: "L'e-mail du client est obligatoire et doit être valide" }, { status: 400 });
   }
 
-  // Vérifier si l'email client existe déjà
-  const emailExistant = await prisma.utilisateur.findUnique({
-    where: { email: data.emailClient },
-  });
-
+  const emailExistant = await prisma.utilisateur.findFirst({ where: { email: { equals: emailClient, mode: "insensitive" } }, select: { id: true } });
   if (emailExistant) {
     return NextResponse.json({ erreur: "Cet email est déjà utilisé" }, { status: 400 });
   }
@@ -67,13 +62,14 @@ export async function POST(request: NextRequest) {
   // Créer l'accès client
   await prisma.utilisateur.create({
     data: {
-      email: data.emailClient,
-      motDePasse: await bcrypt.hash(data.motDePasseClient, 10),
+      email: emailClient,
+      motDePasse: await motDePasseProvisoire(),
       prenom: data.prenomClient || "Client",
       role: "CLIENT",
       entrepriseId: entreprise.id,
     },
   });
 
-  return NextResponse.json({ succes: true, entreprise });
+  const activation = await envoyerActivation(request, { email: emailClient, prenom: data.prenomClient, entreprise: entreprise.nom });
+  return NextResponse.json({ succes: true, entreprise, email: emailClient, ...activation });
 }

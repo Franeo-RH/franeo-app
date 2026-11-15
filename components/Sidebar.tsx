@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { aDroit, droitPourChemin } from "@/lib/droits";
@@ -200,6 +201,10 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
         ) : b.items.map((it) => (
           <SidebarLink key={it.href} href={it.href} label={it.label} active={actif === it} badge={it.badge} />
         )))}
+        {/* Logo FRANEO RH en bas de la barre */}
+        <div className="fr-side-pied">
+          <Image src="/FRANEO-Logo-Orange.png" alt="Franeo RH" width={78} height={96} style={{ objectFit: "contain" }} />
+        </div>
       </aside>
 
       {/* Téléphone : menu déroulant */}

@@ -72,7 +72,7 @@ export default function LoginPage() {
     <main className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="bg-white rounded-xl shadow p-10 w-full max-w-md">
         <div className="flex justify-center mb-6">
-          <Image src="/FRANEO-Logo-Orange.png" alt="Franeo RH" width={114} height={140} style={{ objectFit: "contain" }} priority />
+          <Image src="/FRANEO-Logo-Orange.png" alt="Franeo RH" width={180} height={221} style={{ objectFit: "contain", width: "min(180px, 50vw)", height: "auto" }} priority />
         </div>
 
         <p className="text-gray-500 text-center mb-8">Gérez vos ressources humaines simplement et efficacement.</p>

@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { niveauRH, permissionsFormule } from "@/lib/droits";
-import crypto from "crypto";
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { creerJetonLien } from "@/lib/securite";
+import { envoyerActivation, motDePasseProvisoire } from "@/lib/invitation";
 import { getSession } from "@/lib/session";
 
 /**
  * PUT (admin) { action: "valider" | "refuser" | "rouvrir", packId?, formulePaieId? }
- * « valider » crée l'entreprise et le compte client, et renvoie un lien pour choisir le mot de passe (à transmettre).
+ * « valider » crée l'entreprise et le compte client, et envoie au client l'e-mail d'activation (le lien n'est renvoyé que si l'e-mail n'a pas pu partir).
  */
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -45,13 +43,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     },
   });
   await prisma.utilisateur.create({
-    data: { email: d.email, prenom: d.prenom, role: "CLIENT", entrepriseId: entreprise.id, motDePasse: await bcrypt.hash(crypto.randomBytes(24).toString("hex"), 10) },
+    data: { email: d.email, prenom: d.prenom, role: "CLIENT", entrepriseId: entreprise.id, motDePasse: await motDePasseProvisoire() },
   });
-  const token = await creerJetonLien(d.email, 7 * 24 * 3600 * 1000);
   await prisma.demandeInscription.update({ where: { id }, data: { statut: "VALIDEE", traiteeAt: new Date(), entrepriseId: entreprise.id } });
 
-  const base = (process.env.NEXT_PUBLIC_URL || process.env.APP_URL || request.nextUrl.origin).replace(/\/$/, "");
-  return NextResponse.json({ succes: true, entrepriseId: entreprise.id, lien: `${base}/reinitialiser-mot-de-passe?token=${token}` });
+  const activation = await envoyerActivation(request, { email: d.email, prenom: d.prenom, entreprise: entreprise.nom });
+  return NextResponse.json({ succes: true, entrepriseId: entreprise.id, email: d.email, ...activation });
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
