@@ -109,6 +109,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
       { href: "/client/salaries/releves", label: "⏱️ Relevés" },
       { href: "/client/salaries/pointages", label: "📍 Badge & présences" },
       { href: "/client/salaries/absences", label: "🏖️ Absences" },
+      { href: "/client/salaries/conges", label: "🏗️ Congés BTP" },
       { href: "/client/salaries/frais", label: "🧾 Notes de frais" },
       { href: "/client/salaries/questions", label: "💬 Questions des salariés" },
       { href: "/client/salaries/mouvements", label: "🔄 Mouvements" },

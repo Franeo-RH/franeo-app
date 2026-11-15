@@ -275,6 +275,10 @@ model Salarie {
   etablissement         String?
   service               String?
   soldeConges           Float?
+  // Congés (BTP) : solde de reprise saisi ou importé ; le calcul automatique part de ces chiffres à cette date
+  congesRepriseDate     DateTime?
+  congesRepriseReste    Float?   // jours restant à prendre à la date de reprise
+  congesRepriseEnCours  Float?   // jours acquis sur la période en cours à la date de reprise
   formations            Formation[]
   rappels               RappelSalarie[]
   compte                Utilisateur?

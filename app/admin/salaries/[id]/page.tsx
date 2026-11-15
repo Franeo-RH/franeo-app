@@ -138,7 +138,7 @@ export default async function FicheSalarieAdmin({
 
           </div>
 
-          <div className="mt-6"><CompteurConges salarieId={salarie.id} /></div>
+          <div className="mt-6"><CompteurConges salarieId={salarie.id} lienReprise={`/admin/entreprises/${salarie.entrepriseId}#conges`} /></div>
           <div className="mt-6"><AvantagesSalarie salarieId={salarie.id} lienEntreprise={`/admin/entreprises/${salarie.entrepriseId}`} /></div>
 
           <div className="mt-6">

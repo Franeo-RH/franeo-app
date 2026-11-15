@@ -80,7 +80,9 @@ export function periodeAcquisition(date: Date) {
 /* ───────── Calcul ───────── */
 
 type Absence = { type: string; statut: string; dateDebut: Date; dateFin: Date };
-type Releve = { mois: number; annee: number; statut: string; jours: { heures: number | null; heuresSupp: number }[] };
+type Releve = { mois: number; annee: number; statut: string; jours: { date: Date; heures: number | null; heuresSupp: number }[] };
+/** Solde de reprise saisi ou importé : à la date indiquée, jours restant à prendre et jours acquis sur la période en cours */
+export type RepriseConges = { date: Date; reste: number; enCours: number } | null;
 type SalarieConges = { dateDebut: Date | null; dateFin: Date | null; heuresHebdomadaires: number | null };
 
 const NON_ASSIMILEES = ["CONGE_SANS_SOLDE", "ABSENCE_NON_REMUNEREE"]; // n'ouvrent pas de droits
@@ -90,8 +92,11 @@ export type AcquisitionBTP = {
   acquisTravail: number; acquisMaladie: number; acquis: number; primeVacances: boolean;
 };
 
-/** Droits acquis sur une période d'acquisition (jusqu'à `jusquA` si la période est en cours) */
-export function acquisitionBTP(s: SalarieConges, absences: Absence[], releves: Releve[], du: Date, au: Date, jusquA = au): AcquisitionBTP {
+/**
+ * Droits acquis sur une période d'acquisition (jusqu'à `jusquA` si la période est en cours).
+ * `base` : jours déjà acquis avant `du` (solde de reprise), ajoutés avant l'arrondi et les plafonds.
+ */
+export function acquisitionBTP(s: SalarieConges, absences: Absence[], releves: Releve[], du: Date, au: Date, jusquA = au, base = 0): AcquisitionBTP {
   const hebdo = s.heuresHebdomadaires && s.heuresHebdomadaires > 0 ? s.heuresHebdomadaires : 35;
   const fin = new Date(Math.min(au.getTime(), utc(jusquA).getTime()));
   const absValidees = absences.filter((a) => a.statut === "Validé");
@@ -99,7 +104,7 @@ export function acquisitionBTP(s: SalarieConges, absences: Absence[], releves: R
 
   for (let k = 0; k < 12; k++) {
     const a = du.getUTCFullYear() + Math.floor((du.getUTCMonth() + k) / 12), m = (du.getUTCMonth() + k) % 12;
-    const debutMois = new Date(Date.UTC(a, m, 1));
+    const debutMois = new Date(Math.max(Date.UTC(a, m, 1), utc(du).getTime())); // 1er mois : à partir de `du`
     if (debutMois > fin) break;
     const finMois = new Date(Math.min(Date.UTC(a, m + 1, 0), fin.getTime()));
     // Présence dans l'entreprise ce mois-ci
@@ -111,7 +116,7 @@ export function acquisitionBTP(s: SalarieConges, absences: Absence[], releves: R
     joursMaladie += maladie;
     const releve = releves.find((r) => r.annee === a && r.mois === m + 1 && r.statut === "Validé");
     if (releve) {
-      const h = releve.jours.reduce((t, j) => t + (j.heures ?? 0) + (j.heuresSupp ?? 0), 0);
+      const h = releve.jours.filter((j) => utc(new Date(j.date)) >= debutMois).reduce((t, j) => t + (j.heures ?? 0) + (j.heuresSupp ?? 0), 0);
       heures += h; heuresReleves += h; moisReleves++;
     } else {
       // Sans relevé validé : horaire contractuel, moins les absences qui n'ouvrent pas de droits (maladie comptée à part)
@@ -123,7 +128,7 @@ export function acquisitionBTP(s: SalarieConges, absences: Absence[], releves: R
     }
   }
 
-  const acquisTravail = (heures / HEURES_PAR_MOIS_BTP) * JOURS_PAR_MOIS;
+  const acquisTravail = base + (heures / HEURES_PAR_MOIS_BTP) * JOURS_PAR_MOIS;
   const acquisMaladie = (joursMaladie / 30) * 2;
   // Arrondi au jour supérieur (article L3141-7) ; maladie : total plafonné à 24 jours si le travail seul n'en donne pas plus
   const brut = Math.min(MAX_JOURS, Math.ceil(acquisTravail - 1e-9));
@@ -138,27 +143,51 @@ export function acquisitionBTP(s: SalarieConges, absences: Absence[], releves: R
 export type CongesBTP = {
   aPrendre: AcquisitionBTP; // droits acquis sur la période précédente, à prendre du 1er mai au 30 avril
   enCours: AcquisitionBTP; // période d'acquisition en cours
-  pris: number; // jours ouvrables de congés payés validés depuis le 1er mai
+  pris: number; // jours ouvrables de congés payés validés (depuis le 1er mai, ou depuis la reprise)
   enAttente: number; // jours ouvrables de congés payés demandés, pas encore validés
   reste: number;
   priseDu: Date; priseAu: Date;
+  reprise: { date: Date; reste: number; enCours: number; utilisee: boolean } | null;
 };
 
-/** Compteur complet d'un salarié BTP à une date */
-export function compteurBTP(s: SalarieConges, absences: Absence[], releves: Releve[], aujourdhui = new Date()): CongesBTP {
+const lendemain = (d: Date) => new Date(utc(d).getTime() + JOUR);
+
+/**
+ * Compteur complet d'un salarié BTP à une date.
+ * Avec un solde de reprise (saisi ou importé), le calcul part de ces chiffres à la date de reprise ;
+ * sans reprise, tout est recalculé depuis les absences et les relevés.
+ */
+export function compteurBTP(s: SalarieConges, absences: Absence[], releves: Releve[], aujourdhui = new Date(), reprise: RepriseConges = null): CongesBTP {
   const actuelle = periodeAcquisition(aujourdhui);
   const precedente = { du: new Date(Date.UTC(actuelle.du.getUTCFullYear() - 1, 3, 1)), au: new Date(Date.UTC(actuelle.du.getUTCFullYear(), 2, 31)) };
-  const aPrendre = acquisitionBTP(s, absences, releves, precedente.du, precedente.au);
-  const enCours = acquisitionBTP(s, absences, releves, actuelle.du, actuelle.au, aujourdhui);
   // Les droits acquis au 31 mars se prennent du 1er mai au 30 avril suivant
   const priseDu = new Date(Date.UTC(actuelle.du.getUTCFullYear(), 4, 1));
   const priseAu = new Date(Date.UTC(priseDu.getUTCFullYear() + 1, 3, 30));
   const cp = absences.filter((a) => a.type === "CONGE_PAYE");
-  const compte = (statuts: string[]) => cp.filter((a) => statuts.includes(a.statut)).reduce((t, a) => {
-    const d = new Date(Math.max(utc(a.dateDebut).getTime(), priseDu.getTime())), f = new Date(Math.min(utc(a.dateFin).getTime(), priseAu.getTime()));
+  const compte = (statuts: string[], depuis: Date) => cp.filter((a) => statuts.includes(a.statut)).reduce((t, a) => {
+    const d = new Date(Math.max(utc(a.dateDebut).getTime(), depuis.getTime())), f = new Date(Math.min(utc(a.dateFin).getTime(), priseAu.getTime()));
     return f < d ? t : t + joursOuvrables(d, f);
   }, 0);
-  const pris = compte(["Validé"]);
-  const enAttente = compte(["En attente"]);
-  return { aPrendre, enCours, pris, enAttente, reste: Math.max(0, aPrendre.acquis - pris), priseDu, priseAu };
+
+  const r = reprise ? utc(reprise.date) : null;
+  // Reprise dans la période d'acquisition en cours : « reste » = droits à prendre, « en cours » = acquis à cette date
+  if (reprise && r && r >= actuelle.du && r <= utc(aujourdhui)) {
+    const depuis = new Date(Math.max(lendemain(r).getTime(), priseDu.getTime()));
+    const enCours = { ...acquisitionBTP(s, absences, releves, lendemain(r), actuelle.au, aujourdhui, reprise.enCours), du: actuelle.du };
+    const aPrendre = { ...acquisitionBTP(s, absences, releves, precedente.du, precedente.au), acquis: reprise.reste };
+    const pris = compte(["Validé"], depuis);
+    return { aPrendre, enCours, pris, enAttente: compte(["En attente"], depuis), reste: Math.max(0, reprise.reste - pris), priseDu: depuis, priseAu, reprise: { ...reprise, utilisee: true } };
+  }
+  // Reprise dans la période précédente : son « en cours » devient les droits à prendre depuis le 1er mai
+  if (reprise && r && r >= precedente.du && r < actuelle.du) {
+    const aPrendre = { ...acquisitionBTP(s, absences, releves, lendemain(r), precedente.au, precedente.au, reprise.enCours), du: precedente.du };
+    const enCours = acquisitionBTP(s, absences, releves, actuelle.du, actuelle.au, aujourdhui);
+    const pris = compte(["Validé"], priseDu);
+    return { aPrendre, enCours, pris, enAttente: compte(["En attente"], priseDu), reste: Math.max(0, aPrendre.acquis - pris), priseDu, priseAu, reprise: { ...reprise, utilisee: true } };
+  }
+  // Sans reprise (ou reprise trop ancienne) : calcul complet
+  const aPrendre = acquisitionBTP(s, absences, releves, precedente.du, precedente.au);
+  const enCours = acquisitionBTP(s, absences, releves, actuelle.du, actuelle.au, aujourdhui);
+  const pris = compte(["Validé"], priseDu);
+  return { aPrendre, enCours, pris, enAttente: compte(["En attente"], priseDu), reste: Math.max(0, aPrendre.acquis - pris), priseDu, priseAu, reprise: reprise ? { ...reprise, utilisee: false } : null };
 }

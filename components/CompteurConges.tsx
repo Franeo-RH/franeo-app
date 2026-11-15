@@ -5,13 +5,13 @@ import { useEffect, useState } from "react";
 type Acq = { du: string; au: string; heures: number; heuresReleves: number; moisReleves: number; joursMaladie: number; acquisTravail: number; acquisMaladie: number; acquis: number; primeVacances: boolean };
 type Donnees =
   | { btp: false; soldeSaisi: number | null }
-  | { btp: true; aPrendre: Acq; enCours: Acq; pris: number; enAttente: number; reste: number; priseDu: string; priseAu: string };
+  | { btp: true; aPrendre: Acq; enCours: Acq; pris: number; enAttente: number; reste: number; priseDu: string; priseAu: string; reprise: { date: string; reste: number; enCours: number; utilisee: boolean } | null };
 
 const d = (x: string) => new Date(x).toLocaleDateString("fr-FR", { timeZone: "UTC" });
 const an = (x: string) => new Date(x).getUTCFullYear();
 
 /** Compteur de congés BTP (caisse CIBTP). Ne s'affiche que pour les salariés d'une convention du BTP. */
-export default function CompteurConges({ salarieId, espaceSalarie = false }: { salarieId?: string; espaceSalarie?: boolean }) {
+export default function CompteurConges({ salarieId, espaceSalarie = false, lienReprise = "/client/salaries/conges" }: { salarieId?: string; espaceSalarie?: boolean; lienReprise?: string }) {
   const [c, setC] = useState<Donnees | null>(null);
   useEffect(() => {
     fetch(espaceSalarie ? "/api/espace-salarie/conges" : `/api/salaries/${salarieId}/conges`).then((r) => (r.ok ? r.json() : null)).then(setC).catch(() => setC(null));
@@ -44,6 +44,12 @@ export default function CompteurConges({ salarieId, espaceSalarie = false }: { s
         {" "}Congés pris décomptés en jours ouvrables (lundi au samedi, hors fériés).
         {c.aPrendre.primeVacances ? " ✅ Prime de vacances de la caisse (30 %) : 1 675 heures atteintes sur la dernière période." : ` Prime de vacances : 1 675 heures nécessaires sur la période (${c.aPrendre.heures} h sur la dernière).`}
         {!espaceSalarie && " Les heures sont à déclarer à la caisse de congés chaque mois ; l'indemnité n'apparaît pas sur le bulletin de l'entreprise."}
+      </p>
+      <p style={{ margin: "8px 0 0", fontSize: 12, color: "#374151" }}>
+        {c.reprise?.utilisee
+          ? `📌 Calcul à partir du solde de départ au ${d(c.reprise.date)} (${c.reprise.reste} j à prendre, ${c.reprise.enCours} j en cours).`
+          : c.reprise ? "⚠️ Solde de départ trop ancien : calcul complet depuis les absences et relevés." : "Pas de solde de départ : calcul complet depuis les absences et relevés."}
+        {!espaceSalarie && <> <a href={lienReprise} style={{ color: "#ea580c", fontWeight: 600 }}>Saisir ou importer le solde de départ →</a></>}
       </p>
     </div>
   );
