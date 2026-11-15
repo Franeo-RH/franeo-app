@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { getSessionSalarie } from "@/lib/session";
 import { LIBELLES_ABSENCE } from "@/lib/espace-salarie";
 import { aDroit } from "@/lib/droits";
-import { communicationsNonLues } from "@/lib/communications";
+import { communicationsNonLues, derniereMiseAJour } from "@/lib/communications";
 import BandeauCommunications from "@/components/BandeauCommunications";
+import CarteMiseAJour from "@/components/CarteMiseAJour";
 import BandeauDemo from "@/components/BandeauDemo";
 import ReleveHeuresSalarie from "@/components/ReleveHeuresSalarie";
 import EspaceSalarieRH from "@/components/EspaceSalarieRH";
@@ -60,6 +61,7 @@ export default async function EspaceSalarie() {
     echeances: aDroit(permsEnt, "espace.echeances"),
     communications: aDroit(permsEnt, "espace.communications"),
   };
+  const miseAJour = await derniereMiseAJour({ id: s.utilisateur.id, role: "SALARIE", entrepriseId: s.utilisateur.entrepriseId });
   const [absences, rappels, communications] = await Promise.all([
     prisma.absence.findMany({ where: { salarieId: s.salarie.id }, orderBy: { dateDebut: "desc" }, take: 50 }),
     prisma.rappelSalarie.findMany({ where: { salarieId: s.salarie.id, traite: false, dateEcheance: { gte: aujourdhui } }, orderBy: { dateEcheance: "asc" }, take: 10 }),
@@ -102,6 +104,7 @@ export default async function EspaceSalarie() {
                 <p style={{ margin: 0, fontSize: "20px", fontWeight: 700 }}>Bonjour {s.salarie.prenom} 👋</p>
                 <p style={{ margin: "4px 0 0", color: "#4b5563", fontSize: "14px" }}>{s.salarie.poste} · {s.utilisateur.entreprise?.nom}</p>
               </div>
+              <CarteMiseAJour miseAJour={miseAJour} />
               {voit.communications && <BandeauCommunications communications={communications} />}
               {voit.echeances && (rappels.length > 0 || s.salarie.dateFin) && (
                 <section style={carte} aria-labelledby="t-echeances">

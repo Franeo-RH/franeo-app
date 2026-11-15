@@ -50,7 +50,6 @@ import {
 } from "@/lib/buddy/lectures";
 import { nomComplet } from "@/lib/buddy/slots";
 import { lireProjets } from "@/lib/buddy/projets";
-import { repondreAvecIA } from "@/lib/buddy/ia";
 import { ticketsDuMois } from "@/lib/facturation";
 import type { Ctx, Env, Flow, ReponseBuddy } from "@/lib/buddy/types";
 
@@ -72,15 +71,20 @@ const FLUX: Record<string, Flow> = Object.fromEntries(
    Chargement du contexte de l'entreprise
    ════════════════════════════════════════════════════════════════ */
 
-async function chargerEnv(session: { id: string; prenom: string; entrepriseId: string }, ctx: Ctx): Promise<Env | null> {
+async function chargerEnv(
+  session: { id: string; prenom: string; entrepriseId: string },
+  ctx: Ctx,
+  compte: { permissions: string[]; etablissement: { id: string; nom: string } | null },
+): Promise<Env | null> {
   const entreprise = await prisma.entreprise.findUnique({
     where: { id: session.entrepriseId },
     include: { abonnement: true, abonnementPaie: true },
   });
   if (!entreprise) return null;
 
+  // Dirigeant d'établissement : Buddy ne connaît que les salariés de son établissement
   const salaries = await prisma.salarie.findMany({
-    where: { entrepriseId: entreprise.id },
+    where: { entrepriseId: entreprise.id, ...(compte.etablissement ? { etablissement: { equals: compte.etablissement.nom, mode: "insensitive" as const } } : {}) },
     orderBy: { nom: "asc" },
     select: {
       id: true, prenom: true, nom: true, poste: true, statut: true, typeContrat: true, dateDebut: true, dateFin: true,
@@ -94,7 +98,7 @@ async function chargerEnv(session: { id: string; prenom: string; entrepriseId: s
     entreprise: {
       id: entreprise.id,
       nom: entreprise.nom,
-      permissions: entreprise.permissions,
+      permissions: compte.permissions, // droits du compte (un dirigeant d'établissement en a moins)
       ticketsUtilises: await ticketsDuMois(entreprise.id, new Date().getMonth() + 1, new Date().getFullYear()), // tickets du mois en cours
       bulletinsUtilises: entreprise.bulletinsUtilises,
       abonnementId: entreprise.abonnementId,
@@ -106,6 +110,7 @@ async function chargerEnv(session: { id: string; prenom: string; entrepriseId: s
     today: aujourdhui(now),
     now,
     dernierSalarieId: ctx.dernierSalarieId,
+    ...(compte.etablissement ? { perimetre: salaries.map((s) => s.id), etablissementId: compte.etablissement.id, etablissementNom: compte.etablissement.nom } : {}),
   };
 }
 
@@ -369,26 +374,16 @@ async function traiter(m: Msg, env: Env, ctx: Ctx): Promise<ReponseBuddy> {
     }
   }
 
-  /* 4) Rien de reconnu : la FAQ, puis une réponse d'aide */
+  /* 4) Rien de reconnu : d'abord les réponses paramétrées par FRANEO RH (Admin › Questions Buddy), puis la FAQ */
+  const reponseAdmin = await reponseApprise(m.brut);
+  if (reponseAdmin) return rep(reponseAdmin, { humeur: "content", suggestions: ["Aide"] });
+
   const faq = await lireFaq(m, env.entreprise.id);
   if (faq) return faq;
 
   // Un sujet RH qui figure dans les actualités : on sort l'actualité complète
   const actu = (await actusInterdites(env)) ? null : await chercherDansActus(m, ctx);
   if (actu) return actu;
-
-  // Réponses rédigées par l'équipe Franeo pour des questions déjà posées
-  const apprise = await reponseApprise(m.brut);
-  if (apprise) return rep(apprise, { humeur: "content", suggestions: ["Aide"] });
-
-  // Réponse rédigée par l'IA (si la clé Anthropic est configurée), appuyée sur la FAQ
-  const ia = await repondreAvecIA(m.brut, { entrepriseId: env.entreprise.id, salaries: env.salaries });
-  if (ia) {
-    return rep(`${ia}\n\n🤖 Réponse rédigée automatiquement : pour un cas particulier, ouvrez un ticket RH.`, {
-      humeur: "content",
-      suggestions: ["Ouvrir un ticket", "Aide"],
-    });
-  }
 
   // Question notée pour que l'équipe Franeo puisse y répondre (Communication › Questions Buddy)
   await noterQuestion(m.brut, env.session.entrepriseId);
@@ -423,7 +418,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const ctx = await chargerCtx(session.id);
-    const env = await chargerEnv({ id: session.id, prenom: session.prenom, entrepriseId: session.entrepriseId }, ctx);
+    const env = await chargerEnv({ id: session.id, prenom: session.prenom, entrepriseId: session.entrepriseId }, ctx, {
+      permissions: session.entreprise?.permissions ?? [],
+      etablissement: session.etablissementId && session.etablissement ? session.etablissement : null,
+    });
     if (!env) return NextResponse.json({ reponse: "Je ne retrouve pas votre entreprise. Reconnectez-vous puis réessayez." });
 
     const reponse = await traiter(analyser(message), env, ctx);

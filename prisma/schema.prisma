@@ -177,6 +177,12 @@ model Utilisateur {
   actif        Boolean     @default(true)
   lectures     LectureCommunication[]
 
+  // Dirigeant d'établissement : accès limité à cet établissement (vide = dirigeant général, voit tout)
+  etablissementId      String?
+  etablissement        Etablissement? @relation(fields: [etablissementId], references: [id], onDelete: Restrict)
+  // Droits retirés à ce compte en plus de ceux de l'entreprise (ex. « salaries.salaires »)
+  permissionsRetirees  String[]       @default([])
+
   // index ajouté pour accélérer les recherches
   @@index([entrepriseId])
 }
@@ -591,6 +597,8 @@ model Communication {
   entrepriseId String?
   entreprise   Entreprise? @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
   importante   Boolean     @default(false)
+  // INFO (communication classique) ou MISE_A_JOUR (résumé d'une mise à jour de l'application)
+  type         String      @default("INFO")
   createdAt    DateTime    @default(now())
   lectures     LectureCommunication[]
 
@@ -772,6 +780,9 @@ model Etablissement {
   longitude    Float?
   rayon        Int        @default(200)
   createdAt    DateTime   @default(now())
+  // Accès « dirigeant d'établissement » : ne voient que cet établissement et ses projets
+  utilisateurs Utilisateur[]
+  projets      Projet[]
 
   @@index([entrepriseId])
 }
@@ -1006,6 +1017,9 @@ model Projet {
   seuilAlerte     Int        @default(80) // % du budget consommé qui déclenche l'alerte
   responsableId   String?
   responsable     Salarie?   @relation("ResponsableProjet", fields: [responsableId], references: [id], onDelete: SetNull)
+  // Établissement du projet (facultatif) : visible par le dirigeant de cet établissement
+  etablissementId String?
+  etablissement   Etablissement? @relation(fields: [etablissementId], references: [id], onDelete: SetNull)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   affectations    AffectationProjet[]

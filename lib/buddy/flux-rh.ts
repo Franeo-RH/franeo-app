@@ -44,6 +44,7 @@ import {
   slotTexte,
   type Element,
 } from "./slots";
+import { dansPerimetre } from "./types";
 import type { Data, Env, Flow, SalarieLite, Slot } from "./types";
 import { passeParValidation } from "@/lib/droits";
 import { creerDemande } from "@/lib/demandes-salaries";
@@ -104,7 +105,7 @@ export const absenceAjout: Flow = {
     if (calendaires > 366) return { message: "Cette période dépasse un an, c'est probablement une erreur de date.", reset: ["debut", "fin"] };
     for (const id of d.salarieIds as string[]) {
       const ex = await prisma.absence.findFirst({
-        where: { salarieId: id, entrepriseId: env.entreprise.id, dateDebut: { lte: versDate(d.fin) }, dateFin: { gte: versDate(d.debut) } },
+        where: { ...dansPerimetre(env), salarieId: id, entrepriseId: env.entreprise.id, dateDebut: { lte: versDate(d.fin) }, dateFin: { gte: versDate(d.debut) } },
       });
       if (ex) {
         const nom = nomsDesSalaries([id], env);
@@ -134,7 +135,7 @@ export const absenceAjout: Flow = {
       const s = env.salaries.find((x) => x.id === id);
       if (!s) continue;
       const ex = await prisma.absence.findFirst({
-        where: { salarieId: id, entrepriseId: env.entreprise.id, dateDebut: { lte: versDate(d.fin) }, dateFin: { gte: versDate(d.debut) } },
+        where: { ...dansPerimetre(env), salarieId: id, entrepriseId: env.entreprise.id, dateDebut: { lte: versDate(d.fin) }, dateFin: { gte: versDate(d.debut) } },
       });
       if (ex) {
         refuses.push(nomComplet(s));
@@ -161,7 +162,7 @@ export const absenceAjout: Flow = {
 async function chargerAbsencesAttente(d: Data, env: Env): Promise<Element[]> {
   const ids: string[] = Array.isArray(d.salarieIds) ? d.salarieIds : [];
   const absences = await prisma.absence.findMany({
-    where: { entrepriseId: env.entreprise.id, statut: "En attente", ...(ids.length > 0 ? { salarieId: { in: ids } } : {}) },
+    where: { ...dansPerimetre(env), entrepriseId: env.entreprise.id, statut: "En attente", ...(ids.length > 0 ? { salarieId: { in: ids } } : {}) },
     include: { salarie: true },
     orderBy: { dateDebut: "asc" },
     take: 15,
@@ -231,7 +232,7 @@ export const absenceSuppr: Flow = {
     return `Je vais supprimer cette absence :\n${puces([e?.label ?? "—"])}`;
   },
   async executer(d, env) {
-    const r = await prisma.absence.deleteMany({ where: { id: d.cibleId, entrepriseId: env.entreprise.id, statut: "En attente" } });
+    const r = await prisma.absence.deleteMany({ where: { ...dansPerimetre(env), id: d.cibleId, entrepriseId: env.entreprise.id, statut: "En attente" } });
     if (r.count === 0) return rep("Cette absence n'existe plus ou a déjà été validée, je n'ai rien supprimé.", { humeur: "triste" });
     return rep("✅ Absence supprimée.", {
       humeur: "content",
@@ -282,7 +283,7 @@ export const absenceModif: Flow = {
   },
   async executer(d, env) {
     const r = await prisma.absence.updateMany({
-      where: { id: d.cibleId, entrepriseId: env.entreprise.id, statut: "En attente" },
+      where: { ...dansPerimetre(env), id: d.cibleId, entrepriseId: env.entreprise.id, statut: "En attente" },
       data: { dateDebut: versDate(d.debut), dateFin: versDate(d.fin) },
     });
     if (r.count === 0) return rep("Cette absence n'existe plus ou a déjà été validée, je n'ai rien modifié.", { humeur: "triste" });
@@ -364,7 +365,7 @@ export const variableAjout: Flow = {
 async function chargerVariablesAttente(d: Data, env: Env): Promise<Element[]> {
   const ids: string[] = Array.isArray(d.salarieIds) ? d.salarieIds : [];
   const vars = await prisma.variablePaie.findMany({
-    where: { entrepriseId: env.entreprise.id, statut: "En attente", ...(ids.length > 0 ? { salarieId: { in: ids } } : {}) },
+    where: { ...dansPerimetre(env), entrepriseId: env.entreprise.id, statut: "En attente", ...(ids.length > 0 ? { salarieId: { in: ids } } : {}) },
     include: { salarie: true },
     orderBy: { createdAt: "desc" },
     take: 15,
@@ -428,7 +429,7 @@ export const variableSuppr: Flow = {
     return `Je vais supprimer cette variable de paie :\n${puces([e?.label ?? "—"])}`;
   },
   async executer(d, env) {
-    const r = await prisma.variablePaie.deleteMany({ where: { id: d.cibleId, entrepriseId: env.entreprise.id, statut: "En attente" } });
+    const r = await prisma.variablePaie.deleteMany({ where: { ...dansPerimetre(env), id: d.cibleId, entrepriseId: env.entreprise.id, statut: "En attente" } });
     if (r.count === 0) return rep("Cette variable n'existe plus ou a déjà été traitée, je n'ai rien supprimé.", { humeur: "triste" });
     return rep("✅ Variable supprimée.", { humeur: "content", liens: [{ label: "Voir la saisie de paie", href: PAGE.saisie }], suggestions: ["Variables du mois"] });
   },
@@ -464,7 +465,7 @@ export const variableModif: Flow = {
   },
   async executer(d, env) {
     const r = await prisma.variablePaie.updateMany({
-      where: { id: d.cibleId, entrepriseId: env.entreprise.id, statut: "En attente" },
+      where: { ...dansPerimetre(env), id: d.cibleId, entrepriseId: env.entreprise.id, statut: "En attente" },
       data: { valeur: d.valeur },
     });
     if (r.count === 0) return rep("Cette variable n'existe plus ou a déjà été traitée, je n'ai rien modifié.", { humeur: "triste" });
@@ -628,6 +629,7 @@ export const salarieAjout: Flow = {
         auteur: `${env.session.prenom} (via Buddy)`,
         donnees: {
           prenom: d.prenom, nom: d.nom, poste: d.poste, typeContrat: d.typeContrat, dateDebut: d.dateDebut,
+          ...(env.etablissementNom ? { etablissement: env.etablissementNom } : {}),
           ...(typeof d.salaireMensuel === "number" ? { salaireMensuel: d.salaireMensuel, salaireAnnuel: arrondi(d.salaireMensuel * 12) } : {}),
         },
       });
@@ -636,6 +638,7 @@ export const salarieAjout: Flow = {
     const cree = await prisma.salarie.create({
       data: {
         entrepriseId: env.entreprise.id,
+        ...(env.etablissementNom ? { etablissement: env.etablissementNom } : {}),
         prenom: d.prenom,
         nom: d.nom,
         poste: d.poste,

@@ -111,6 +111,7 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
         <div className="fr-nav-droite">
           <div className="fr-nav-profil">
             <span className="fr-nav-prenom">{nom || " "}</span>
+            {moi?.etablissement && <span className="fr-nav-petit" title="Accès limité à cet établissement">🏢 {moi.etablissement}</span>}
             {profil}
           </div>
           {/* Logo du client (Mon entreprise › Logo) */}

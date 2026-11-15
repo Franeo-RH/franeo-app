@@ -17,12 +17,12 @@ export async function GET(request: NextRequest) {
   const fin = new Date(depart.getTime() + nb * 7 * 86400000 - 1);
 
   const [salaries, affectations, absences] = await Promise.all([
-    prisma.salarie.findMany({ where: { entrepriseId: a.entrepriseId, statut: "Actif" }, select: { id: true, prenom: true, nom: true, poste: true, heuresHebdomadaires: true, service: true }, orderBy: [{ nom: "asc" }, { prenom: "asc" }] }),
+    prisma.salarie.findMany({ where: { entrepriseId: a.entrepriseId, statut: "Actif", ...a.fs }, select: { id: true, prenom: true, nom: true, poste: true, heuresHebdomadaires: true, service: true }, orderBy: [{ nom: "asc" }, { prenom: "asc" }] }),
     prisma.affectationProjet.findMany({
-      where: { projet: { entrepriseId: a.entrepriseId, statut: { in: ["PREVU", "EN_COURS"] } }, du: { lte: fin }, au: { gte: depart } },
+      where: { projet: { entrepriseId: a.entrepriseId, ...a.fp, statut: { in: ["PREVU", "EN_COURS"] } }, du: { lte: fin }, au: { gte: depart } },
       include: { projet: { select: { id: true, nom: true, couleur: true, code: true } } },
     }),
-    prisma.absence.findMany({ where: { entrepriseId: a.entrepriseId, statut: { not: "Refusé" }, dateDebut: { lte: fin }, dateFin: { gte: depart } }, select: { salarieId: true, dateDebut: true, dateFin: true, type: true, statut: true } }),
+    prisma.absence.findMany({ where: { entrepriseId: a.entrepriseId, ...a.fv, statut: { not: "Refusé" }, dateDebut: { lte: fin }, dateFin: { gte: depart } }, select: { salarieId: true, dateDebut: true, dateFin: true, type: true, statut: true } }),
   ]);
 
   const lignes = salaries.map((s) => {

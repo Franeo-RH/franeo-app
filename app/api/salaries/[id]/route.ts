@@ -7,6 +7,8 @@ import { aDroit, passeParValidation } from "@/lib/droits";
 import { creerDemande } from "@/lib/demandes-salaries";
 import { supprimerSalarieComplet } from "@/lib/rgpd";
 import { journaliser } from "@/lib/securite";
+import { salarieVisible } from "@/lib/perimetre";
+import { etablissementDe } from "@/lib/perimetre";
 
 export async function GET(
   request: NextRequest,
@@ -23,7 +25,7 @@ export async function GET(
 
   if (!salarie) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
 
-  if (session.role === "CLIENT" && salarie.entrepriseId !== session.entrepriseId) {
+  if (session.role === "CLIENT" && (salarie.entrepriseId !== session.entrepriseId || !salarieVisible(session, salarie))) {
     return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   }
 
@@ -39,13 +41,16 @@ export async function PUT(
 
   const { id } = await params;
   const data = await request.json();
+  // Dirigeant d'établissement : impossible de déplacer un salarié vers un autre établissement
+  const etabSession = etablissementDe(session);
+  if (etabSession && data && typeof data === "object") data.etablissement = etabSession.nom;
 
   const salarie = await prisma.salarie.findUnique({ where: { id } });
   let demandeEnvoyee = false;
 
   if (!salarie) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
 
-  if (session.role === "CLIENT" && salarie.entrepriseId !== session.entrepriseId) {
+  if (session.role === "CLIENT" && (salarie.entrepriseId !== session.entrepriseId || !salarieVisible(session, salarie))) {
     return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   }
 
@@ -178,7 +183,7 @@ export async function DELETE(
 
   if (!salarie) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
 
-  if (session.role === "CLIENT" && salarie.entrepriseId !== session.entrepriseId) {
+  if (session.role === "CLIENT" && (salarie.entrepriseId !== session.entrepriseId || !salarieVisible(session, salarie))) {
     return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   }
 

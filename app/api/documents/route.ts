@@ -4,13 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
 import { lireFichier } from "@/lib/fichiers";
+import { salarieVisible } from "@/lib/perimetre";
 
 async function salarieAutorise(salarieId: string) {
   const session = await getSession();
   if (!session) return { session: null, salarie: null };
   if (session.role === "CLIENT" && !aDroit(session.entreprise?.permissions, "rh.documents")) return { session, salarie: null };
-  const salarie = await prisma.salarie.findUnique({ where: { id: salarieId }, select: { id: true, entrepriseId: true, prenom: true, nom: true } });
-  if (!salarie || (session.role === "CLIENT" && salarie.entrepriseId !== session.entrepriseId)) return { session, salarie: null };
+  const salarie = await prisma.salarie.findUnique({ where: { id: salarieId }, select: { id: true, entrepriseId: true, etablissement: true, prenom: true, nom: true } });
+  if (!salarie || (session.role === "CLIENT" && (salarie.entrepriseId !== session.entrepriseId || !salarieVisible(session, salarie)))) return { session, salarie: null };
   return { session, salarie };
 }
 

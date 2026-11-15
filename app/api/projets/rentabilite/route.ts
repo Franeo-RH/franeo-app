@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   if (!a.ok) return a.refus;
   const annee = Number(request.nextUrl.searchParams.get("annee")) || new Date().getFullYear();
   const debut = new Date(Date.UTC(annee, 0, 1)), finAnnee = new Date(Date.UTC(annee, 11, 31, 23, 59, 59));
-  const projets = (await projetsAvecSynthese(a.entrepriseId)).filter((p) => p.dateDebut <= finAnnee && (p.dateFin ?? p.dateDebut) >= debut && p.statut !== "ANNULE");
+  const projets = (await projetsAvecSynthese(a.entrepriseId, a.fp)).filter((p) => p.dateDebut <= finAnnee && (p.dateFin ?? p.dateDebut) >= debut && p.statut !== "ANNULE");
 
   const clients = new Map<string, { client: string; projets: number; vendu: number; coutReel: number; marge: number; projection: number; heures: number }>();
   const salaries = new Map<string, { salarieId: string; salarie: string; heures: number; heuresFacturables: number; cout: number; projets: Set<string> }>();

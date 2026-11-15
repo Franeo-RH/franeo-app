@@ -8,6 +8,7 @@ import Sidebar from "@/components/Sidebar";
 import BlocEcheances from "@/components/BlocEcheances";
 import { chargerEcheances } from "@/lib/rappels-serveur";
 import { aDroit } from "@/lib/droits";
+import { filtreSalaries, filtreViaSalarie } from "@/lib/perimetre";
 
 export const dynamic = "force-dynamic";
 
@@ -25,19 +26,19 @@ export default async function TableauDeBordRH() {
   const now = new Date();
   const debutMois = new Date(now.getFullYear(), now.getMonth(), 1);
   const finMois = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-  const actif = { entrepriseId, statut: "Actif", OR: [{ dateFin: null }, { dateFin: { gte: now } }] };
+  const actif = { entrepriseId, ...filtreSalaries(session), statut: "Actif", OR: [{ dateFin: null }, { dateFin: { gte: now } }] };
 
   const [salaries, absAttente, absMois, relevesAValider, fraisAttente, questionsOuvertes, entrees, sorties, demandes, echeances, nbEtab] = await Promise.all([
     prisma.salarie.findMany({ where: actif, select: { id: true, service: true, etablissement: true, roleRH: true, managerId: true, typeContrat: true, dateFin: true } }),
-    prisma.absence.count({ where: { entrepriseId, statut: "En attente" } }),
-    prisma.absence.count({ where: { entrepriseId, statut: { not: "Refusé" }, dateDebut: { lte: finMois }, dateFin: { gte: debutMois } } }),
-    prisma.releveMois.count({ where: { entrepriseId, statut: "Envoyé" } }),
-    prisma.noteFrais.count({ where: { entrepriseId, statut: "En attente" } }),
+    prisma.absence.count({ where: { ...filtreViaSalarie(session), entrepriseId, statut: "En attente" } }),
+    prisma.absence.count({ where: { ...filtreViaSalarie(session), entrepriseId, statut: { not: "Refusé" }, dateDebut: { lte: finMois }, dateFin: { gte: debutMois } } }),
+    prisma.releveMois.count({ where: { ...filtreViaSalarie(session), entrepriseId, statut: "Envoyé" } }),
+    prisma.noteFrais.count({ where: { ...filtreViaSalarie(session), entrepriseId, statut: "En attente" } }),
     prisma.questionInterne.count({ where: { entrepriseId, statut: "OUVERTE", versFraneo: false } }),
-    prisma.salarie.count({ where: { entrepriseId, dateDebut: { gte: debutMois, lte: finMois } } }),
-    prisma.salarie.count({ where: { entrepriseId, dateFin: { gte: debutMois, lte: finMois } } }),
+    prisma.salarie.count({ where: { ...filtreSalaries(session), entrepriseId, dateDebut: { gte: debutMois, lte: finMois } } }),
+    prisma.salarie.count({ where: { ...filtreSalaries(session), entrepriseId, dateFin: { gte: debutMois, lte: finMois } } }),
     prisma.demandeSalarie.count({ where: { entrepriseId, statut: "EN_ATTENTE" } }),
-    chargerEcheances({ entrepriseId }),
+    chargerEcheances({ entrepriseId, etablissement: session.etablissement?.nom }),
     prisma.etablissement.count({ where: { entrepriseId } }),
   ]);
 

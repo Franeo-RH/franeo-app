@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
 import { jourParis, TYPES_POINTAGE } from "@/lib/badge";
 import { presencesDuJour } from "@/lib/presences";
+import { filtreSalaries, filtreViaSalarie } from "@/lib/perimetre";
 
 /**
  * GET ?jour=AAAA-MM-JJ : présences de toute l'entreprise (client).
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   if (p.get("format") === "csv" && ok(p.get("du")) && ok(p.get("au"))) {
     const l = await prisma.pointage.findMany({
-      where: { entrepriseId: session.entrepriseId, jour: { gte: p.get("du")!, lte: p.get("au")! } },
+      where: { entrepriseId: session.entrepriseId, ...filtreViaSalarie(session), jour: { gte: p.get("du")!, lte: p.get("au")! } },
       include: { salarie: { select: { prenom: true, nom: true } } },
       orderBy: [{ jour: "asc" }, { at: "asc" }],
     });
@@ -33,6 +34,6 @@ export async function GET(request: NextRequest) {
 
   const aujourdhui = jourParis();
   const jour = ok(p.get("jour")) ? p.get("jour")! : aujourdhui;
-  const salaries = await prisma.salarie.findMany({ where: { entrepriseId: session.entrepriseId, statut: "Actif", compte: { isNot: null } }, select: { id: true } });
+  const salaries = await prisma.salarie.findMany({ where: { entrepriseId: session.entrepriseId, ...filtreSalaries(session), statut: "Actif", compte: { isNot: null } }, select: { id: true } });
   return NextResponse.json({ jour, lignes: await presencesDuJour(salaries.map((s) => s.id), jour, aujourdhui) });
 }

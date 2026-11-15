@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
             ? await prisma.entreprise.findMany({ where: { demo: false }, select: { id: true, nom: true }, orderBy: { nom: "asc" } })
             : await prisma.entreprise.findMany({ where: { id: { in: filtres.entreprises } }, select: { id: true, nom: true } });
           const sal = await prisma.salarie.findMany({
-            where: { entrepriseId: { in: filtres.entreprises } },
+            where: { entrepriseId: { in: filtres.entreprises }, ...(!admin && filtres.etablissement ? { etablissement: filtres.etablissement } : {}) },
             select: { id: true, nom: true, prenom: true, etablissement: true, service: true },
             orderBy: [{ nom: "asc" }],
           });

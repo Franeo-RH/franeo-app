@@ -5,14 +5,16 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import BandeauCommunications from "@/components/BandeauCommunications";
+import CarteMiseAJour from "@/components/CarteMiseAJour";
 import BlocEcheances from "@/components/BlocEcheances";
 import BoutonCloture from "@/components/BoutonCloture";
 import AppsFraneo from "@/components/AppsFraneo";
-import { communicationsNonLues } from "@/lib/communications";
+import { communicationsNonLues, derniereMiseAJour } from "@/lib/communications";
 import { chargerEcheances } from "@/lib/rappels-serveur";
 import { calculerMasseSalariale } from "@/lib/masse-salariale";
 import { calculerFacture, PRIX_TICKET_SANS_ABONNEMENT, quotaTickets, ticketsDuMois } from "@/lib/facturation";
 import { aAccesPaie, aDroit } from "@/lib/droits";
+import { filtreSalaries, filtreViaSalarie } from "@/lib/perimetre";
 
 export const dynamic = "force-dynamic";
 
@@ -42,18 +44,18 @@ export default async function ClientDashboard() {
   ] = await Promise.all([
     communicationsNonLues({ id: session.id, role: session.role, entrepriseId: session.entrepriseId }),
     prisma.entreprise.findUnique({ where: { id: entrepriseId }, include: { abonnement: true, abonnementPaie: true } }),
-    prisma.salarie.count({ where: { entrepriseId, statut: "Actif", OR: [{ dateFin: null }, { dateFin: { gte: maintenant } }] } }),
-    prisma.absence.count({ where: { entrepriseId, statut: { not: "Refusé" }, dateDebut: { lte: finMois }, dateFin: { gte: debutMois } } }),
+    prisma.salarie.count({ where: { ...filtreSalaries(session), entrepriseId, statut: "Actif", OR: [{ dateFin: null }, { dateFin: { gte: maintenant } }] } }),
+    prisma.absence.count({ where: { ...filtreViaSalarie(session), entrepriseId, statut: { not: "Refusé" }, dateDebut: { lte: finMois }, dateFin: { gte: debutMois } } }),
     prisma.ticket.count({ where: { entrepriseId, statut: { not: "Clôturé" } } }),
     prisma.questionRH.count({ where: { entrepriseId, statut: { not: "CLOSE" } } }),
-    chargerEcheances({ entrepriseId }),
-    calculerMasseSalariale({ mois, annee, entrepriseId }),
+    chargerEcheances({ entrepriseId, etablissement: session.etablissement?.nom }),
+    calculerMasseSalariale({ mois, annee, entrepriseId, etablissement: session.etablissement?.nom }),
     calculerFacture(entrepriseId, mois, annee),
     prisma.facturation.findFirst({ where: { entrepriseId, mois, annee } }),
     ticketsDuMois(entrepriseId, mois, annee),
     avecEspace ? prisma.utilisateur.count({ where: { role: "SALARIE", actif: true, salarie: { entrepriseId, statut: "Actif" } } }) : Promise.resolve(0),
-    avecEspace ? prisma.releveMois.count({ where: { entrepriseId, mois, annee, statut: { in: ["Envoyé", "Validé"] } } }) : Promise.resolve(0),
-    prisma.salarie.count({ where: { entrepriseId, statut: "Actif", dateDebut: { lte: finMois }, OR: [{ dateFin: null }, { dateFin: { gte: debutMois } }] } }),
+    avecEspace ? prisma.releveMois.count({ where: { ...filtreViaSalarie(session), entrepriseId, mois, annee, statut: { in: ["Envoyé", "Validé"] } } }) : Promise.resolve(0),
+    prisma.salarie.count({ where: { ...filtreSalaries(session), entrepriseId, statut: "Actif", dateDebut: { lte: finMois }, OR: [{ dateFin: null }, { dateFin: { gte: debutMois } }] } }),
   ]);
 
   const abo = entreprise?.abonnement;
@@ -103,6 +105,7 @@ export default async function ClientDashboard() {
           </ul>
         </div>
 
+        <CarteMiseAJour miseAJour={await derniereMiseAJour({ id: session.id, role: session.role, entrepriseId: session.entrepriseId })} lienHistorique="/client/actualites/mises-a-jour" />
         <BandeauCommunications communications={communications} />
 
         <div className="flex gap-2 flex-wrap">

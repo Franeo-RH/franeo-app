@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { aDroit, type ActionId } from "@/lib/droits";
+import { prisma } from "@/lib/prisma";
+import { etablissementDe, filtreProjets, filtreSalaries, filtreViaSalarie } from "@/lib/perimetre";
 
 /** Accès client à l'option Projets : renvoie l'entreprise et ce que l'utilisateur peut voir / faire */
 export async function accesProjets(droit: ActionId = "projets.voir") {
@@ -18,7 +20,23 @@ export async function accesProjets(droit: ActionId = "projets.voir") {
     entrepriseId: session.entrepriseId,
     voitCouts: aDroit(perms, "projets.couts"),
     peutGerer: aDroit(perms, "projets.gerer"),
+    // Dirigeant d'établissement : projets et salariés de son établissement seulement
+    etablissement: etablissementDe(session),
+    fp: filtreProjets(session),
+    fs: filtreSalaries(session),
+    fv: filtreViaSalarie(session),
   };
+}
+
+/**
+ * Établissement d'un projet créé ou modifié : imposé pour un dirigeant d'établissement,
+ * sinon celui choisi (s'il appartient bien à l'entreprise), ou aucun (projet commun).
+ */
+export async function etablissementDuProjet(a: { entrepriseId: string; etablissement: { id: string } | null }, choisi: unknown): Promise<string | null> {
+  if (a.etablissement) return a.etablissement.id;
+  if (typeof choisi !== "string" || !choisi) return null;
+  const e = await prisma.etablissement.findFirst({ where: { id: choisi, entrepriseId: a.entrepriseId }, select: { id: true } });
+  return e?.id ?? null;
 }
 
 const n = (v: unknown) => (v === "" || v == null ? null : Number.isFinite(Number(v)) ? Number(v) : null);

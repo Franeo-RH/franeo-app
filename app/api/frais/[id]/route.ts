@@ -3,12 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
 import { deciderFrais } from "@/lib/decisions";
+import { salarieVisible } from "@/lib/perimetre";
 
 async function charger(id: string) {
   const session = await getSession();
   if (!session) return { session: null, f: null };
-  const f = await prisma.noteFrais.findUnique({ where: { id } });
-  if (!f || (session.role === "CLIENT" && (f.entrepriseId !== session.entrepriseId || !aDroit(session.entreprise?.permissions, "rh.frais")))) return { session, f: null };
+  const f = await prisma.noteFrais.findUnique({ where: { id }, include: { salarie: { select: { etablissement: true } } } });
+  if (!f || (session.role === "CLIENT" && (f.entrepriseId !== session.entrepriseId || !salarieVisible(session, f.salarie) || !aDroit(session.entreprise?.permissions, "rh.frais")))) return { session, f: null };
   return { session, f };
 }
 

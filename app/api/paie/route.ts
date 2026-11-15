@@ -3,6 +3,8 @@ import { journaliser } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
+import { salarieVisible } from "@/lib/perimetre";
+import { filtreViaSalarie } from "@/lib/perimetre";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -16,6 +18,7 @@ export async function GET(request: NextRequest) {
     ? { ...(mois && annee ? { mois, annee } : {}) }
     : {
         entrepriseId: session.entrepriseId!,
+        ...filtreViaSalarie(session),
         ...(mois && annee ? { mois, annee } : {}),
       };
 
@@ -49,7 +52,7 @@ export async function POST(request: NextRequest) {
 
   // Vérifier que le salarié appartient à l'entreprise
   const salarie = await prisma.salarie.findUnique({ where: { id: salarieId } });
-  if (!salarie || salarie.entrepriseId !== session.entrepriseId) {
+  if (!salarie || salarie.entrepriseId !== session.entrepriseId || !salarieVisible(session, salarie)) {
     return NextResponse.json({ erreur: "Salarié introuvable" }, { status: 404 });
   }
 

@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   if (!a.ok) return a.refus;
   const annee = Number(request.nextUrl.searchParams.get("annee")) || new Date().getFullYear();
   const debut = new Date(Date.UTC(annee, 0, 1)), fin = new Date(Date.UTC(annee, 11, 31, 23, 59, 59));
-  const tous = await projetsAvecSynthese(a.entrepriseId);
+  const tous = await projetsAvecSynthese(a.entrepriseId, a.fp);
   const projets = tous.filter((p) => p.statut !== "ANNULE" && p.dateDebut <= fin && (p.dateFin ?? new Date(8.64e15)) >= debut);
   const ids = projets.map((p) => p.id);
   const heures = await heuresDatees(ids);
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
   });
 
   // Plan de charge des 12 prochaines semaines
-  const salaries = await prisma.salarie.findMany({ where: { entrepriseId: a.entrepriseId, statut: "Actif" }, select: { id: true, heuresHebdomadaires: true } });
+  const salaries = await prisma.salarie.findMany({ where: { entrepriseId: a.entrepriseId, statut: "Actif", ...a.fs }, select: { id: true, heuresHebdomadaires: true } });
   const capaciteSemaine = salaries.reduce((t, s) => t + (s.heuresHebdomadaires || 35), 0);
   const l0 = lundi(new Date());
   const charge = Array.from({ length: 12 }, (_, k) => {

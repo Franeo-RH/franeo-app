@@ -11,6 +11,7 @@ import { estSessionDemo } from "@/lib/demo";
 import { anonymiserSalarie, estSorti, exporterDonneesSalarie } from "@/lib/rgpd";
 import { reponseExcel } from "@/lib/excel-marque";
 import { journaliser } from "@/lib/securite";
+import { salarieVisible } from "@/lib/perimetre";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,8 +22,8 @@ type Ctx = { params: Promise<{ id: string }> };
 async function charger(id: string) {
   const session = await getSession();
   if (!session) return { ok: false as const, refus: NextResponse.json({ erreur: "Non autorisé" }, { status: 401 }) };
-  const salarie = await prisma.salarie.findUnique({ where: { id }, select: { id: true, nom: true, prenom: true, entrepriseId: true, statut: true, dateFin: true, anonymiseLe: true } });
-  if (!salarie || (session.role !== "ADMIN" && salarie.entrepriseId !== session.entrepriseId)) {
+  const salarie = await prisma.salarie.findUnique({ where: { id }, select: { id: true, nom: true, prenom: true, entrepriseId: true, etablissement: true, statut: true, dateFin: true, anonymiseLe: true } });
+  if (!salarie || (session.role !== "ADMIN" && (salarie.entrepriseId !== session.entrepriseId || !salarieVisible(session, salarie)))) {
     return { ok: false as const, refus: NextResponse.json({ erreur: "Salarié introuvable" }, { status: 404 }) };
   }
   return { ok: true as const, session, salarie };

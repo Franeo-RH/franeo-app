@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
+import { etablissementDe, filtreSalaries } from "@/lib/perimetre";
 
 /** GET (?entrepriseId= pour l'admin) : salariés actifs, établissements et services de l'entreprise (listes, organigramme) */
 export async function GET(request: NextRequest) {
@@ -12,11 +13,11 @@ export async function GET(request: NextRequest) {
   const voitSalaires = session.role === "ADMIN" || aDroit(session.entreprise?.permissions, "salaries.salaires");
   const [salaries, etablissements, services] = await Promise.all([
     prisma.salarie.findMany({
-      where: { entrepriseId, statut: "Actif" },
+      where: { entrepriseId, statut: "Actif", ...(session.role === "CLIENT" ? filtreSalaries(session) : {}) },
       select: { id: true, prenom: true, nom: true, poste: true, service: true, etablissement: true, roleRH: true, managerId: true, salaireMensuel: true },
       orderBy: [{ nom: "asc" }, { prenom: "asc" }],
     }),
-    prisma.etablissement.findMany({ where: { entrepriseId }, orderBy: { createdAt: "asc" } }),
+    prisma.etablissement.findMany({ where: { entrepriseId, ...(etablissementDe(session) ? { id: etablissementDe(session)!.id } : {}) }, orderBy: { createdAt: "asc" } }),
     prisma.service.findMany({ where: { entrepriseId }, orderBy: [{ ordre: "asc" }, { nom: "asc" }] }),
   ]);
   return NextResponse.json({

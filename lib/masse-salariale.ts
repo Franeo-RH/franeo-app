@@ -80,6 +80,7 @@ export async function calculerMasseSalariale(options: {
   annee: number;
   entrepriseId?: string; // une entreprise
   tousLesClients?: boolean; // admin : tous les clients actifs (démo exclue)
+  etablissement?: string | null; // dirigeant d'établissement : son établissement seulement
 }): Promise<MasseSalariale> {
   const { mois, annee } = options;
   const debutMois = new Date(annee, mois - 1, 1);
@@ -88,11 +89,13 @@ export async function calculerMasseSalariale(options: {
   const filtreEntreprise = options.entrepriseId
     ? { entrepriseId: options.entrepriseId }
     : { entreprise: { demo: false, actif: true } };
+  const etab = options.etablissement ? { equals: options.etablissement, mode: "insensitive" as const } : null;
 
   const [salaries, absences, variables] = await Promise.all([
     prisma.salarie.findMany({
       where: {
         ...filtreEntreprise,
+        ...(etab ? { etablissement: etab } : {}),
         statut: "Actif",
         OR: [{ dateDebut: null }, { dateDebut: { lte: finMois } }],
         AND: [{ OR: [{ dateFin: null }, { dateFin: { gte: debutMois } }] }],
@@ -107,6 +110,7 @@ export async function calculerMasseSalariale(options: {
     prisma.absence.findMany({
       where: {
         ...filtreEntreprise,
+        ...(etab ? { salarie: { etablissement: etab } } : {}),
         type: { in: [...TYPES_RETENUE_SANS_SOLDE, TYPE_MALADIE] },
         statut: { not: "Refusé" },
         dateDebut: { lte: finMois },
@@ -115,7 +119,7 @@ export async function calculerMasseSalariale(options: {
       select: { salarieId: true, type: true, dateDebut: true, dateFin: true },
     }),
     prisma.variablePaie.findMany({
-      where: { ...filtreEntreprise, mois, annee }, // toutes les variables saisies, validées ou non
+      where: { ...filtreEntreprise, ...(etab ? { salarie: { etablissement: etab } } : {}), mois, annee }, // toutes les variables saisies, validées ou non
       select: { salarieId: true, type: true, valeur: true },
     }),
   ]);

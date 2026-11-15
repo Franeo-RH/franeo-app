@@ -6,6 +6,7 @@ import * as XLSX from "xlsx";
 import { quotaTickets, ticketsDuMois, ticketsDuMoisParEntreprise } from "@/lib/facturation";
 import { aDroit } from "@/lib/droits";
 import { journaliser } from "@/lib/securite";
+import { filtreSalaries, filtreViaSalarie } from "@/lib/perimetre";
 
 function calculerCout(type: string, valeur: number, salarie: {
   salaireMensuel: number | null;
@@ -105,7 +106,7 @@ export async function GET(request: NextRequest) {
 
   } else if (type === "salaries-client" && session.role === "CLIENT") {
     const salaries = await prisma.salarie.findMany({
-      where: { entrepriseId: session.entrepriseId! },
+      where: { entrepriseId: session.entrepriseId!, ...filtreSalaries(session) },
       orderBy: { createdAt: "desc" },
     });
     data = salaries.map((s) => ({
@@ -423,7 +424,7 @@ export async function GET(request: NextRequest) {
     const suffixe = `${moisDebut}-${anneeDebut}${nbMois > 1 ? `_${moisFin}-${anneeFin}` : ""}`;
 
     if (type === "client-salaries" && permissions.includes("salaries")) {
-      const salaries = await prisma.salarie.findMany({ where: { entrepriseId }, orderBy: [{ nom: "asc" }, { prenom: "asc" }] });
+      const salaries = await prisma.salarie.findMany({ where: { entrepriseId, ...filtreSalaries(session) }, orderBy: [{ nom: "asc" }, { prenom: "asc" }] });
       data = salaries.map((s) => ({
         "Matricule": s.matricule || "",
         "Nom": s.nom,
@@ -451,7 +452,7 @@ export async function GET(request: NextRequest) {
 
     } else if (type === "client-variables" && permissions.includes("paie")) {
       const variables = await prisma.variablePaie.findMany({
-        where: { entrepriseId, OR: periodes },
+        where: { entrepriseId, ...filtreViaSalarie(session), OR: periodes },
         include: { salarie: true },
         orderBy: [{ annee: "asc" }, { mois: "asc" }],
       });
@@ -476,6 +477,7 @@ export async function GET(request: NextRequest) {
       const absences = await prisma.absence.findMany({
         where: {
           entrepriseId,
+          ...filtreViaSalarie(session),
           ...(toutes ? {} : {
             dateDebut: { lte: new Date(anneeFin, moisFin, 0) },
             dateFin: { gte: new Date(anneeDebut, moisDebut - 1, 1) },
@@ -526,7 +528,7 @@ export async function GET(request: NextRequest) {
       }));
       nomFichier = "helpdesk";
 
-    } else if (type === "client-factures" && permissions.includes("entreprise")) {
+    } else if (type === "client-factures" && permissions.includes("entreprise") && aDroit(permissions, "entreprise.factures")) {
       const factures = await prisma.facturation.findMany({
         where: { entrepriseId },
         orderBy: [{ annee: "desc" }, { mois: "desc" }],
@@ -542,7 +544,7 @@ export async function GET(request: NextRequest) {
 
     } else if (type === "client-echeances" && permissions.includes("salaries")) {
       const rappels = await prisma.rappelSalarie.findMany({
-        where: { salarie: { entrepriseId } },
+        where: { salarie: { entrepriseId, ...filtreSalaries(session) } },
         include: { salarie: true },
         orderBy: { dateEcheance: "asc" },
       });

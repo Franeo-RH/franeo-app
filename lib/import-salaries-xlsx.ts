@@ -78,7 +78,7 @@ export async function fabriquerModele(opts: OptionsMarque = {}): Promise<Buffer>
   aide.addRow([]);
   aide.addRow(["Exemple", "Jean | Dupont | Comptable | CDI | 01/09/2026 | | 35 | 2500 | | jean@exemple.fr"]);
   aide.addRow([]);
-  aide.addRow(["Règles", "* = obligatoire. Remplissez l'onglet « Salariés » à partir de la ligne 5 (une ligne par salarié). Une ligne avec une erreur n'est pas importée : vous récupérez un fichier d'erreurs à corriger et à renvoyer. Un matricule déjà utilisé est refusé."]);
+  aide.addRow(["Règles", "* = obligatoire. Remplissez l'onglet « Salariés » à partir de la ligne 2 (une ligne par salarié). Une ligne avec une erreur n'est pas importée : vous récupérez un fichier d'erreurs à corriger et à renvoyer. Un matricule déjà utilisé est refusé."]);
   styliserTitres(aide, LIGNE_TITRES, 2, VERT);
   aide.getColumn(2).alignment = { wrapText: true, vertical: "top" };
 

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
+import { filtreSalaries } from "@/lib/perimetre";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function ClientMouvements() {
   const entrepriseId = session.entrepriseId!;
 
   const salaries = await prisma.salarie.findMany({
-    where: {
+    where: { ...filtreSalaries(session),
       entrepriseId,
       OR: [
         { dateDebut: { gte: new Date(anneeActuelle, 0, 1), lte: new Date(anneeActuelle, 11, 31) } },

@@ -19,6 +19,7 @@ type Projet = {
   notesFrais: { id: string; montant: number; statut: string; motif: string; date: string; salarie: { prenom: string; nom: string } }[];
   jalons: { id: string; libelle: string; date: string; etat: string; montant: number | null; facturation: string; faitLe: string | null }[];
   montantMensuel: number | null; modele: string | null; adresse: string | null;
+  etablissementId: string | null; etablissement: { id: string; nom: string } | null;
   devis: { id: string; numero: string; objet: string; statut: string; totalHT: number; supplementaire: boolean }[];
   synthese: {
     venduContrat: number; facture: number; paye: number; aFacturer: number; resteAFacturer: number; jalonsFaits: number; jalonsTotal: number; jalonsEnRetard: number;
@@ -35,6 +36,13 @@ type Donnees = {
 };
 
 const auj = () => new Date().toISOString().slice(0, 10);
+const ONGLETS = [
+  { id: "synthese", label: "📊 Synthèse" },
+  { id: "planning", label: "🗓️ Équipe & planning" },
+  { id: "etapes", label: "🏁 Étapes" },
+  { id: "temps", label: "⏱️ Temps passé" },
+  { id: "frais", label: "🧾 Frais" },
+] as const;
 const carte = "bg-white rounded-xl shadow p-6";
 const input = "border rounded-lg px-3 py-2";
 const COULEUR_ALERTE: Record<string, { fond: string; texte: string; icone: string }> = {
@@ -54,6 +62,9 @@ export default function FicheProjet({ id }: { id: string }) {
   const [dep, setDep] = useState({ libelle: "", categorie: "AUTRE", montant: "", date: auj(), prevu: true });
   const [frais, setFrais] = useState("");
   const [jal, setJal] = useState({ libelle: "", date: auj(), montant: "", facturation: "AUCUNE" });
+  const [etablissements, setEtablissements] = useState<{ id: string; nom: string }[]>([]);
+  useEffect(() => { fetch("/api/etablissements").then((r) => (r.ok ? r.json() : [])).then((l) => setEtablissements(Array.isArray(l) ? l : [])).catch(() => {}); }, []);
+  const [onglet, setOnglet] = useState<(typeof ONGLETS)[number]["id"]>("synthese");
 
   const charger = useCallback(async () => {
     const r = await fetch(`/api/projets/${id}`);
@@ -79,6 +90,7 @@ export default function FicheProjet({ id }: { id: string }) {
     nom: p.nom, code: p.code ?? "", client: p.client ?? "", description: p.description ?? "", couleur: p.couleur, statut: p.statut,
     dateDebut: iso(p.dateDebut), dateFin: iso(p.dateFin), modeVente: p.modeVente, prixVente: p.prixVente?.toString() ?? "", tauxJournalier: p.tauxJournalier?.toString() ?? "",
     joursVendus: p.joursVendus?.toString() ?? "", budgetHeures: p.budgetHeures?.toString() ?? "", seuilAlerte: String(p.seuilAlerte), responsableId: p.responsableId ?? "", montantMensuel: p.montantMensuel?.toString() ?? "", adresse: p.adresse ?? "",
+    etablissementId: p.etablissementId ?? "",
   };
   const suppr = (quoi: string, cle: string, question: string) => { if (confirm(question)) appel("DELETE", undefined, `?quoi=${quoi}&cle=${cle}`); };
 
@@ -90,7 +102,7 @@ export default function FicheProjet({ id }: { id: string }) {
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-3"><span style={{ width: 16, height: 16, borderRadius: 99, background: p.couleur }} />{p.nom}</h1>
             <p className="text-gray-500 mt-1">
-              {[p.code, p.client, voitCouts ? MODES_VENTE[p.modeVente as keyof typeof MODES_VENTE] : null, `du ${dateFR(p.dateDebut)} au ${dateFR(p.dateFin)}`, p.responsable ? `Responsable : ${p.responsable.prenom} ${p.responsable.nom}` : null].filter(Boolean).join(" · ")}
+              {[p.code, p.client, p.etablissement ? `🏢 ${p.etablissement.nom}` : null, voitCouts ? MODES_VENTE[p.modeVente as keyof typeof MODES_VENTE] : null, `du ${dateFR(p.dateDebut)} au ${dateFR(p.dateFin)}`, p.responsable ? `Responsable : ${p.responsable.prenom} ${p.responsable.nom}` : null].filter(Boolean).join(" · ")}
             </p>
             {p.adresse && <p className="text-sm mt-1">📍 <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.adresse)}`} target="_blank" rel="noreferrer" className="underline">{p.adresse}</a></p>}
             {p.description && <p className="text-sm mt-2 whitespace-pre-line">{p.description}</p>}
@@ -110,7 +122,7 @@ export default function FicheProjet({ id }: { id: string }) {
       {edition && (
         <div className={carte}>
           <h2 className="text-xl font-bold mb-4">Modifier le projet</h2>
-          <FormulaireProjet initial={initial} salaries={d.salaries} voitCouts={voitCouts} libelle="Enregistrer"
+          <FormulaireProjet initial={initial} salaries={d.salaries} voitCouts={voitCouts} libelle="Enregistrer" etablissements={etablissements}
             onAnnuler={() => setEdition(false)}
             onEnvoyer={async (v) => { const r = await fetch(`/api/projets/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(v) }); const j = await r.json().catch(() => ({})); if (!r.ok) return j.erreur || "Enregistrement impossible"; setEdition(false); charger(); return null; }} />
         </div>
@@ -129,6 +141,17 @@ export default function FicheProjet({ id }: { id: string }) {
         {voitCouts && <Tuile titre="Marge projetée en fin" valeur={eur(s.projectionMarge)} detail={pct(s.tauxProjection)} couleur={couleurMarge(s.tauxProjection)} />}
       </div>
 
+      <nav className="bg-white rounded-xl shadow p-2 flex gap-1 overflow-x-auto sticky top-2 z-10" aria-label="Rubriques du projet">
+        {ONGLETS.filter((o) => voitCouts || o.id !== "frais").map((o) => (
+          <button key={o.id} type="button" onClick={() => setOnglet(o.id)} aria-current={onglet === o.id ? "page" : undefined}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap ${onglet === o.id ? "bg-orange-500 text-white" : "text-gray-700 hover:bg-gray-100"}`}>
+            {o.label}{o.id === "planning" && d.conflits.length ? ` (${d.conflits.length} ⚠️)` : o.id === "etapes" && s.jalonsEnRetard ? ` (${s.jalonsEnRetard} en retard)` : ""}
+          </button>
+        ))}
+      </nav>
+
+      {onglet === "synthese" && (
+        <>
       {voitCouts && (
         <div className={`${carte} overflow-x-auto`}>
           <h2 className="text-xl font-bold mb-3">💶 Vendu / Budgété / Réel / Projection</h2>
@@ -170,6 +193,10 @@ export default function FicheProjet({ id }: { id: string }) {
         )}
       </div>
 
+        </>
+      )}
+
+      {onglet === "planning" && (
       <div className={carte}>
         <h2 className="text-xl font-bold mb-3">🗓️ Planning du projet</h2>
         <ConflitsAbsences
@@ -200,7 +227,9 @@ export default function FicheProjet({ id }: { id: string }) {
         )}
         <p className="text-xs text-gray-500 mt-2">Vue d&apos;ensemble de la charge de chacun : <Link href="/client/projets/planning" className="underline">Planning</Link>.</p>
       </div>
+      )}
 
+      {onglet === "etapes" && (
       <div className={carte}>
         <div className="flex flex-wrap justify-between items-baseline gap-2 mb-3">
           <h2 className="text-xl font-bold">🏁 Étapes clés</h2>
@@ -231,7 +260,9 @@ export default function FicheProjet({ id }: { id: string }) {
           </form>
         )}
       </div>
+      )}
 
+      {onglet === "temps" && (
       <div className={carte}>
         <div className="flex justify-between items-baseline gap-2">
           <h2 className="text-xl font-bold mb-1">⏱️ Temps passé</h2>
@@ -260,7 +291,10 @@ export default function FicheProjet({ id }: { id: string }) {
           </form>
         )}
       </div>
+      )}
 
+      {onglet === "frais" && (
+        <>
       {voitCouts && (
         <div className={carte}>
           <h2 className="text-xl font-bold mb-3">🧾 Frais du projet</h2>
@@ -309,6 +343,8 @@ export default function FicheProjet({ id }: { id: string }) {
             </div>
           )}
         </div>
+      )}
+        </>
       )}
     </>
   );

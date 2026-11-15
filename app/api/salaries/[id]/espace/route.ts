@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { creerJetonLien } from "@/lib/securite";
 import { getSession } from "@/lib/session";
 import { refuserSansDroit } from "@/lib/droits-serveur";
+import { salarieVisible } from "@/lib/perimetre";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -17,7 +18,7 @@ async function controler(id: string) {
     include: { entreprise: true, compte: true },
   });
   if (!salarie) return { erreur: NextResponse.json({ erreur: "Salarié introuvable" }, { status: 404 }) };
-  if (session.role === "CLIENT" && salarie.entrepriseId !== session.entrepriseId) {
+  if (session.role === "CLIENT" && (salarie.entrepriseId !== session.entrepriseId || !salarieVisible(session, salarie))) {
     return { erreur: NextResponse.json({ erreur: "Non autorisé" }, { status: 401 }) };
   }
   if (salarie.entreprise.demo) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { journaliser } from "@/lib/journal";
+import { salarieVisible } from "@/lib/perimetre";
 
 export async function PUT(
   request: NextRequest,
@@ -36,12 +37,12 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const variable = await prisma.variablePaie.findUnique({ where: { id } });
+  const variable = await prisma.variablePaie.findUnique({ where: { id }, include: { salarie: { select: { etablissement: true } } } });
 
   if (!variable) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
 
   if (session.role === "CLIENT") {
-    if (variable.entrepriseId !== session.entrepriseId) {
+    if (variable.entrepriseId !== session.entrepriseId || !salarieVisible(session, variable.salarie)) {
       return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
     }
     // Le client ne peut supprimer qu'une variable encore en attente

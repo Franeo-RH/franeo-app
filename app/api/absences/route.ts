@@ -3,6 +3,7 @@ import { journaliser } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
+import { filtreViaSalarie, salarieVisible } from "@/lib/perimetre";
 
 export async function GET() {
   const session = await getSession();
@@ -14,7 +15,7 @@ export async function GET() {
         orderBy: { createdAt: "desc" },
       })
     : await prisma.absence.findMany({
-        where: { entrepriseId: session.entrepriseId! },
+        where: { entrepriseId: session.entrepriseId!, ...filtreViaSalarie(session) },
         include: { salarie: true },
         orderBy: { createdAt: "desc" },
       });
@@ -68,6 +69,13 @@ export async function POST(request: NextRequest) {
 
   if (!entrepriseId) {
     return NextResponse.json({ erreur: "Entreprise introuvable" }, { status: 404 });
+  }
+  // Le salarié doit appartenir à l'entreprise (et à l'établissement du compte)
+  if (session.role !== "ADMIN") {
+    const cible = await prisma.salarie.findUnique({ where: { id: String(salarieId) }, select: { entrepriseId: true, etablissement: true } });
+    if (!cible || cible.entrepriseId !== entrepriseId || !salarieVisible(session, cible)) {
+      return NextResponse.json({ erreur: "Salarié introuvable" }, { status: 404 });
+    }
   }
 
   const absence = await prisma.absence.create({

@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import BoutonSupprimerVariable from "@/components/BoutonSupprimerVariable";
 import BoutonExport from "@/components/BoutonExport";
+import { filtreViaSalarie } from "@/lib/perimetre";
 
 const MOIS = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -92,7 +93,7 @@ export default async function HistoriquePaie({
   // Requêtes lancées en même temps
   const [variables, absences] = await Promise.all([
     prisma.variablePaie.findMany({
-      where: {
+      where: { ...filtreViaSalarie(session),
         entrepriseId: session.entrepriseId!,
         OR: periodes,
       },
@@ -100,7 +101,7 @@ export default async function HistoriquePaie({
       orderBy: [{ annee: "desc" }, { mois: "desc" }],
     }),
     prisma.absence.findMany({
-      where: {
+      where: { ...filtreViaSalarie(session),
         entrepriseId: session.entrepriseId!,
         dateDebut: { gte: new Date(anneeDebut, moisDebut - 1, 1) },
         dateFin: { lte: new Date(anneeFin, moisFin, 0) },

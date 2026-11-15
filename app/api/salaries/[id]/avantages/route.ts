@@ -3,14 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
 import { estimerAvantages, joursOuvresMois, lireAvantagesEntreprise, lireAvantagesSalarie } from "@/lib/avantages";
+import { salarieVisible } from "@/lib/perimetre";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 async function charger(id: string, ecriture: boolean) {
   const session = await getSession();
   if (!session) return { refus: NextResponse.json({ erreur: "Non autorisé" }, { status: 401 }) };
-  const s = await prisma.salarie.findUnique({ where: { id }, select: { id: true, entrepriseId: true, avantagesMensuels: true, entreprise: { select: { avantages: true } } } });
-  if (!s || (session.role === "CLIENT" && s.entrepriseId !== session.entrepriseId) || (session.role !== "CLIENT" && session.role !== "ADMIN")) {
+  const s = await prisma.salarie.findUnique({ where: { id }, select: { id: true, entrepriseId: true, etablissement: true, avantagesMensuels: true, entreprise: { select: { avantages: true } } } });
+  if (!s || (session.role === "CLIENT" && (s.entrepriseId !== session.entrepriseId || !salarieVisible(session, s))) || (session.role !== "CLIENT" && session.role !== "ADMIN")) {
     return { refus: NextResponse.json({ erreur: "Salarié introuvable" }, { status: 404 }) };
   }
   if (session.role === "CLIENT") {

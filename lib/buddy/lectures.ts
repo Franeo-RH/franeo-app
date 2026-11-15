@@ -38,6 +38,7 @@ import { simplifierActus, type ActuLite } from "./resume";
 import { fmtValeur } from "./flux-rh";
 import { nomComplet } from "./slots";
 import { THEMATIQUES } from "@/lib/buddy/thematiques";
+import { dansPerimetre } from "./types";
 import type { Ctx, Env, ModuleBuddy, ReponseBuddy, SalarieLite } from "./types";
 import { quotaTickets } from "@/lib/facturation";
 
@@ -178,7 +179,7 @@ export async function lireFiche(m: Msg, env: Env): Promise<ReponseBuddy> {
   let texte = `📋 ${nomComplet(s)}\n${puces(lignes)}`;
 
   const absences = await prisma.absence.findMany({
-    where: { salarieId: s.id, entrepriseId: env.entreprise.id, dateFin: { gte: versDate(env.today.iso) } },
+    where: { ...dansPerimetre(env), salarieId: s.id, entrepriseId: env.entreprise.id, dateFin: { gte: versDate(env.today.iso) } },
     orderBy: { dateDebut: "asc" },
     take: 3,
   });
@@ -218,7 +219,7 @@ export async function lireAbsences(m: Msg, env: Env): Promise<ReponseBuddy> {
   // 1) « Marie est-elle absente demain ? »
   if (salaries.length === 1 && periode && estQuestion(m)) {
     const trouvees = await prisma.absence.findMany({
-      where: { entrepriseId, salarieId: salaries[0].id, dateDebut: { lte: versDate(periode.fin) }, dateFin: { gte: versDate(periode.debut) } },
+      where: { ...dansPerimetre(env), entrepriseId, salarieId: salaries[0].id, dateDebut: { lte: versDate(periode.fin) }, dateFin: { gte: versDate(periode.debut) } },
       include: { salarie: true },
       orderBy: { dateDebut: "asc" },
     });
@@ -235,7 +236,7 @@ export async function lireAbsences(m: Msg, env: Env): Promise<ReponseBuddy> {
   if (salaries.length === 0 && (a(m, "qui") || aPrefixe(m, "absent")) && (periode || a(m, "aujourd hui"))) {
     const p = periode ?? { debut: env.today.iso, fin: env.today.iso };
     const trouvees = await prisma.absence.findMany({
-      where: { entrepriseId, dateDebut: { lte: versDate(p.fin) }, dateFin: { gte: versDate(p.debut) } },
+      where: { ...dansPerimetre(env), entrepriseId, dateDebut: { lte: versDate(p.fin) }, dateFin: { gte: versDate(p.debut) } },
       include: { salarie: true },
       orderBy: { dateDebut: "asc" },
       take: 40,
@@ -251,7 +252,7 @@ export async function lireAbsences(m: Msg, env: Env): Promise<ReponseBuddy> {
   if (a(m, "combien") && (salaries.length > 0 || a(m, "jours")) && !enAttente) {
     const annee = moisCite?.annee ?? env.today.y;
     const trouvees = await prisma.absence.findMany({
-      where: { entrepriseId, ...filtreSalarie, ...filtreType, dateDebut: { lte: versDate(`${annee}-12-31`) }, dateFin: { gte: versDate(`${annee}-01-01`) } },
+      where: { ...dansPerimetre(env), entrepriseId, ...filtreSalarie, ...filtreType, dateDebut: { lte: versDate(`${annee}-12-31`) }, dateFin: { gte: versDate(`${annee}-01-01`) } },
       include: { salarie: true },
     });
     if (trouvees.length === 0) return rep(`Aucune absence enregistrée en ${annee}${salaries.length === 1 ? ` pour ${nomComplet(salaries[0])}` : ""}.`, { humeur: "neutre" });
@@ -276,7 +277,7 @@ export async function lireAbsences(m: Msg, env: Env): Promise<ReponseBuddy> {
       ? { dateDebut: { lte: versDate(periode.fin) }, dateFin: { gte: versDate(periode.debut) } }
       : {};
   const trouvees = await prisma.absence.findMany({
-    where: { entrepriseId, ...filtreSalarie, ...filtreType, ...filtreStatut, ...filtreMois },
+    where: { ...dansPerimetre(env), entrepriseId, ...filtreSalarie, ...filtreType, ...filtreStatut, ...filtreMois },
     include: { salarie: true },
     orderBy: { dateDebut: "desc" },
     take: 12,
@@ -310,7 +311,7 @@ export async function lireVariables(m: Msg, env: Env): Promise<ReponseBuddy> {
 
   const vars = await prisma.variablePaie.findMany({
     where: {
-      entrepriseId,
+      entrepriseId, ...dansPerimetre(env),
       mois,
       annee,
       ...(ids.length > 0 ? { salarieId: { in: ids } } : {}),
@@ -343,8 +344,8 @@ export async function lireVariables(m: Msg, env: Env): Promise<ReponseBuddy> {
 export async function lirePaie(env: Env): Promise<ReponseBuddy> {
   const entrepriseId = env.entreprise.id;
   const { m, y } = env.today;
-  const vars = await prisma.variablePaie.findMany({ where: { entrepriseId, mois: m, annee: y } });
-  const absencesAttente = await prisma.absence.count({ where: { entrepriseId, statut: "En attente" } });
+  const vars = await prisma.variablePaie.findMany({ where: { ...dansPerimetre(env), entrepriseId, mois: m, annee: y } });
+  const absencesAttente = await prisma.absence.count({ where: { ...dansPerimetre(env), entrepriseId, statut: "En attente" } });
   const lignes: string[] = [];
   const nbAttente = vars.filter((v) => v.statut === "En attente").length;
   lignes.push(`Variables saisies : ${vars.length} (dont ${nbAttente} en attente)`);
@@ -881,11 +882,11 @@ export async function salut(env: Env): Promise<ReponseBuddy> {
       if (n > 0) lignes.push(`${pluriel(n, "échéance de document", "échéances de documents")} en retard`);
     }
     if (aAcces(env, "absences")) {
-      const n = await prisma.absence.count({ where: { entrepriseId: id, statut: "En attente" } });
+      const n = await prisma.absence.count({ where: { ...dansPerimetre(env), entrepriseId: id, statut: "En attente" } });
       if (n > 0) lignes.push(`${pluriel(n, "absence")} en attente de validation`);
     }
     if (aAcces(env, "paie")) {
-      const n = await prisma.variablePaie.count({ where: { entrepriseId: id, statut: "En attente" } });
+      const n = await prisma.variablePaie.count({ where: { ...dansPerimetre(env), entrepriseId: id, statut: "En attente" } });
       if (n > 0) lignes.push(`${pluriel(n, "variable de paie", "variables de paie")} en attente`);
     }
     if (aAcces(env, "tickets")) {

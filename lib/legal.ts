@@ -20,7 +20,6 @@ export const SOUS_TRAITANTS = [
   { nom: "Neon", role: "Base de données", lieu: EDITEUR.regionBase },
   { nom: "OVHcloud", role: "Stockage des documents (contrats, bulletins, justificatifs)", lieu: "France" },
   { nom: "Resend", role: "Envoi des e-mails (invitations, mot de passe oublié)", lieu: "États-Unis" },
-  { nom: "Anthropic", role: "Assistant Buddy (uniquement si activé) : les questions sont envoyées sans e-mail, téléphone, n° de sécurité sociale ni IBAN", lieu: "États-Unis" },
 ];
 
 export const estComplete = () => !Object.values(EDITEUR).some((v) => v.startsWith("À compléter"));

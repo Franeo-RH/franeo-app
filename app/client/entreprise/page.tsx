@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import GestionEtablissements from "@/components/GestionEtablissements";
+import AccesEtablissements from "@/components/AccesEtablissements";
 import AvantagesEntreprise from "@/components/AvantagesEntreprise";
 import LogoEntreprise from "@/components/LogoEntreprise";
 import { aDroit } from "@/lib/droits";
@@ -72,6 +73,9 @@ export default async function EntrepriseClient() {
               </div>
             </div>
 
+            {/* Coordonnées bancaires et abonnements : réservés au dirigeant général */}
+            {!session.etablissementId && (
+              <>
             <div className="bg-white rounded-xl shadow p-6">
               <h2 className="text-lg font-bold mb-4">🏦 Coordonnées bancaires</h2>
               <div className="flex flex-col gap-3">
@@ -92,8 +96,11 @@ export default async function EntrepriseClient() {
                 Gérer mes abonnements →
               </Link>
             </div>
+              </>
+            )}
 
             <GestionEtablissements modifiable={aDroit(session.entreprise?.permissions, "entreprise.modifier")} />
+            {!session.etablissementId && aDroit(session.entreprise?.permissions, "entreprise.modifier") && <AccesEtablissements />}
             <LogoEntreprise modifiable={aDroit(session.entreprise?.permissions, "entreprise.modifier")} />
             <AvantagesEntreprise modifiable={aDroit(session.entreprise?.permissions, "entreprise.modifier")} />
           </div>

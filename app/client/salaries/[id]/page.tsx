@@ -13,6 +13,7 @@ import EspaceSalarieFiche from "@/components/EspaceSalarieFiche";
 import AvantagesSalarie from "@/components/AvantagesSalarie";
 import RgpdSalarie from "@/components/RgpdSalarie";
 import { estSorti } from "@/lib/rgpd";
+import { salarieVisible } from "@/lib/perimetre";
 
 export default async function FicheSalarie({
   params,
@@ -32,7 +33,7 @@ export default async function FicheSalarie({
     include: { managerFiche: { select: { prenom: true, nom: true } }, rappels: { orderBy: { dateEcheance: "asc" } }, compte: { select: { actif: true } } },
   });
 
-  if (!salarie || salarie.entrepriseId !== session.entrepriseId) {
+  if (!salarie || salarie.entrepriseId !== session.entrepriseId || !salarieVisible(session, salarie)) {
     redirect("/client/salaries");
   }
 

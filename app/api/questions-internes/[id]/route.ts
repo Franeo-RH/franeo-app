@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
+import { estDirigeantEtablissement, salarieVisible } from "@/lib/perimetre";
 
 /** POST { contenu } ou { statut } : la direction répond ou clôt une question d'un salarié */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -11,6 +12,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { id } = await params;
   const q = await prisma.questionInterne.findUnique({ where: { id } });
   if (!q || q.entrepriseId !== session.entrepriseId) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
+  if (estDirigeantEtablissement(session)) {
+    const auteur = await prisma.salarie.findUnique({ where: { id: q.auteurId }, select: { etablissement: true } });
+    if (!salarieVisible(session, auteur)) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
+  }
   const b = await request.json().catch(() => ({}));
   if (b.statut === "CLOSE" || b.statut === "OUVERTE") {
     await prisma.questionInterne.update({ where: { id }, data: { statut: b.statut } });

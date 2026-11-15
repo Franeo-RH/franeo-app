@@ -7,6 +7,7 @@ import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import BoutonExport from "@/components/BoutonExport";
 import { aDroit, ajoutParValidation } from "@/lib/droits";
+import { filtreSalaries } from "@/lib/perimetre";
 
 export const dynamic = "force-dynamic";
 
@@ -35,14 +36,15 @@ export default async function ClientSalaries({
 
   // Requêtes lancées en même temps
   const [etablissements, services] = await Promise.all([
-    prisma.etablissement.findMany({ where: { entrepriseId: session.entrepriseId! }, select: { nom: true }, orderBy: { nom: "asc" } }),
+    prisma.etablissement.findMany({ where: { entrepriseId: session.entrepriseId!, ...(session.etablissementId ? { id: session.etablissementId } : {}) }, select: { nom: true }, orderBy: { nom: "asc" } }),
     prisma.service.findMany({ where: { entrepriseId: session.entrepriseId! }, select: { nom: true }, orderBy: { nom: "asc" } }),
   ]);
   const [salariesActifs, salariesAVenir, salariesAnciens] = await Promise.all([
     prisma.salarie.findMany({
-      where: {
+      where: { ...filtreSalaries(session),
         entrepriseId,
         ...filtreOrga,
+        ...filtreSalaries(session),
         statut: "Actif",
         dateDebut: { lte: finMois },
         OR: [{ dateFin: null }, { dateFin: { gte: debutMois } }],
@@ -50,18 +52,20 @@ export default async function ClientSalaries({
       orderBy: { createdAt: "desc" },
     }),
     prisma.salarie.findMany({
-      where: {
+      where: { ...filtreSalaries(session),
         entrepriseId,
         ...filtreOrga,
+        ...filtreSalaries(session),
         statut: "Actif",
         dateDebut: { gt: finMois },
       },
       orderBy: { dateDebut: "asc" },
     }),
     prisma.salarie.findMany({
-      where: {
+      where: { ...filtreSalaries(session),
         entrepriseId,
         ...filtreOrga,
+        ...filtreSalaries(session),
         dateFin: { lt: debutMois },
       },
       orderBy: { dateFin: "desc" },

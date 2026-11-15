@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { chargerReleve } from "@/lib/releves";
 import { aDroit } from "@/lib/droits";
+import { filtreViaSalarie } from "@/lib/perimetre";
 
 /**
  * GET : relevés d'heures (client : son entreprise ; admin : toutes)
@@ -21,6 +22,7 @@ export async function GET(request: NextRequest) {
   const releves = await prisma.releveMois.findMany({
     where: {
       ...(entrepriseFiltre ? { entrepriseId: entrepriseFiltre } : {}),
+      ...(session.role === "CLIENT" ? filtreViaSalarie(session) : {}),
       ...(statut === "toutes" ? {} : statut === "tout" ? { statut: { not: "Brouillon" } } : { statut }),
       ...(filtreMois ? { annee: filtreMois[0], mois: filtreMois[1] } : {}),
     },

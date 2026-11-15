@@ -306,7 +306,7 @@ export function synthese(p: ProjetCalcul, tauxCharges: number | null | undefined
 const SELECT_COUT = { id: true, prenom: true, nom: true, coutHoraireStandard: true, salaireMensuel: true, heuresHebdomadaires: true } as const;
 
 /** Projets d'une entreprise avec leur synthèse (un seul passage en base pour les pointages) */
-export async function projetsAvecSynthese(entrepriseId: string, where: { id?: string; statut?: { in: string[] } } = {}) {
+export async function projetsAvecSynthese(entrepriseId: string, where: { id?: string; statut?: { in: string[] }; etablissementId?: string } = {}) {
   const [entreprise, projetsBruts, salaries] = await Promise.all([
     prisma.entreprise.findUnique({ where: { id: entrepriseId }, select: { tauxCharges: true } }),
     prisma.projet.findMany({
@@ -314,6 +314,7 @@ export async function projetsAvecSynthese(entrepriseId: string, where: { id?: st
       orderBy: [{ statut: "asc" }, { dateDebut: "desc" }],
       include: {
         responsable: { select: { id: true, prenom: true, nom: true } },
+        etablissement: { select: { id: true, nom: true } },
         affectations: { include: { salarie: { select: SELECT_COUT } }, orderBy: { du: "asc" } },
         depenses: { orderBy: { date: "desc" } },
         temps: { select: { id: true, salarieId: true, jour: true, heures: true, commentaire: true, releveId: true }, orderBy: { jour: "desc" } },

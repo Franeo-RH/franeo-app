@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
 import { geocoder } from "@/lib/geocodage";
 import { lireZone, rayonValide } from "@/lib/zone";
+import { siretInvalide, siretPropre } from "@/lib/siret";
 
 async function verifier(id: string) {
   const session = await getSession();
@@ -22,9 +23,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const t = (x: unknown, n = 120) => (typeof x === "string" && x.trim() ? x.trim().slice(0, n) : null);
   const nom = t(b.nom), rue = t(b.rue, 200), codePostal = t(b.codePostal, 10), ville = t(b.ville);
   if (!nom || !rue || !codePostal || !ville) return NextResponse.json({ erreur: "Nom et adresse complète obligatoires." }, { status: 400 });
+  const siret = siretPropre(b.siret);
+  if (siretInvalide(siret)) return NextResponse.json({ erreur: "Le SIRET doit contenir 14 chiffres." }, { status: 400 });
   const adresseChangee = rue !== v.e.rue || codePostal !== v.e.codePostal || ville !== v.e.ville;
   const zone = lireZone(b) ?? (adresseChangee || v.e.latitude == null ? await geocoder(`${rue} ${codePostal} ${ville}`) : null);
-  await prisma.etablissement.update({ where: { id }, data: { nom, rue, codePostal, ville, siret: t(b.siret, 20), ...(zone ?? {}), rayon: rayonValide(b.rayon, v.e.rayon) } });
+  await prisma.etablissement.update({ where: { id }, data: { nom, rue, codePostal, ville, siret, ...(zone ?? {}), rayon: rayonValide(b.rayon, v.e.rayon) } });
   // Les fiches salariés suivent le nouveau nom
   if (v.e.nom !== nom) await prisma.salarie.updateMany({ where: { entrepriseId: v.e.entrepriseId, etablissement: v.e.nom }, data: { etablissement: nom } });
   return NextResponse.json({ succes: true });
@@ -36,6 +39,8 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   if (v.erreur || !v.e) return v.erreur ?? NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
   const n = await prisma.etablissement.count({ where: { entrepriseId: v.e.entrepriseId } });
   if (n <= 1) return NextResponse.json({ erreur: "Au moins un établissement est obligatoire." }, { status: 400 });
+  const acces = await prisma.utilisateur.count({ where: { etablissementId: id } });
+  if (acces > 0) return NextResponse.json({ erreur: `${acces} accès dirigeant est rattaché à cet établissement : supprimez-le ou changez-le d'établissement avant.` }, { status: 400 });
   await prisma.etablissement.delete({ where: { id } });
   return NextResponse.json({ succes: true });
 }

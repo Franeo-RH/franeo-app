@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { estDirigeantEtablissement, filtreSalaries } from "@/lib/perimetre";
 
 /** GET (client) : questions posées par les salariés dans leur espace (suivi par la direction) */
 export async function GET() {
   const session = await getSession();
   if (!session || session.role !== "CLIENT") return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
+  // Dirigeant d'établissement : seulement les questions des salariés de son établissement
+  const visibles = estDirigeantEtablissement(session)
+    ? (await prisma.salarie.findMany({ where: { entrepriseId: session.entrepriseId ?? "-", ...filtreSalaries(session) }, select: { id: true } })).map((s) => s.id)
+    : null;
   const questions = await prisma.questionInterne.findMany({
-    where: { entrepriseId: session.entrepriseId ?? "-" },
+    where: { entrepriseId: session.entrepriseId ?? "-", ...(visibles ? { auteurId: { in: visibles } } : {}) },
     include: { messages: { orderBy: { createdAt: "asc" } } },
     orderBy: { updatedAt: "desc" },
     take: 200,

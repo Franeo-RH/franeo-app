@@ -2,6 +2,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 import { empreinte, lireJeton, NOM_COOKIE } from "./jeton-session";
+import { RETIRES_ETABLISSEMENT } from "./perimetre";
 
 /**
  * Utilisateur connecté, quel que soit son rôle et même si son entreprise est suspendue.
@@ -21,8 +22,20 @@ function lireUtilisateur(id: string) {
       entreprise: {
         include: { abonnement: true },
       },
+      etablissement: { select: { id: true, nom: true } },
     },
   });
+}
+
+/**
+ * Dirigeant d'établissement : mêmes modules que l'entreprise, sans les réglages réservés au dirigeant général
+ * (infos de l'entreprise, abonnements, factures, clôture, imports…) ni les droits retirés à ce compte.
+ */
+function appliquerPerimetre(u: UtilisateurSession): UtilisateurSession | null {
+  if (u.role !== "CLIENT" || !u.etablissementId) return u;
+  if (!u.etablissement || !u.entreprise) return null; // établissement introuvable : aucun accès
+  const retires = [...RETIRES_ETABLISSEMENT, ...(u.permissionsRetirees || [])].map((p) => `-${p}`);
+  return { ...u, entreprise: { ...u.entreprise, permissions: [...new Set([...u.entreprise.permissions, ...retires])] } };
 }
 
 /** À appeler après un changement de droits, de mot de passe ou de statut (vide la mémoire de cette instance) */
@@ -51,7 +64,7 @@ export const getSessionBrute = cache(async () => {
   // Mot de passe changé depuis l'ouverture de la session : la session n'est plus valable
   if (!utilisateur || empreinte(utilisateur.motDePasse) !== jeton.empreinte) return null;
 
-  return utilisateur;
+  return appliquerPerimetre(utilisateur);
 });
 
 /**

@@ -3,16 +3,17 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { lireRappel, versISO } from "@/lib/rappels";
 import { refuserSansDroit } from "@/lib/droits-serveur";
+import { salarieVisible } from "@/lib/perimetre";
 
 async function rappelAutorise(rappelId: string) {
   const session = await getSession();
   if (!session) return { erreur: NextResponse.json({ erreur: "Non autorisé" }, { status: 401 }) };
   const rappel = await prisma.rappelSalarie.findUnique({
     where: { id: rappelId },
-    include: { salarie: { select: { entrepriseId: true } } },
+    include: { salarie: { select: { entrepriseId: true, etablissement: true } } },
   });
   if (!rappel) return { erreur: NextResponse.json({ erreur: "Introuvable" }, { status: 404 }) };
-  if (session.role === "CLIENT" && rappel.salarie.entrepriseId !== session.entrepriseId) {
+  if (session.role === "CLIENT" && (rappel.salarie.entrepriseId !== session.entrepriseId || !salarieVisible(session, rappel.salarie))) {
     return { erreur: NextResponse.json({ erreur: "Non autorisé" }, { status: 401 }) };
   }
   return { rappel };

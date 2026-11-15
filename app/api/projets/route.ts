@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { excelDepuisLignes, reponseExcel } from "@/lib/excel-marque";
 import { prisma } from "@/lib/prisma";
-import { accesProjets, lireProjet } from "@/lib/projets-serveur";
+import { accesProjets, etablissementDuProjet, lireProjet } from "@/lib/projets-serveur";
 import { masquerCouts, projetsAvecSynthese, STATUTS_PROJET } from "@/lib/projets";
 import { MODELES_METIER } from "@/lib/projets-constantes";
 
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   if (!a.ok) return a.refus;
   const st = request.nextUrl.searchParams.get("statut");
   const statuts = st ? st.split(",").filter((x) => x in STATUTS_PROJET) : [];
-  const brut = await projetsAvecSynthese(a.entrepriseId, statuts.length ? { statut: { in: statuts } } : {});
+  const brut = await projetsAvecSynthese(a.entrepriseId, { ...(statuts.length ? { statut: { in: statuts } } : {}), ...a.fp });
   const projets = brut.map((p) => (a.voitCouts ? p : masquerCouts(p)));
 
   if (request.nextUrl.searchParams.get("format") === "csv") {
@@ -37,11 +37,12 @@ export async function POST(request: NextRequest) {
   const b = await request.json().catch(() => ({}));
   const { erreurs, data } = lireProjet(b);
   if (erreurs.length) return NextResponse.json({ erreur: erreurs.join(" ") }, { status: 400 });
-  if (data.responsableId && !(await prisma.salarie.findFirst({ where: { id: data.responsableId, entrepriseId: a.entrepriseId } }))) data.responsableId = null;
+  if (data.responsableId && !(await prisma.salarie.findFirst({ where: { id: data.responsableId, entrepriseId: a.entrepriseId, ...a.fs } }))) data.responsableId = null;
+  const etablissementId = await etablissementDuProjet(a, b.etablissementId);
   const modele = typeof b.modele === "string" && MODELES_METIER[b.modele] ? b.modele : null;
   const m = modele ? MODELES_METIER[modele] : null;
   const jour = (n: number) => new Date(data.dateDebut.getTime() + n * 86400000);
   const jalons = m ? m.jalons.map((j) => ({ libelle: j.libelle, date: jour(j.jours) })) : [];
-  const p = await prisma.projet.create({ data: { ...data, modele, entrepriseId: a.entrepriseId, ...(jalons.length ? { jalons: { create: jalons } } : {}) } });
+  const p = await prisma.projet.create({ data: { ...data, modele, etablissementId, entrepriseId: a.entrepriseId, ...(jalons.length ? { jalons: { create: jalons } } : {}) } });
   return NextResponse.json({ succes: true, id: p.id });
 }

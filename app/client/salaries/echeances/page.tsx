@@ -23,7 +23,7 @@ export default async function PageEcheances({
   if (!session.entreprise?.permissions.includes("salaries")) redirect("/client/dashboard");
   const { filtre = "tous" } = await searchParams;
 
-  const toutes = await chargerEcheances({ entrepriseId: session.entrepriseId! });
+  const toutes = await chargerEcheances({ entrepriseId: session.entrepriseId!, etablissement: session.etablissement?.nom });
   const retards = toutes.filter((e) => e.jours < 0);
   const bientot = toutes.filter((e) => e.jours >= 0 && e.jours <= 30);
   const plusTard = toutes.filter((e) => e.jours > 30);

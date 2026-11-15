@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     if (!entreprise.permissions.includes("salaries")) {
       return NextResponse.json({ erreur: "Le module Salariés n'est pas activé sur votre espace." }, { status: 403 });
     }
-    if (!aDroit(entreprise.permissions, "salaries.importer")) {
+    if (!aDroit(session.entreprise?.permissions ?? entreprise.permissions, "salaries.importer")) {
       return NextResponse.json({ erreur: "Vous n'avez pas le droit d'importer des salariés. Contactez votre gestionnaire." }, { status: 403 });
     }
   }

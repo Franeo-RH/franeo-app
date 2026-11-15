@@ -63,7 +63,7 @@ export default function GestionEtablissements({ modifiable }: { modifiable: bool
       {ouvert && (
         <form onSubmit={enregistrer} className="grid grid-cols-2 gap-3 mt-4 border-t pt-4">
           <input required placeholder="Nom (ex : Siège, Agence de Nancy)" value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} className={chp} aria-label="Nom" />
-          <input placeholder="SIRET (facultatif)" value={form.siret} onChange={(e) => setForm({ ...form, siret: e.target.value })} className={chp} aria-label="SIRET" />
+          <input placeholder="SIRET (14 chiffres, facultatif)" inputMode="numeric" value={form.siret} onChange={(e) => setForm({ ...form, siret: e.target.value })} className={chp} aria-label="SIRET" />
           <input required placeholder="Rue" value={form.rue} onChange={(e) => setForm({ ...form, rue: e.target.value })} className={`${chp} col-span-2`} aria-label="Rue" />
           <input required placeholder="Code postal" value={form.codePostal} onChange={(e) => setForm({ ...form, codePostal: e.target.value })} className={chp} aria-label="Code postal" />
           <input required placeholder="Ville" value={form.ville} onChange={(e) => setForm({ ...form, ville: e.target.value })} className={chp} aria-label="Ville" />

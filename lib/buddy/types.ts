@@ -79,6 +79,16 @@ export interface Env {
   today: { y: number; m: number; d: number; iso: string };
   now: Date;
   dernierSalarieId?: string;
+  /** Dirigeant d'établissement : identifiants des seuls salariés qu'il peut voir */
+  perimetre?: string[];
+  /** Dirigeant d'établissement : son établissement (projets) */
+  etablissementId?: string;
+  etablissementNom?: string;
+}
+
+/** Filtre à ajouter aux requêtes d'absences / variables pour un dirigeant d'établissement */
+export function dansPerimetre(env: Env): { salarieId?: { in: string[] } } {
+  return env.perimetre ? { salarieId: { in: env.perimetre } } : {};
 }
 
 export type ModuleBuddy = "salaries" | "absences" | "paie" | "tickets" | "helpdesk" | "entreprise" | "projets" | "libre";

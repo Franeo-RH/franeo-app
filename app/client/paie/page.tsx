@@ -8,6 +8,7 @@ import Link from "next/link";
 import SuiviMasseSalariale from "@/components/SuiviMasseSalariale";
 import { calculerMasseSalariale } from "@/lib/masse-salariale";
 import BoutonExport from "@/components/BoutonExport";
+import { filtreViaSalarie } from "@/lib/perimetre";
 
 const MOIS = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -58,14 +59,14 @@ export default async function ClientPaie({
   const anneeChoisie = parseInt(sp.annee || "");
   const moisActuel = moisChoisi >= 1 && moisChoisi <= 12 ? moisChoisi : maintenant.getMonth() + 1;
   const anneeActuelle = anneeChoisie >= 2000 && anneeChoisie <= 2100 ? anneeChoisie : maintenant.getFullYear();
-  const masseP = calculerMasseSalariale({ mois: moisActuel, annee: anneeActuelle, entrepriseId: session.entrepriseId! });
+  const masseP = calculerMasseSalariale({ mois: moisActuel, annee: anneeActuelle, entrepriseId: session.entrepriseId!, etablissement: session.etablissement?.nom });
 
 
 
   // Requêtes lancées en même temps
   const [variables, absences] = await Promise.all([
     prisma.variablePaie.findMany({
-      where: {
+      where: { ...filtreViaSalarie(session),
         entrepriseId: session.entrepriseId!,
         mois: moisActuel,
         annee: anneeActuelle,
@@ -73,7 +74,7 @@ export default async function ClientPaie({
       include: { salarie: true },
     }),
     prisma.absence.findMany({
-      where: {
+      where: { ...filtreViaSalarie(session),
         entrepriseId: session.entrepriseId!,
         dateDebut: { gte: new Date(anneeActuelle, moisActuel - 1, 1) },
         dateFin: { lte: new Date(anneeActuelle, moisActuel, 0) },

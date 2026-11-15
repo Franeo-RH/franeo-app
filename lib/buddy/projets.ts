@@ -15,7 +15,7 @@ const pct = (n: number | null | undefined) => (n == null ? "—" : `${Math.round
 
 export async function lireProjets(m: Msg, env: Env): Promise<ReponseBuddy> {
   const couts = aDroit(env.entreprise.permissions, "projets.couts");
-  const tous = await projetsAvecSynthese(env.entreprise.id, { statut: { in: ["PREVU", "EN_COURS", "TERMINE"] } });
+  const tous = await projetsAvecSynthese(env.entreprise.id, { statut: { in: ["PREVU", "EN_COURS", "TERMINE"] }, ...(env.etablissementId ? { etablissementId: env.etablissementId } : {}) });
   if (tous.length === 0) {
     return rep("Vous n'avez encore aucun projet. Créez-en un depuis la page Projets : planning, budget et rentabilité sont calculés automatiquement. 🙂", {
       humeur: "neutre",

@@ -7,6 +7,7 @@ import { estSessionDemo, LIMITE_SALARIES_DEMO, NOM_FAMILLE_DEMO } from "@/lib/de
 import { evaluerSurcout, STATUT_ACCORD_REQUIS } from "@/lib/surcout";
 import { aDroit, ajoutParValidation } from "@/lib/droits";
 import { creerDemande } from "@/lib/demandes-salaries";
+import { etablissementDe, filtreSalaries } from "@/lib/perimetre";
 
 export async function GET() {
   const session = await getSession();
@@ -26,7 +27,7 @@ export async function GET() {
           orderBy: { createdAt: "desc" },
         })
       : await prisma.salarie.findMany({
-          where: { entrepriseId: session.entrepriseId! },
+          where: { entrepriseId: session.entrepriseId!, ...filtreSalaries(session) },
           orderBy: { createdAt: "desc" },
         });
 
@@ -45,6 +46,9 @@ export async function POST(request: NextRequest) {
   }
 
   const brut = await request.json();
+  // Dirigeant d'établissement : le salarié est forcément rattaché à son établissement
+  const etabSession = etablissementDe(session);
+  if (etabSession && brut && typeof brut === "object") brut.etablissement = etabSession.nom;
 
   const demo = estSessionDemo(session);
 

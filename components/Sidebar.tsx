@@ -137,6 +137,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
   if (dans("/client/actualites", "/client/faq")) {
     return { titre: "Communication", items: [
       { href: "/client/actualites", label: "📢 Communications & actualité RH" },
+      { href: "/client/actualites/mises-a-jour", label: "🚀 Mises à jour" },
       { href: "/client/faq", label: "❓ FAQ" },
     ] };
   }

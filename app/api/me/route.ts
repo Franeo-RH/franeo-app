@@ -16,5 +16,7 @@ export async function GET() {
     permissions: session.entreprise?.permissions || [],
     aPaie: aAccesPaie(session.entreprise),
     demo: !!session.entreprise?.demo,
+    // Dirigeant d'établissement : nom de son établissement (affiché dans la barre du haut)
+    etablissement: session.etablissementId ? session.etablissement?.nom ?? null : null,
   });
 }

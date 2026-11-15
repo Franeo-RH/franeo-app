@@ -21,7 +21,7 @@ function preparer(fichier: File): Promise<{ data: string; largeur: number; haute
   });
 }
 
-/** Logo du client : affiché en haut à droite de la barre de navigation et sur les fichiers Excel */
+/** Logo du client : affiché en haut à droite de la barre de navigation */
 export default function LogoEntreprise({ entrepriseId, modifiable = true }: { entrepriseId?: string; modifiable?: boolean }) {
   const q = entrepriseId ? `?entrepriseId=${entrepriseId}` : "";
   const [version, setVersion] = useState(() => Date.now());
@@ -40,7 +40,7 @@ export default function LogoEntreprise({ entrepriseId, modifiable = true }: { en
       const r = await fetch(`/api/entreprises/logo${q}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(img) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.erreur || "Envoi impossible");
-      setMsg({ ok: true, t: "✅ Logo enregistré : il apparaît dans la barre du haut et sur vos fichiers Excel." });
+      setMsg({ ok: true, t: "✅ Logo enregistré : il apparaît en haut à droite de votre espace." });
       oublierDroits(); setVersion(Date.now()); setFichiers([]);
     } catch (e) {
       setMsg({ ok: false, t: `❌ ${e instanceof Error ? e.message : "Envoi impossible"}` });
@@ -56,7 +56,7 @@ export default function LogoEntreprise({ entrepriseId, modifiable = true }: { en
   return (
     <div className="bg-white rounded-xl shadow p-6">
       <h2 className="text-lg font-bold">🖼️ Logo de l&apos;entreprise</h2>
-      <p className="text-sm text-gray-500 mb-4">Affiché en haut à droite de votre espace et sur tous vos fichiers Excel (extractions et modèles d&apos;import).</p>
+      <p className="text-sm text-gray-500 mb-4">Affiché en haut à droite de votre espace.</p>
       {present && (
         <div className="flex items-center gap-4 mb-4 flex-wrap">
           {/* eslint-disable-next-line @next/next/no-img-element */}

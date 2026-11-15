@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { excelDepuisLignes, reponseExcel } from "@/lib/excel-marque";
 import { prisma } from "@/lib/prisma";
-import { accesProjets, lire, lireProjet } from "@/lib/projets-serveur";
+import { accesProjets, etablissementDuProjet, lire, lireProjet } from "@/lib/projets-serveur";
 import { retirerJoursAbsence } from "@/lib/projets-planning";
 import { CATEGORIES_DEPENSE, coutHoraire, heuresDatees, masquerCouts, projetsAvecSynthese } from "@/lib/projets";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-async function charger(id: string, entrepriseId: string) {
-  return prisma.projet.findFirst({ where: { id, entrepriseId }, select: { id: true } });
+async function charger(id: string, entrepriseId: string, fp: { etablissementId?: string } = {}) {
+  return prisma.projet.findFirst({ where: { id, entrepriseId, ...fp }, select: { id: true } });
 }
 
 /** GET : fiche complète du projet (planning, temps, dépenses, synthèse) + listes pour les formulaires */
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest, { params }: Ctx) {
   const a = await accesProjets();
   if (!a.ok) return a.refus;
   const { id } = await params;
-  const [p] = await projetsAvecSynthese(a.entrepriseId, { id });
+  const [p] = await projetsAvecSynthese(a.entrepriseId, { id, ...a.fp });
   if (!p) return NextResponse.json({ erreur: "Projet introuvable" }, { status: 404 });
 
   // ?format=csv : export de tous les temps du projet (badge + saisies)
@@ -35,13 +35,13 @@ export async function GET(request: NextRequest, { params }: Ctx) {
 
   const [salaries, entreprise, fraisLibres] = await Promise.all([
     prisma.salarie.findMany({
-      where: { entrepriseId: a.entrepriseId, statut: "Actif" },
+      where: { entrepriseId: a.entrepriseId, statut: "Actif", ...a.fs },
       select: { id: true, prenom: true, nom: true, poste: true, coutHoraireStandard: true, salaireMensuel: true, heuresHebdomadaires: true },
       orderBy: [{ nom: "asc" }, { prenom: "asc" }],
     }),
     prisma.entreprise.findUnique({ where: { id: a.entrepriseId }, select: { tauxCharges: true } }),
     a.voitCouts
-      ? prisma.noteFrais.findMany({ where: { entrepriseId: a.entrepriseId, projetId: null, statut: { not: "Refusé" } }, select: { id: true, date: true, montant: true, motif: true, salarie: { select: { prenom: true, nom: true } } }, orderBy: { date: "desc" }, take: 50 })
+      ? prisma.noteFrais.findMany({ where: { entrepriseId: a.entrepriseId, ...a.fv, projetId: null, statut: { not: "Refusé" } }, select: { id: true, date: true, montant: true, motif: true, salarie: { select: { prenom: true, nom: true } } }, orderBy: { date: "desc" }, take: 50 })
       : Promise.resolve([]),
   ]);
   // Absences validées ou en attente des salariés planifiés, pendant le projet (conflits de planning)
@@ -71,7 +71,7 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
   const a = await accesProjets("projets.gerer");
   if (!a.ok) return a.refus;
   const { id } = await params;
-  if (!(await charger(id, a.entrepriseId))) return NextResponse.json({ erreur: "Projet introuvable" }, { status: 404 });
+  if (!(await charger(id, a.entrepriseId, a.fp))) return NextResponse.json({ erreur: "Projet introuvable" }, { status: 404 });
   const b = await request.json().catch(() => ({}));
   // Changement de statut seul (boutons rapides)
   if (Object.keys(b).length === 1 && typeof b.statut === "string") {
@@ -82,8 +82,9 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
   const { erreurs, data } = lireProjet(b);
   if (erreurs.length) return NextResponse.json({ erreur: erreurs.join(" ") }, { status: 400 });
   if (!a.voitCouts) { delete (data as Partial<typeof data>).prixVente; delete (data as Partial<typeof data>).tauxJournalier; delete (data as Partial<typeof data>).montantMensuel; }
-  if (data.responsableId && !(await prisma.salarie.findFirst({ where: { id: data.responsableId, entrepriseId: a.entrepriseId } }))) data.responsableId = null;
-  await prisma.projet.update({ where: { id }, data });
+  if (data.responsableId && !(await prisma.salarie.findFirst({ where: { id: data.responsableId, entrepriseId: a.entrepriseId, ...a.fs } }))) data.responsableId = null;
+  const etablissementId = "etablissementId" in b || a.etablissement ? await etablissementDuProjet(a, b.etablissementId) : undefined;
+  await prisma.projet.update({ where: { id }, data: { ...data, ...(etablissementId !== undefined ? { etablissementId } : {}) } });
   return NextResponse.json({ succes: true });
 }
 
@@ -101,10 +102,10 @@ export async function POST(request: NextRequest, { params }: Ctx) {
   const a = await accesProjets("projets.gerer");
   if (!a.ok) return a.refus;
   const { id } = await params;
-  const projet = await prisma.projet.findFirst({ where: { id, entrepriseId: a.entrepriseId }, include: { affectations: true, depenses: { where: { prevu: true } }, jalons: true } });
+  const projet = await prisma.projet.findFirst({ where: { id, entrepriseId: a.entrepriseId, ...a.fp }, include: { affectations: true, depenses: { where: { prevu: true } }, jalons: true } });
   if (!projet) return NextResponse.json({ erreur: "Projet introuvable" }, { status: 404 });
   const b = await request.json().catch(() => ({}));
-  const salarieOk = async (sid: unknown) => typeof sid === "string" && !!(await prisma.salarie.findFirst({ where: { id: sid, entrepriseId: a.entrepriseId }, select: { id: true } }));
+  const salarieOk = async (sid: unknown) => typeof sid === "string" && !!(await prisma.salarie.findFirst({ where: { id: sid, entrepriseId: a.entrepriseId, ...a.fs }, select: { id: true } }));
 
   switch (b.action) {
     case "affectation": {
@@ -193,7 +194,7 @@ export async function DELETE(request: NextRequest, { params }: Ctx) {
   const a = await accesProjets("projets.gerer");
   if (!a.ok) return a.refus;
   const { id } = await params;
-  if (!(await charger(id, a.entrepriseId))) return NextResponse.json({ erreur: "Projet introuvable" }, { status: 404 });
+  if (!(await charger(id, a.entrepriseId, a.fp))) return NextResponse.json({ erreur: "Projet introuvable" }, { status: 404 });
   const quoi = request.nextUrl.searchParams.get("quoi");
   const cle = request.nextUrl.searchParams.get("cle") || "";
   if (quoi === "affectation") await prisma.affectationProjet.deleteMany({ where: { id: cle, projetId: id } });

@@ -28,7 +28,8 @@ export async function lireFiltres(request: NextRequest): Promise<{ erreur: NextR
     filtres: {
       periode: periodeDepuis(p.get("period"), p.get("startDate"), p.get("endDate")),
       entreprises,
-      etablissement: p.get("establishmentId") || null,
+      // Dirigeant d'établissement : toujours limité à son établissement
+      etablissement: (!admin && session.etablissementId && session.etablissement ? session.etablissement.nom : null) ?? (p.get("establishmentId") || null),
       service: p.get("departmentId") || null,
       salarieId: p.get("employeeId") || null,
       contrat: p.get("contractType") || null,

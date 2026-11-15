@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
 import { annulerReleve, deciderReleve } from "@/lib/decisions";
+import { salarieVisible } from "@/lib/perimetre";
 
 /**
  * PUT :
@@ -17,9 +18,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params;
   const corps = await request.json().catch(() => ({}));
 
-  const r = await prisma.releveMois.findUnique({ where: { id }, select: { entrepriseId: true } });
+  const r = await prisma.releveMois.findUnique({ where: { id }, select: { entrepriseId: true, salarie: { select: { etablissement: true } } } });
   if (!r) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
-  if (session.role === "CLIENT" && r.entrepriseId !== session.entrepriseId) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
+  if (session.role === "CLIENT" && (r.entrepriseId !== session.entrepriseId || !salarieVisible(session, r.salarie))) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   const auteur = session.role === "ADMIN" ? "FRANEO RH" : session.prenom;
 
   if (corps?.action === "bloquer" || corps?.action === "debloquer") {
@@ -43,9 +44,9 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   const session = await getSession();
   if (!session) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   const { id } = await params;
-  const r = await prisma.releveMois.findUnique({ where: { id }, select: { entrepriseId: true, statut: true } });
+  const r = await prisma.releveMois.findUnique({ where: { id }, select: { entrepriseId: true, statut: true, salarie: { select: { etablissement: true } } } });
   if (!r) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
-  if (session.role === "CLIENT" && (r.entrepriseId !== session.entrepriseId || !aDroit(session.entreprise?.permissions, "paie.releves"))) return NextResponse.json({ erreur: "Non autorisé" }, { status: 403 });
+  if (session.role === "CLIENT" && (r.entrepriseId !== session.entrepriseId || !salarieVisible(session, r.salarie) || !aDroit(session.entreprise?.permissions, "paie.releves"))) return NextResponse.json({ erreur: "Non autorisé" }, { status: 403 });
   if (r.statut === "Validé") return NextResponse.json({ erreur: "Relevé validé : il faut d'abord l'annuler avant de le supprimer." }, { status: 400 });
   await prisma.releveMois.delete({ where: { id } });
   return NextResponse.json({ succes: true });

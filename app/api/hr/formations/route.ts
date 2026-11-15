@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { VIEW_HR_INDICATORS } from "@/lib/indicateurs-calculs";
+import { salarieVisible } from "@/lib/perimetre";
 
 // POST { salarieId, intitule, date, heures, cout } : ajoute une formation (admin, ou client ayant les indicateurs RH)
 export async function POST(request: NextRequest) {
@@ -10,8 +11,8 @@ export async function POST(request: NextRequest) {
   const admin = session.role === "ADMIN";
   if (!admin && !(session.entreprise?.permissions || []).includes(VIEW_HR_INDICATORS)) return NextResponse.json({ erreur: "Non autorisé" }, { status: 403 });
   const b = await request.json().catch(() => ({}));
-  const sal = await prisma.salarie.findUnique({ where: { id: String(b.salarieId || "") }, select: { id: true, entrepriseId: true } });
-  if (!sal || (!admin && sal.entrepriseId !== session.entrepriseId)) return NextResponse.json({ erreur: "Salarié introuvable" }, { status: 404 });
+  const sal = await prisma.salarie.findUnique({ where: { id: String(b.salarieId || "") }, select: { id: true, entrepriseId: true, etablissement: true } });
+  if (!sal || (!admin && (sal.entrepriseId !== session.entrepriseId || !salarieVisible(session, sal)))) return NextResponse.json({ erreur: "Salarié introuvable" }, { status: 404 });
   const date = new Date(b.date);
   const heures = Number(String(b.heures ?? 0).replace(",", "."));
   const cout = Number(String(b.cout ?? 0).replace(",", "."));

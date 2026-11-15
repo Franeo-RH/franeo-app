@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
+import { filtreViaSalarie } from "@/lib/perimetre";
 
 /**
  * GET ?du=&au=&entrepriseId= : journal (log) des pointages, du plus récent au plus ancien.
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     where: {
       ...(session.role === "ADMIN"
         ? (p.get("entrepriseId") ? { entrepriseId: p.get("entrepriseId")! } : { entreprise: { demo: false } })
-        : { entrepriseId: session.entrepriseId ?? "-" }),
+        : { entrepriseId: session.entrepriseId ?? "-", ...filtreViaSalarie(session) }),
       ...(ok(p.get("du")) || ok(p.get("au")) ? { jour: { ...(ok(p.get("du")) ? { gte: p.get("du")! } : {}), ...(ok(p.get("au")) ? { lte: p.get("au")! } : {}) } } : {}),
     },
     include: { salarie: { select: { prenom: true, nom: true } }, entreprise: { select: { nom: true } } },

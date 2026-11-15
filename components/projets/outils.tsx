@@ -52,17 +52,25 @@ export type ValeursProjet = {
   nom: string; code: string; client: string; description: string; couleur: string; statut: string;
   dateDebut: string; dateFin: string; modeVente: string; prixVente: string; tauxJournalier: string; joursVendus: string;
   budgetHeures: string; seuilAlerte: string; responsableId: string; montantMensuel: string; modele?: string; adresse?: string;
+  etablissementId?: string;
 };
 
 export const projetVide = (): ValeursProjet => ({
   nom: "", code: "", client: "", description: "", couleur: COULEURS_PROJET[0], statut: "PREVU",
   dateDebut: new Date().toISOString().slice(0, 10), dateFin: "", modeVente: "FORFAIT", prixVente: "", tauxJournalier: "", joursVendus: "",
-  budgetHeures: "", seuilAlerte: "80", responsableId: "", montantMensuel: "", modele: "LIBRE", adresse: "",
+  budgetHeures: "", seuilAlerte: "80", responsableId: "", montantMensuel: "", modele: "LIBRE", adresse: "", etablissementId: "",
 });
 
+/** Intertitre d'une partie du formulaire */
+function Section({ titre }: { titre: string }) {
+  return <p className="md:col-span-3 text-xs font-bold uppercase tracking-wide text-orange-600 border-b border-orange-100 pb-1 mt-2">{titre}</p>;
+}
+
 /** Formulaire de création / modification d'un projet */
-export function FormulaireProjet({ initial, salaries, voitCouts, onEnvoyer, onAnnuler, libelle, avecModele = false }: {
+export function FormulaireProjet({ initial, salaries, voitCouts, onEnvoyer, onAnnuler, libelle, avecModele = false, etablissements = [] }: {
   initial: ValeursProjet; salaries: { id: string; prenom: string; nom: string }[]; voitCouts: boolean; avecModele?: boolean;
+  /** Établissements de l'entreprise (le choix n'apparaît que s'il y en a plusieurs) */
+  etablissements?: { id: string; nom: string }[];
   onEnvoyer: (v: ValeursProjet) => Promise<string | null>; onAnnuler?: () => void; libelle: string;
 }) {
   const [v, setV] = useState(initial);
@@ -82,10 +90,21 @@ export function FormulaireProjet({ initial, salaries, voitCouts, onEnvoyer, onAn
           <span className="block text-xs text-gray-500 font-normal mt-1">{MODELES_METIER[v.modele ?? "LIBRE"]?.conseil}</span>
         </label>
       )}
+      <Section titre="1. Le projet" />
       <label className="text-sm font-semibold md:col-span-2">Nom du projet *<input className={input} required {...champ("nom")} placeholder="Ex. Refonte du site, Chantier Dupont…" /></label>
       <label className="text-sm font-semibold">Code<input className={input} {...champ("code")} placeholder="Ex. P-2026-014" /></label>
       <label className="text-sm font-semibold">Client<input className={input} {...champ("client")} placeholder="Nom du client" /></label>
+      {etablissements.length > 1 && (
+        <label className="text-sm font-semibold">🏢 Établissement
+          <select className={input} value={v.etablissementId ?? ""} onChange={(e) => setV({ ...v, etablissementId: e.target.value })}>
+            <option value="">Commun à toute l&apos;entreprise</option>
+            {etablissements.map((e) => <option key={e.id} value={e.id}>{e.nom}</option>)}
+          </select>
+          <span className="block text-xs text-gray-500 font-normal mt-1">Le dirigeant de cet établissement verra le projet.</span>
+        </label>
+      )}
       <label className="text-sm font-semibold md:col-span-3">📍 Adresse d&apos;intervention<input className={input} value={v.adresse ?? ""} onChange={(e) => setV({ ...v, adresse: e.target.value })} placeholder="Ex. 12 rue de l'Usine, 59000 Lille (affichée dans le planning des salariés)" /></label>
+      <Section titre="2. Équipe et calendrier" />
       <label className="text-sm font-semibold">Responsable
         <select className={input} {...champ("responsableId")}>
           <option value="">—</option>
@@ -102,6 +121,7 @@ export function FormulaireProjet({ initial, salaries, voitCouts, onEnvoyer, onAn
           <button key={c} type="button" aria-label={c} onClick={() => setV({ ...v, couleur: c })} style={{ width: 24, height: 24, borderRadius: 99, background: c, outline: v.couleur === c ? "3px solid #111827" : "none", outlineOffset: 2 }} />
         ))}</div>
       </div>
+      <Section titre={voitCouts ? "3. Vente et budget" : "3. Budget"} />
       {voitCouts && (
         <>
           <label className="text-sm font-semibold">Mode de vente

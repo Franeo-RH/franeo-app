@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import BoutonCloture from "@/components/BoutonCloture";
 import { NOMS_MOIS } from "@/lib/heures";
+import { filtreSalaries, filtreViaSalarie } from "@/lib/perimetre";
 
 export const dynamic = "force-dynamic";
 
@@ -23,14 +24,14 @@ export default async function ControleAvantPaie() {
   const espace = (session.entreprise?.permissions || []).includes("espace-salaries");
 
   const [actifs, absAttente, relevesAttente, fraisAttente, demandes, entrees, sorties, varsAttente] = await Promise.all([
-    prisma.salarie.findMany({ where: { entrepriseId, statut: "Actif", dateDebut: { lte: fin }, OR: [{ dateFin: null }, { dateFin: { gte: debut } }] }, select: { id: true, prenom: true, nom: true, salaireMensuel: true, iban: true, numeroSecuriteSociale: true, compte: { select: { id: true } }, releves: { where: { mois, annee }, select: { statut: true } } } }),
-    prisma.absence.count({ where: { entrepriseId, statut: "En attente", dateDebut: { lte: fin } } }),
-    prisma.releveMois.count({ where: { entrepriseId, mois, annee, statut: "Envoyé" } }),
-    prisma.noteFrais.count({ where: { entrepriseId, statut: "En attente" } }),
+    prisma.salarie.findMany({ where: { ...filtreSalaries(session), entrepriseId, statut: "Actif", dateDebut: { lte: fin }, OR: [{ dateFin: null }, { dateFin: { gte: debut } }] }, select: { id: true, prenom: true, nom: true, salaireMensuel: true, iban: true, numeroSecuriteSociale: true, compte: { select: { id: true } }, releves: { where: { mois, annee }, select: { statut: true } } } }),
+    prisma.absence.count({ where: { ...filtreViaSalarie(session), entrepriseId, statut: "En attente", dateDebut: { lte: fin } } }),
+    prisma.releveMois.count({ where: { ...filtreViaSalarie(session), entrepriseId, mois, annee, statut: "Envoyé" } }),
+    prisma.noteFrais.count({ where: { ...filtreViaSalarie(session), entrepriseId, statut: "En attente" } }),
     prisma.demandeSalarie.count({ where: { entrepriseId, statut: "EN_ATTENTE" } }),
-    prisma.salarie.findMany({ where: { entrepriseId, dateDebut: { gte: debut, lte: fin } }, select: { id: true, prenom: true, nom: true } }),
-    prisma.salarie.findMany({ where: { entrepriseId, dateFin: { gte: debut, lte: fin } }, select: { id: true, prenom: true, nom: true } }),
-    prisma.variablePaie.count({ where: { entrepriseId, mois, annee, statut: "En attente" } }),
+    prisma.salarie.findMany({ where: { ...filtreSalaries(session), entrepriseId, dateDebut: { gte: debut, lte: fin } }, select: { id: true, prenom: true, nom: true } }),
+    prisma.salarie.findMany({ where: { ...filtreSalaries(session), entrepriseId, dateFin: { gte: debut, lte: fin } }, select: { id: true, prenom: true, nom: true } }),
+    prisma.variablePaie.count({ where: { ...filtreViaSalarie(session), entrepriseId, mois, annee, statut: "En attente" } }),
   ]);
 
   const sansSalaire = actifs.filter((s) => !s.salaireMensuel);

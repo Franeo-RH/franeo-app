@@ -4,12 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
 import { telecharger } from "@/lib/fichiers";
+import { salarieVisible } from "@/lib/perimetre";
 
 async function charger(id: string) {
   const session = await getSession();
   if (!session) return { session: null, doc: null };
-  const doc = await prisma.document.findUnique({ where: { id }, include: { salarie: { select: { entrepriseId: true } } } });
-  if (!doc || (session.role === "CLIENT" && (doc.salarie.entrepriseId !== session.entrepriseId || !aDroit(session.entreprise?.permissions, "rh.documents")))) return { session, doc: null };
+  const doc = await prisma.document.findUnique({ where: { id }, include: { salarie: { select: { entrepriseId: true, etablissement: true } } } });
+  if (!doc || (session.role === "CLIENT" && (doc.salarie.entrepriseId !== session.entrepriseId || !salarieVisible(session, doc.salarie) || !aDroit(session.entreprise?.permissions, "rh.documents")))) return { session, doc: null };
   return { session, doc };
 }
 

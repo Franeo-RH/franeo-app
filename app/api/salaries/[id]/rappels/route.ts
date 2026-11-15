@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { lireRappel } from "@/lib/rappels";
 import { refuserSansDroit } from "@/lib/droits-serveur";
+import { salarieVisible } from "@/lib/perimetre";
 
 async function salarieAutorise(id: string) {
   const session = await getSession();
@@ -21,6 +22,7 @@ async function salarieAutorise(id: string) {
     select: {
       id: true,
       entrepriseId: true,
+      etablissement: true,
     },
   });
 
@@ -35,7 +37,7 @@ async function salarieAutorise(id: string) {
 
   if (
     session.role === "CLIENT" &&
-    salarie.entrepriseId !== session.entrepriseId
+    (salarie.entrepriseId !== session.entrepriseId || !salarieVisible(session, salarie))
   ) {
     return {
       erreur: NextResponse.json(

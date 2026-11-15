@@ -13,11 +13,15 @@ import {
 const JOUR = 86400000;
 
 /** Échéances à traiter : retards + 60 prochains jours (rappels saisis + fins de contrat) */
-export async function chargerEcheances(options: { entrepriseId?: string; sansDemo?: boolean } = {}): Promise<Echeance[]> {
+export async function chargerEcheances(options: { entrepriseId?: string; sansDemo?: boolean; etablissement?: string | null } = {}): Promise<Echeance[]> {
   const aujourdhui = Date.parse(`${aujourdhuiISO()}T00:00:00Z`);
   const limite = new Date(aujourdhui + FENETRE_DASHBOARD_JOURS * JOUR);
   const debutRetard = new Date(aujourdhui - 30 * JOUR);
-  const filtre = options.entrepriseId ? { entrepriseId: options.entrepriseId } : {};
+  const filtre = {
+    ...(options.entrepriseId ? { entrepriseId: options.entrepriseId } : {}),
+    // Dirigeant d'établissement : seulement les salariés de son établissement
+    ...(options.etablissement ? { etablissement: { equals: options.etablissement, mode: "insensitive" as const } } : {}),
+  };
   // sansDemo : exclut la démo ET les entreprises suspendues
   const sansDemo = options.sansDemo ? { entreprise: { demo: false, actif: true } } : {};
 

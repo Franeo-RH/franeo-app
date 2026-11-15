@@ -9,7 +9,7 @@ export async function GET() {
   if (!a.ok) return a.refus;
   const [e, salaries] = await Promise.all([
     prisma.entreprise.findUnique({ where: { id: a.entrepriseId }, select: { tauxCharges: true } }),
-    prisma.salarie.findMany({ where: { entrepriseId: a.entrepriseId, statut: "Actif" }, select: { id: true, prenom: true, nom: true, poste: true, salaireMensuel: true, heuresHebdomadaires: true, coutHoraireStandard: true }, orderBy: [{ nom: "asc" }, { prenom: "asc" }] }),
+    prisma.salarie.findMany({ where: { entrepriseId: a.entrepriseId, statut: "Actif", ...a.fs }, select: { id: true, prenom: true, nom: true, poste: true, salaireMensuel: true, heuresHebdomadaires: true, coutHoraireStandard: true }, orderBy: [{ nom: "asc" }, { prenom: "asc" }] }),
   ]);
   return NextResponse.json({
     tauxCharges: e?.tauxCharges ?? 40,
@@ -28,7 +28,7 @@ export async function PUT(request: NextRequest) {
   const b = await request.json().catch(() => ({}));
   const v = b.coutStandard === "" || b.coutStandard == null ? null : Number(b.coutStandard);
   if (v != null && (!Number.isFinite(v) || v <= 0 || v > 1000)) return NextResponse.json({ erreur: "Coût horaire invalide" }, { status: 400 });
-  const r = await prisma.salarie.updateMany({ where: { id: String(b.salarieId), entrepriseId: a.entrepriseId }, data: { coutHoraireStandard: v } });
+  const r = await prisma.salarie.updateMany({ where: { id: String(b.salarieId), entrepriseId: a.entrepriseId, ...a.fs }, data: { coutHoraireStandard: v } });
   if (!r.count) return NextResponse.json({ erreur: "Salarié introuvable" }, { status: 404 });
   return NextResponse.json({ succes: true });
 }
