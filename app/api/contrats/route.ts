@@ -21,7 +21,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session || session.role !== "CLIENT" || !session.entrepriseId) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
-  if (!aAccesContrats(session.entreprise)) return NextResponse.json({ erreur: "Les contrats automatiques sont inclus à partir de la formule RH Sérénité." }, { status: 403 });
+  if (!aAccesContrats(session.entreprise)) return NextResponse.json({ erreur: "Les contrats automatiques ne sont pas activés sur votre espace : demandez-les à FRANEO RH." }, { status: 403 });
   const b = await request.json().catch(() => ({}));
   const donnees: Record<string, string> = {};
   if (b.donnees && typeof b.donnees === "object") for (const [k, v] of Object.entries(b.donnees as Record<string, unknown>).slice(0, 200)) donnees[k.slice(0, 60)] = String(v ?? "").slice(0, 1000);

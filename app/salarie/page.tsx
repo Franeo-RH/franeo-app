@@ -99,7 +99,7 @@ export default async function EspaceSalarie() {
           avecProjets={aDroit(permsEnt, "espace.projets")}
           avecFrais={aDroit(permsEnt, "espace.frais")}
           avecQuestions={aDroit(permsEnt, "espace.questions")}
-          avecPaie={!!s.utilisateur.entreprise?.abonnementPaieId}
+          avecPaie={permsEnt.includes("paie")}
           accueil={
             <>
               <div style={carte}>

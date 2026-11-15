@@ -8,7 +8,7 @@ import { lireFichier } from "@/lib/fichiers";
 async function acces() {
   const session = await getSession();
   if (!session || session.role !== "CLIENT" || !session.entrepriseId) return { session: null, refus: NextResponse.json({ erreur: "Non autorisé" }, { status: 401 }) };
-  if (!aAccesContrats(session.entreprise)) return { session: null, refus: NextResponse.json({ erreur: "Les contrats automatiques sont inclus à partir de la formule RH Sérénité." }, { status: 403 }) };
+  if (!aAccesContrats(session.entreprise)) return { session: null, refus: NextResponse.json({ erreur: "Les contrats automatiques ne sont pas activés sur votre espace : demandez-les à FRANEO RH." }, { status: 403 }) };
   return { session, refus: null };
 }
 

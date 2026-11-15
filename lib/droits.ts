@@ -154,17 +154,14 @@ export function niveauRH(entreprise: { abonnement?: { nom: string } | null } | n
   return 0;
 }
 
-/**
- * Onglet Paie : formule paie souscrite, ou formule RH Sérénité / Premium (saisie des informations de paie),
- * et module « paie » activé.
- */
-export function aAccesPaie(entreprise: { permissions?: string[] | null; abonnementPaieId?: string | null; abonnement?: { nom: string } | null } | null | undefined): boolean {
-  return !!entreprise && (entreprise.permissions || []).includes("paie") && (!!entreprise.abonnementPaieId || niveauRH(entreprise) >= 3);
+/** Onglet Paie : uniquement selon les accès cochés par l'admin (module « paie »), quelle que soit la formule */
+export function aAccesPaie(entreprise: { permissions?: string[] | null } | null | undefined): boolean {
+  return !!entreprise && (entreprise.permissions || []).includes("paie");
 }
 
-/** Contrats générés depuis un modèle : à partir de RH Sérénité (ou avec une formule paie) */
-export function aAccesContrats(entreprise: { permissions?: string[] | null; abonnementPaieId?: string | null; abonnement?: { nom: string } | null } | null | undefined): boolean {
-  return !!entreprise && aDroit(entreprise.permissions, "rh.contrats") && (niveauRH(entreprise) >= 3 || !!entreprise.abonnementPaieId);
+/** Contrats générés depuis un modèle : uniquement selon les accès cochés par l'admin (action « rh.contrats ») */
+export function aAccesContrats(entreprise: { permissions?: string[] | null } | null | undefined): boolean {
+  return !!entreprise && aDroit(entreprise.permissions, "rh.contrats");
 }
 
 // ── Accès par formule (bloc « Accès & droits » de l'admin) ──

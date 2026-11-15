@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   if (!s.ok) return NextResponse.json({ erreur: "Accès refusé" }, { status: 401 });
   const ctx = await contexteHierarchie(s.salarie.id);
   if (!ctx || !ctx.peutSaisirVariables || ctx.role === "SALARIE") return NextResponse.json({ erreur: "Vous n'avez pas le droit de saisir des variables." }, { status: 403 });
-  if (!s.utilisateur.entreprise?.abonnementPaieId) return NextResponse.json({ erreur: "Pas de formule paie pour votre entreprise." }, { status: 400 });
+  if (!(s.utilisateur.entreprise?.permissions || []).includes("paie")) return NextResponse.json({ erreur: "La paie n'est pas activée pour votre entreprise." }, { status: 400 });
   const b = await request.json().catch(() => ({}));
   if (!ctx.equipeIds.has(String(b.salarieId))) return NextResponse.json({ erreur: "Ce salarié ne fait pas partie de votre équipe." }, { status: 403 });
   if (!TYPES.includes(b.type)) return NextResponse.json({ erreur: "Type invalide" }, { status: 400 });
