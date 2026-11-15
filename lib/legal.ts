@@ -4,14 +4,14 @@
 
 export const EDITEUR = {
   nomCommercial: "FRANEO RH",
-  responsable: "FRANCHINO Lucas",
+  responsable: "À compléter (prénom et nom)",
   statut: "Entrepreneur individuel (micro-entreprise)",
-  siret: "130 563 133 00011",
-  adresse: "16 Rue de l'Orée du Parc, 54200 Menil-la-Tour, France",
-  email: "lfranchino@franeo-rh.com",
+  siret: "À compléter",
+  adresse: "À compléter (adresse de domiciliation)",
+  email: "À compléter (adresse de contact)",
   site: "franeo-rh.com",
   /** Région de la base de données : console Neon › votre projet › Settings › Region (ex. : « Union européenne (Francfort) ») */
-  regionBase: "Franckfort, Allemagne",
+  regionBase: "À compléter (région de la base Neon)",
 };
 
 /** Prestataires techniques (sous-traitants au sens du RGPD) */
