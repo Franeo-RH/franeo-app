@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { aDroit, droitPourChemin } from "@/lib/droits";
 import { useDroits } from "@/components/useDroits";
 
@@ -258,25 +258,63 @@ function SidebarLink({
   );
 }
 
-/** Intertitre repliable d'un groupe de liens (ouvert s'il contient la page affichée ; choix mémorisé) */
+/** Groupe de liens : au survol (ou au clic), la liste s'ouvre à droite de la barre latérale */
 function GroupeSidebar({ titre, contientActif, badge, children }: { titre: string; contientActif: boolean; badge: number; children: React.ReactNode }) {
-  const cle = `franeo-side-${titre}`;
-  const [ouvert, setOuvert] = useState(true);
+  const pathname = usePathname();
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const bouton = useRef<HTMLButtonElement>(null);
+  const minuterie = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const annuler = () => { if (minuterie.current) { clearTimeout(minuterie.current); minuterie.current = null; } };
+  const ouvrir = () => {
+    annuler();
+    const r = bouton.current?.getBoundingClientRect();
+    if (!r) return;
+    // Le menu reste dans l'écran même pour un groupe placé en bas de la barre
+    const hauteur = Math.min(420, window.innerHeight - 16);
+    setPos({ left: r.right + 6, top: Math.max(8, Math.min(r.top - 6, window.innerHeight - hauteur - 8)) });
+  };
+  const fermerBientot = () => { annuler(); minuterie.current = setTimeout(() => setPos(null), 180); };
+  const fermer = () => { annuler(); setPos(null); };
+
+  // Fermé après un clic sur un lien (changement de page), au défilement et avec Échap
+  useEffect(() => { fermer(); }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (contientActif) { setOuvert(true); return; }
-    try { const v = localStorage.getItem(cle); if (v !== null) setOuvert(v === "1"); } catch { /* navigation privée */ }
-  }, [cle, contientActif]);
-  const basculer = () => setOuvert((o) => { try { localStorage.setItem(cle, o ? "0" : "1"); } catch { /* navigation privée */ } return !o; });
+    if (!pos) return;
+    const touche = (e: KeyboardEvent) => { if (e.key === "Escape") { fermer(); bouton.current?.focus(); } };
+    const defile = () => fermer();
+    window.addEventListener("keydown", touche);
+    window.addEventListener("resize", defile);
+    document.querySelector(".fr-sidebar")?.addEventListener("scroll", defile);
+    return () => {
+      window.removeEventListener("keydown", touche);
+      window.removeEventListener("resize", defile);
+      document.querySelector(".fr-sidebar")?.removeEventListener("scroll", defile);
+    };
+  }, [pos]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => annuler, []);
+
   const [icone, ...reste] = titre.split(" ");
   return (
-    <div className="fr-side-groupe">
-      <button type="button" className="fr-side-groupe-titre" aria-expanded={ouvert} onClick={basculer}>
+    <div className="fr-side-groupe" onMouseEnter={ouvrir} onMouseLeave={fermerBientot}>
+      <button
+        ref={bouton}
+        type="button"
+        className={`fr-side-groupe-titre${contientActif ? " fr-actif" : ""}${pos ? " fr-ouvert" : ""}`}
+        aria-expanded={!!pos}
+        aria-haspopup="true"
+        onClick={() => (pos ? fermer() : ouvrir())}
+      >
         <span className="fr-side-icone" aria-hidden="true">{icone}</span>
         <span className="fr-side-texte">{reste.join(" ")}</span>
-        {!ouvert && badge > 0 && <span className="fr-side-badge">{badge}</span>}
-        <span aria-hidden="true" style={{ transform: ouvert ? "rotate(90deg)" : "none", transition: "transform .15s", fontSize: 11 }}>▶</span>
+        {badge > 0 && <span className="fr-side-badge">{badge}</span>}
+        <span aria-hidden="true" className="fr-side-groupe-fleche">›</span>
       </button>
-      {ouvert && <div className="fr-side-groupe-liens">{children}</div>}
+      {pos && (
+        <div className="fr-side-volet" role="menu" aria-label={reste.join(" ")} style={{ top: pos.top, left: pos.left }} onMouseEnter={annuler} onMouseLeave={fermerBientot}>
+          <p className="fr-side-volet-titre">{titre}</p>
+          {children}
+        </div>
+      )}
     </div>
   );
 }
