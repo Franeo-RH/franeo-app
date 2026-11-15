@@ -11,7 +11,7 @@ Puis ouvrir http://localhost:3000. Les données utilisées sont celles de la bas
 ### Liste de contrôle (10 minutes)
 
 1. Connexion admin, connexion client, démo dirigeant, démo salarié.
-2. Exports Excel : récap factures, pointages, projets, export complet admin. Ils doivent s'ouvrir sans message de réparation, avec les logos.
+2. Fichiers Excel : récap factures, pointages, projets, export paie, export complet admin, modèle « nouveau client » et modèles d'import admin. Ils doivent s'ouvrir sans message de réparation, avec les logos.
 3. Modèle d'import salariés : le remplir à partir de la ligne 5 et l'importer.
 4. Fiche d'un salarié › « Données personnelles (RGPD) » › Télécharger toutes ses données.
 5. Espace salarié › « Mes données personnelles » › Télécharger mes données.

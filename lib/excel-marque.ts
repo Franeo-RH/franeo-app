@@ -4,10 +4,14 @@
 // Les données commencent ligne 4 (ligne des titres de colonnes), figée à l'écran.
 // Les imports savent ignorer ces lignes d'en-tête (la ligne des titres de colonnes est retrouvée automatiquement).
 //
-// Correctif V36 : Excel refusait d'ouvrir certains fichiers (« sheet1.xml : erreur XML ») car les volets figés
-// étaient recopiés avec une cellule de départ incohérente. Les volets sont maintenant toujours recalculés.
+// Correctifs « Excel a détecté des erreurs / partie réparée sheet1.xml » :
+// - V36 : volets figés recopiés avec une cellule de départ incohérente → les volets sont toujours recalculés ;
+// - V38 : un fichier fabriqué par la bibliothèque « xlsx » puis réenregistré par exceljs perdait la hauteur de ligne
+//   par défaut (attribut obligatoire pour Excel). On ne réenregistre plus jamais un fichier : il est relu, puis
+//   entièrement reconstruit avec exceljs, comme toutes les autres extractions.
 
 import ExcelJS from "exceljs";
+import * as XLSX from "xlsx";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { LOGO_FRANEO_PNG_BASE64, LOGO_FRANEO_TAILLE } from "@/lib/logo-franeo";
@@ -167,14 +171,19 @@ export async function classeurMarque(opts: OptionsMarque = {}) {
 }
 
 /** Écrit un tableau (première ligne = titres) à partir de la ligne 4 d'une feuille préparée */
-export function remplirTableau(ws: ExcelJS.Worksheet, lignes: unknown[][], couleur?: string) {
+export function remplirTableau(ws: ExcelJS.Worksheet, lignes: unknown[][], couleur?: string, largeurs?: (number | undefined)[]) {
   const donnees = lignes.length > 1 ? lignes : [...(lignes.length ? lignes : [["Information"]]), ["Aucune donnée"]];
-  for (const l of donnees) ws.addRow(l.map((v) => (v === null || v === undefined ? "" : v)));
+  for (const l of donnees) {
+    const row = ws.addRow(l.map((v) => (v === null || v === undefined ? "" : v)));
+    // Dates au format français
+    row.eachCell((cell) => { if (cell.value instanceof Date) cell.numFmt = "dd/mm/yyyy"; });
+  }
   const nb = Math.max(...donnees.map((l) => l.length), 1);
   styliserTitres(ws, LIGNE_TITRES, nb, couleur);
   for (let i = 0; i < nb; i++) {
+    const imposee = largeurs?.[i];
     const max = Math.max(...donnees.slice(0, 300).map((l) => String(l[i] ?? "").length));
-    ws.getColumn(i + 1).width = Math.min(Math.max(max + 2, 10), 60);
+    ws.getColumn(i + 1).width = imposee && imposee > 0 ? Math.min(imposee, 80) : Math.min(Math.max(max + 2, 10), 60);
   }
   figer(ws, LIGNE_TITRES);
 }
@@ -187,37 +196,24 @@ export async function excelDepuisLignes(feuille: string, lignes: unknown[][], op
 }
 
 /**
- * Ajoute l'en-tête FRANEO RH à un fichier Excel déjà fabriqué (par la bibliothèque « xlsx »).
- * Les lignes existantes descendent de 3 lignes ; la ligne des titres de colonnes est stylée et figée.
+ * Ajoute l'en-tête FRANEO RH à un fichier Excel fabriqué par la bibliothèque « xlsx » (json_to_sheet, aoa_to_sheet).
+ * Le fichier n'est pas modifié sur place : chaque feuille est relue puis reconstruite avec exceljs
+ * (mêmes noms de feuilles, mêmes valeurs, largeurs de colonnes conservées), titres de colonnes en ligne 4.
  */
 export async function brander(contenu: Buffer | Uint8Array | ArrayBuffer, opts: OptionsMarque = {}): Promise<Buffer> {
-  const wb = new ExcelJS.Workbook();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await wb.xlsx.load(contenu as any);
-  const marque = await preparerMarque(wb, opts);
-
-  for (const ws of wb.worksheets) {
-    // Ligne des titres d'origine : première ligne avec au moins 2 cellules remplies
-    let titres = 0;
-    for (let r = 1; r <= Math.min(ws.rowCount, 20) && !titres; r++) {
-      let pleines = 0;
-      ws.getRow(r).eachCell((cell) => { if (String(cell.value ?? "").trim() !== "") pleines++; });
-      if (pleines >= 2) titres = r;
-    }
-    const nb = ws.columnCount;
-    ws.spliceRows(1, 0, [], [], []);
-    poserEntete(ws, marque);
-    if (titres) {
-      const ligne = titres + LIGNES_ENTETE;
-      // On ne restyle pas une ligne déjà mise en forme
-      const deja = ws.getRow(ligne).getCell(1).fill as { fgColor?: unknown } | undefined;
-      if (!deja?.fgColor) styliserTitres(ws, ligne, nb);
-      figer(ws, ligne);
-    } else {
-      figer(ws, 0);
-    }
+  const octets = contenu instanceof ArrayBuffer ? new Uint8Array(contenu) : new Uint8Array(contenu);
+  const source = XLSX.read(octets, { type: "array", cellDates: true });
+  const c = await classeurMarque(opts);
+  for (const nom of source.SheetNames) {
+    const feuille = source.Sheets[nom];
+    if (!feuille) continue;
+    const lignes = XLSX.utils.sheet_to_json<unknown[]>(feuille, { header: 1, raw: true, defval: null, blankrows: true });
+    const largeurs = (feuille["!cols"] ?? []).map((col) => (col ? col.wch ?? (col.width ? col.width : undefined) : undefined));
+    const ws = c.feuille(nom);
+    remplirTableau(ws, lignes, undefined, largeurs);
   }
-  return Buffer.from(await wb.xlsx.writeBuffer());
+  if (source.SheetNames.length === 0) c.tableau("Export", []);
+  return c.terminer();
 }
 
 /** Réponse HTTP de téléchargement d'un fichier Excel */
