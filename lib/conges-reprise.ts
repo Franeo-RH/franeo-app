@@ -1,12 +1,13 @@
 // lib/conges-reprise.ts
-// Solde de reprise des congés (BTP) : qui peut le voir / le modifier, et quels salariés sont concernés
+// Solde de départ des congés : qui peut le voir / le modifier, et quels salariés sont concernés
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
 import { filtreSalaries } from "@/lib/perimetre";
-import { estBTP } from "@/lib/conges-btp";
+import { estBTP } from "@/lib/conges";
+import { congesDe } from "@/lib/conges-serveur";
 
 export async function accesReprise(request: NextRequest, ecriture: boolean, entrepriseIdCorps?: unknown) {
   const session = await getSession();
@@ -23,8 +24,8 @@ export async function accesReprise(request: NextRequest, ecriture: boolean, entr
   return { ok: true as const, session, entrepriseId: session.entrepriseId, filtre: filtreSalaries(session) };
 }
 
-/** Salariés BTP (actifs) de l'entreprise, avec leur solde de reprise */
-export async function salariesBTP(entrepriseId: string, filtre: object) {
+/** Salariés actifs de l'entreprise, avec leur solde de départ et leur solde calculé */
+export async function salariesConges(entrepriseId: string, filtre: object) {
   const [entreprise, salaries] = await Promise.all([
     prisma.entreprise.findUnique({ where: { id: entrepriseId }, select: { ccn: true } }),
     prisma.salarie.findMany({
@@ -33,7 +34,15 @@ export async function salariesBTP(entrepriseId: string, filtre: object) {
       orderBy: [{ nom: "asc" }, { prenom: "asc" }],
     }),
   ]);
-  return salaries.filter((s) => estBTP(s.conventionCollective, entreprise?.ccn));
+  const calc = await congesDe(salaries.map((s) => s.id));
+  return salaries.map((s) => {
+    const c = calc.get(s.id);
+    return {
+      ...s, btp: estBTP(s.conventionCollective, entreprise?.ccn),
+      congesRepriseDate: c?.reprise?.date ?? s.congesRepriseDate, congesRepriseReste: c?.reprise?.reste ?? s.congesRepriseReste, congesRepriseEnCours: c?.reprise?.enCours ?? s.congesRepriseEnCours,
+      reste: c?.reste ?? 0, enCours: c?.enCours.acquis ?? 0, pris: c?.pris ?? 0,
+    };
+  });
 }
 
 /** Nombre de jours saisi (vide = pas de valeur) */

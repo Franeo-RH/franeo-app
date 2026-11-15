@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
-import { accesReprise, jours, salariesBTP } from "@/lib/conges-reprise";
+import { accesReprise, jours, salariesConges } from "@/lib/conges-reprise";
 import { indexLigneTitres } from "@/lib/excel-marque";
 
 export const runtime = "nodejs";
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   const cMat = col("matricule"), cNom = col("nom"), cPrenom = col("prenom"), cReste = col("reste"), cEnCours = col("en cours", "acquis");
   if (cReste < 0 || cEnCours < 0) return NextResponse.json({ erreur: "Colonnes « Reste à prendre » et « Acquis en cours » introuvables : utilisez le modèle." }, { status: 400 });
 
-  const salaries = await salariesBTP(a.entrepriseId, a.filtre);
+  const salaries = await salariesConges(a.entrepriseId, a.filtre);
   const lignes: { ligne: number; salarieId: string | null; nom: string; reste: number | null; enCours: number | null; erreur?: string }[] = [];
   brut.slice(debut + 1).forEach((r, i) => {
     const mat = cMat >= 0 ? String(r[cMat] ?? "").trim() : "";
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     const libelle = s ? `${s.prenom} ${s.nom}` : [r[cPrenom], r[cNom], mat].filter(Boolean).join(" ");
     lignes.push({
       ligne: debut + i + 2, salarieId: s?.id ?? null, nom: libelle, reste: Number.isNaN(reste) ? null : reste, enCours: Number.isNaN(enCours) ? null : enCours,
-      ...(!s ? { erreur: "Salarié BTP introuvable" } : Number.isNaN(reste) || Number.isNaN(enCours) ? { erreur: "Nombre de jours invalide" } : {}),
+      ...(!s ? { erreur: "Salarié introuvable" } : Number.isNaN(reste) || Number.isNaN(enCours) ? { erreur: "Nombre de jours invalide" } : {}),
     });
   });
   return NextResponse.json({ lignes });

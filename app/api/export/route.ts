@@ -6,7 +6,7 @@ import * as XLSX from "xlsx";
 import { quotaTickets, ticketsDuMois, ticketsDuMoisParEntreprise } from "@/lib/facturation";
 import { aDroit } from "@/lib/droits";
 import { journaliser } from "@/lib/securite";
-import { estBTP, joursOuvrables } from "@/lib/conges-btp";
+import { estBTP, joursOuvrables } from "@/lib/conges";
 import { filtreSalaries, filtreViaSalarie } from "@/lib/perimetre";
 
 function calculerCout(type: string, valeur: number, salarie: {

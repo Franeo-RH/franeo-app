@@ -19,8 +19,8 @@ Puis ouvrir http://localhost:3000. Les données utilisées sont celles de la bas
 7. Buddy : « mes projets », « projets en alerte », « comment déclarer un arrêt maladie ? ».
 8. Pages /confidentialite et /mentions-legales (liens en bas de la page de connexion).
 9. Mon entreprise › Accès dirigeants d'établissement : créer un accès, ouvrir le lien dans une fenêtre privée, choisir le mot de passe. Ce compte ne doit voir que les salariés et les projets de son établissement.
-11. BTP : mettre « BTP » (ou l'IDCC, ex. 1597) dans la convention collective d'une entreprise ou d'un salarié ; le bloc « Congés BTP » apparaît dans la fiche du salarié et dans son espace. Gestion RH › Congés BTP : télécharger le modèle, le remplir, l'importer, enregistrer, puis vérifier le compteur dans la fiche.
-10. Tableau de bord : la carte « Mise à jour V43 » s'affiche ; « J'ai lu » la masque ; l'historique est dans Communication › Mises à jour.
+11. Gestion RH › Soldes de congés : tous les salariés à 0 au départ ; modifier un solde ou importer le modèle, enregistrer, vérifier la fiche du salarié, son espace et l'espace de son manager. BTP : mettre « BTP » (ou l'IDCC) dans la convention collective.
+10. Tableau de bord : la carte « Mise à jour V44 » s'affiche ; « J'ai lu » la masque ; l'historique est dans Communication › Mises à jour.
 
 ## Variables d'environnement (Vercel › Settings › Environment Variables)
 

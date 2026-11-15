@@ -334,6 +334,18 @@ export async function reinitialiserDemo(): Promise<{ entrepriseId: string; userI
     await semerProjetsDemo(entrepriseId);
   }
 
+  // Congés payés : soldes de départ réalistes au 1er du mois (le calcul continue ensuite tout seul)
+  const maintenant = new Date();
+  const debutMois = new Date(Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth(), 1));
+  const moisDepuisJuin = (maintenant.getUTCMonth() - 5 + 12) % 12;
+  const salariesDemo = await prisma.salarie.findMany({ where: { entrepriseId }, select: { id: true } });
+  for (const [i, sd] of salariesDemo.entries()) {
+    await prisma.salarie.update({
+      where: { id: sd.id },
+      data: { congesRepriseDate: debutMois, congesRepriseReste: [12, 5, 18, 9, 22, 3, 15][i % 7], congesRepriseEnCours: Math.round(moisDepuisJuin * 2.5) },
+    });
+  }
+
   return { entrepriseId, userId: utilisateur.id };
 }
 

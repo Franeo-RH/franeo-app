@@ -8,6 +8,7 @@ import { communicationsNonLues, derniereMiseAJour } from "@/lib/communications";
 import BandeauCommunications from "@/components/BandeauCommunications";
 import CarteMiseAJour from "@/components/CarteMiseAJour";
 import CompteurConges from "@/components/CompteurConges";
+import CongesEquipe from "@/components/CongesEquipe";
 import BandeauDemo from "@/components/BandeauDemo";
 import ReleveHeuresSalarie from "@/components/ReleveHeuresSalarie";
 import EspaceSalarieRH from "@/components/EspaceSalarieRH";
@@ -132,7 +133,8 @@ export default async function EspaceSalarie() {
                   <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>{aVenir.slice(0, 3).map((a) => ligneAbsence(a, false))}</ul>
                 </section>
               )}
-              {voit.absences && <CompteurConges espaceSalarie />}
+              <CompteurConges espaceSalarie />
+              <CongesEquipe />
               <section style={carte} aria-labelledby="t-donnees">
                 <h2 id="t-donnees" style={{ margin: "0 0 6px", fontSize: "18px" }}>🔐 Mes données personnelles</h2>
                 <p style={{ margin: "0 0 12px", color: "#4b5563", fontSize: "14px" }}>

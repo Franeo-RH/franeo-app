@@ -15,13 +15,13 @@ export type MiseAJour = {
 
 export const MISES_A_JOUR: MiseAJour[] = [
   {
-    version: "V43",
+    version: "V44",
     date: "novembre 2026",
     titre: "Établissements, option Projets et fichiers Excel fiabilisés",
     clients: [
       "📐 Option Projets, planning & rentabilité (29 € HT / mois) : demandez-la en un clic dans Mon entreprise › Abonnement.",
       "💳 Formules RH : 2 € par salarié au-delà des salariés inclus, quelle que soit la formule.",
-      "🏗️ Congés BTP : saisissez ou importez une fois le solde de chaque salarié (Gestion RH › Congés BTP), puis les compteurs se calculent seuls (caisse CIBTP, période du 1er avril au 31 mars, 2,5 jours par 150 heures, jours ouvrables).",
+      "🏖️ Soldes de congés payés calculés automatiquement pour tous vos salariés (Gestion RH › Soldes de congés), visibles dans leur fiche, leur espace salarié et par leur manager. Importez vos soldes au début ou chaque mois pour les caler sur votre paie. BTP : règles de la caisse CIBTP (1er avril au 31 mars, 150 heures = 2,5 jours).",
       "🔑 Accès dirigeants d'établissement : dans Mon entreprise, créez un accès pour le responsable de chaque établissement. Il ne voit que ses salariés, leurs absences, relevés, paie et les projets de son établissement.",
       "🏢 Établissements : ajoutez le SIRET de chacun (14 chiffres).",
       "📐 Projets : nouvelle présentation en cartes (ou en tableau), filtres par statut et par établissement, fiche projet organisée en onglets (synthèse, équipe & planning, étapes, temps, frais).",
@@ -31,7 +31,7 @@ export const MISES_A_JOUR: MiseAJour[] = [
       "🚀 Retrouvez l'historique des mises à jour dans Communication › Mises à jour.",
     ],
     salaries: [
-      "🏗️ BTP : vos congés (reste à prendre, en cours d'acquisition) sont calculés automatiquement sur votre tableau de bord.",
+      "🏖️ Mes congés payés : votre solde (reste à prendre, en cours d'acquisition) est sur votre tableau de bord ; les managers voient celui de leur équipe.",
       "🔐 Mes données personnelles : téléchargez toutes vos informations depuis votre tableau de bord.",
       "🔑 Mot de passe : 10 caractères minimum, avec au moins une lettre et un chiffre.",
     ],

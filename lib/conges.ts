@@ -1,16 +1,36 @@
-// lib/conges-btp.ts
-// Congés payés des salariés du BTP (conventions collectives du Bâtiment et des Travaux publics).
-// Particularités prises en compte :
-//  - les congés sont gérés et payés par la caisse de congés payés du BTP (réseau CIBTP), pas par l'employeur ;
-//  - période de référence (acquisition) : du 1er avril au 31 mars ;
-//  - acquisition : 2,5 jours ouvrables par mois de travail, un « mois » = 150 heures de travail ; 30 jours ouvrables maximum ;
-//  - congés pris (prise du 1er mai au 30 avril suivant) décomptés en jours ouvrables (lundi au samedi, hors jours fériés) ;
-//  - arrêt maladie non professionnel : 2 jours ouvrables par mois d'arrêt, dans la limite de 24 jours au total (loi du 22 avril 2024) ;
-//  - prime de vacances versée par la caisse : 30 % de l'indemnité des 24 premiers jours, si 1 675 heures de travail sur la période.
-// Les autres conventions gardent le solde de congés saisi dans la fiche (pas de calcul automatique pour l'instant).
+// lib/conges.ts
+// Soldes de congés payés de tous les salariés, calculés automatiquement à partir d'un solde de départ
+// (0 par défaut, ou saisi / importé dans Gestion RH › Congés, au début ou chaque mois).
+//
+// Droit commun (toutes conventions) :
+//  - période d'acquisition du 1er juin au 31 mai ; les droits se prennent à partir du 1er juin suivant ;
+//  - 2,5 jours ouvrables par mois de travail (horaire du contrat), 30 jours maximum ;
+// BTP (Bâtiment et Travaux publics) :
+//  - congés gérés et payés par la caisse de congés payés du BTP (réseau CIBTP), pas par l'employeur ;
+//  - période d'acquisition du 1er avril au 31 mars ; prise à partir du 1er mai ;
+//  - 2,5 jours ouvrables par tranche de 150 heures de travail (heures des relevés validés, sinon horaire du contrat) ;
+//  - prime de vacances de la caisse (30 %) si 1 675 heures de travail sur la période.
+// Dans les deux cas :
+//  - congés sans solde et absences non rémunérées n'ouvrent pas de droits ;
+//  - arrêt maladie non professionnel : 2 jours ouvrables par mois d'arrêt, total limité à 24 jours (loi du 22 avril 2024) ;
+//  - arrondi au jour supérieur ; congés pris décomptés en jours ouvrables (lundi au samedi, hors jours fériés).
 
 const JOUR = 86400000;
 export const HEURES_PAR_MOIS_BTP = 150;
+
+export type RegleConges = {
+  code: "BTP" | "DROIT_COMMUN";
+  libelle: string;
+  moisAcquisition: number; // mois (0 = janvier) de début de la période d'acquisition
+  moisPrise: number; // mois de début de la prise des droits acquis
+  heuresParMois: number | null; // BTP : 150 h ; sinon horaire mensuel du contrat
+  releves: boolean; // heures des relevés validés prises en compte
+  caisse: boolean; // congés payés par une caisse (BTP)
+};
+
+export const REGLE_DROIT_COMMUN: RegleConges = { code: "DROIT_COMMUN", libelle: "Code du travail", moisAcquisition: 5, moisPrise: 5, heuresParMois: null, releves: false, caisse: false };
+export const REGLE_BTP: RegleConges = { code: "BTP", libelle: "BTP (caisse CIBTP)", moisAcquisition: 3, moisPrise: 4, heuresParMois: HEURES_PAR_MOIS_BTP, releves: true, caisse: true };
+
 export const JOURS_PAR_MOIS = 2.5;
 export const MAX_JOURS = 30;
 export const MAX_AVEC_MALADIE = 24;
@@ -28,6 +48,9 @@ export function estBTP(...conventions: (string | null | undefined)[]): boolean {
     return /\bbtp\b|b\.t\.p|batiment|travaux publics/.test(t) || IDCC_BTP.some((n) => new RegExp(`\\b${n}\\b`).test(t));
   });
 }
+
+/** Règle de congés selon la convention collective du salarié ou de l'entreprise */
+export const regleConges = (...conventions: (string | null | undefined)[]) => (estBTP(...conventions) ? REGLE_BTP : REGLE_DROIT_COMMUN);
 
 /* ───────── Jours fériés et jours ouvrables ───────── */
 
@@ -71,10 +94,11 @@ function chevauchement(a: Date, b: Date, debut: Date, fin: Date): number {
 
 /* ───────── Périodes ───────── */
 
-/** Période d'acquisition BTP contenant la date : du 1er avril au 31 mars */
-export function periodeAcquisition(date: Date) {
-  const a = date.getUTCMonth() >= 3 ? date.getUTCFullYear() : date.getUTCFullYear() - 1;
-  return { du: new Date(Date.UTC(a, 3, 1)), au: new Date(Date.UTC(a + 1, 2, 31)) };
+/** Période d'acquisition contenant la date (BTP : 1er avril → 31 mars ; droit commun : 1er juin → 31 mai) */
+export function periodeAcquisition(date: Date, regle: RegleConges = REGLE_BTP) {
+  const m = regle.moisAcquisition;
+  const a = date.getUTCMonth() >= m ? date.getUTCFullYear() : date.getUTCFullYear() - 1;
+  return { du: new Date(Date.UTC(a, m, 1)), au: new Date(Date.UTC(a + 1, m, 0)) };
 }
 
 /* ───────── Calcul ───────── */
@@ -87,7 +111,7 @@ type SalarieConges = { dateDebut: Date | null; dateFin: Date | null; heuresHebdo
 
 const NON_ASSIMILEES = ["CONGE_SANS_SOLDE", "ABSENCE_NON_REMUNEREE"]; // n'ouvrent pas de droits
 
-export type AcquisitionBTP = {
+export type Acquisition = {
   du: Date; au: Date; heures: number; heuresReleves: number; moisReleves: number; joursMaladie: number;
   acquisTravail: number; acquisMaladie: number; acquis: number; primeVacances: boolean;
 };
@@ -96,8 +120,9 @@ export type AcquisitionBTP = {
  * Droits acquis sur une période d'acquisition (jusqu'à `jusquA` si la période est en cours).
  * `base` : jours déjà acquis avant `du` (solde de reprise), ajoutés avant l'arrondi et les plafonds.
  */
-export function acquisitionBTP(s: SalarieConges, absences: Absence[], releves: Releve[], du: Date, au: Date, jusquA = au, base = 0): AcquisitionBTP {
+export function acquisition(regle: RegleConges, s: SalarieConges, absences: Absence[], releves: Releve[], du: Date, au: Date, jusquA = au, base = 0): Acquisition {
   const hebdo = s.heuresHebdomadaires && s.heuresHebdomadaires > 0 ? s.heuresHebdomadaires : 35;
+  const heuresMois = regle.heuresParMois ?? (hebdo * 52) / 12;
   const fin = new Date(Math.min(au.getTime(), utc(jusquA).getTime()));
   const absValidees = absences.filter((a) => a.statut === "Validé");
   let heures = 0, heuresReleves = 0, moisReleves = 0, joursMaladie = 0;
@@ -114,7 +139,7 @@ export function acquisitionBTP(s: SalarieConges, absences: Absence[], releves: R
     if (!presence) continue;
     const maladie = absValidees.filter((x) => x.type === "MALADIE").reduce((t, x) => t + chevauchement(x.dateDebut, x.dateFin, debutMois, finMois), 0);
     joursMaladie += maladie;
-    const releve = releves.find((r) => r.annee === a && r.mois === m + 1 && r.statut === "Validé");
+    const releve = regle.releves ? releves.find((r) => r.annee === a && r.mois === m + 1 && r.statut === "Validé") : undefined;
     if (releve) {
       const h = releve.jours.filter((j) => utc(new Date(j.date)) >= debutMois).reduce((t, j) => t + (j.heures ?? 0) + (j.heuresSupp ?? 0), 0);
       heures += h; heuresReleves += h; moisReleves++;
@@ -128,21 +153,22 @@ export function acquisitionBTP(s: SalarieConges, absences: Absence[], releves: R
     }
   }
 
-  const acquisTravail = base + (heures / HEURES_PAR_MOIS_BTP) * JOURS_PAR_MOIS;
+  const acquisTravail = base + (heures / heuresMois) * JOURS_PAR_MOIS;
   const acquisMaladie = (joursMaladie / 30) * 2;
   // Arrondi au jour supérieur (article L3141-7) ; maladie : total plafonné à 24 jours si le travail seul n'en donne pas plus
-  const brut = Math.min(MAX_JOURS, Math.ceil(acquisTravail - 1e-9));
+  const brut = Math.max(0, Math.min(MAX_JOURS, Math.ceil(acquisTravail - 1e-9)));
   const acquis = acquisMaladie > 0 ? Math.max(brut, Math.min(MAX_AVEC_MALADIE, Math.ceil(acquisTravail + acquisMaladie - 1e-9))) : brut;
   return {
     du, au, heures: Math.round(heures * 10) / 10, heuresReleves: Math.round(heuresReleves * 10) / 10, moisReleves, joursMaladie,
     acquisTravail: Math.round(acquisTravail * 100) / 100, acquisMaladie: Math.round(acquisMaladie * 100) / 100, acquis,
-    primeVacances: heures >= SEUIL_PRIME_VACANCES,
+    primeVacances: regle.caisse && heures >= SEUIL_PRIME_VACANCES,
   };
 }
 
-export type CongesBTP = {
-  aPrendre: AcquisitionBTP; // droits acquis sur la période précédente, à prendre du 1er mai au 30 avril
-  enCours: AcquisitionBTP; // période d'acquisition en cours
+export type Conges = {
+  regle: RegleConges;
+  aPrendre: Acquisition; // droits acquis sur la période précédente, à prendre du 1er mai au 30 avril
+  enCours: Acquisition; // période d'acquisition en cours
   pris: number; // jours ouvrables de congés payés validés (depuis le 1er mai, ou depuis la reprise)
   enAttente: number; // jours ouvrables de congés payés demandés, pas encore validés
   reste: number;
@@ -153,16 +179,16 @@ export type CongesBTP = {
 const lendemain = (d: Date) => new Date(utc(d).getTime() + JOUR);
 
 /**
- * Compteur complet d'un salarié BTP à une date.
+ * Compteur complet d'un salarié à une date.
  * Avec un solde de reprise (saisi ou importé), le calcul part de ces chiffres à la date de reprise ;
  * sans reprise, tout est recalculé depuis les absences et les relevés.
  */
-export function compteurBTP(s: SalarieConges, absences: Absence[], releves: Releve[], aujourdhui = new Date(), reprise: RepriseConges = null): CongesBTP {
-  const actuelle = periodeAcquisition(aujourdhui);
-  const precedente = { du: new Date(Date.UTC(actuelle.du.getUTCFullYear() - 1, 3, 1)), au: new Date(Date.UTC(actuelle.du.getUTCFullYear(), 2, 31)) };
-  // Les droits acquis au 31 mars se prennent du 1er mai au 30 avril suivant
-  const priseDu = new Date(Date.UTC(actuelle.du.getUTCFullYear(), 4, 1));
-  const priseAu = new Date(Date.UTC(priseDu.getUTCFullYear() + 1, 3, 30));
+export function compteurConges(regle: RegleConges, s: SalarieConges, absences: Absence[], releves: Releve[], aujourdhui = new Date(), reprise: RepriseConges = null): Conges {
+  const actuelle = periodeAcquisition(aujourdhui, regle);
+  const precedente = periodeAcquisition(new Date(actuelle.du.getTime() - JOUR), regle);
+  // Les droits acquis sur la période précédente se prennent à partir du mois de prise (BTP : 1er mai ; sinon 1er juin), pendant un an
+  const priseDu = new Date(Date.UTC(actuelle.du.getUTCFullYear(), regle.moisPrise, 1));
+  const priseAu = new Date(Date.UTC(priseDu.getUTCFullYear() + 1, regle.moisPrise, 0));
   const cp = absences.filter((a) => a.type === "CONGE_PAYE");
   const compte = (statuts: string[], depuis: Date) => cp.filter((a) => statuts.includes(a.statut)).reduce((t, a) => {
     const d = new Date(Math.max(utc(a.dateDebut).getTime(), depuis.getTime())), f = new Date(Math.min(utc(a.dateFin).getTime(), priseAu.getTime()));
@@ -173,21 +199,21 @@ export function compteurBTP(s: SalarieConges, absences: Absence[], releves: Rele
   // Reprise dans la période d'acquisition en cours : « reste » = droits à prendre, « en cours » = acquis à cette date
   if (reprise && r && r >= actuelle.du && r <= utc(aujourdhui)) {
     const depuis = new Date(Math.max(lendemain(r).getTime(), priseDu.getTime()));
-    const enCours = { ...acquisitionBTP(s, absences, releves, lendemain(r), actuelle.au, aujourdhui, reprise.enCours), du: actuelle.du };
-    const aPrendre = { ...acquisitionBTP(s, absences, releves, precedente.du, precedente.au), acquis: reprise.reste };
+    const enCours = { ...acquisition(regle, s, absences, releves, lendemain(r), actuelle.au, aujourdhui, reprise.enCours), du: actuelle.du };
+    const aPrendre = { ...acquisition(regle, s, absences, releves, precedente.du, precedente.au), acquis: reprise.reste };
     const pris = compte(["Validé"], depuis);
-    return { aPrendre, enCours, pris, enAttente: compte(["En attente"], depuis), reste: Math.max(0, reprise.reste - pris), priseDu: depuis, priseAu, reprise: { ...reprise, utilisee: true } };
+    return { regle, aPrendre, enCours, pris, enAttente: compte(["En attente"], depuis), reste: Math.max(0, reprise.reste - pris), priseDu: depuis, priseAu, reprise: { ...reprise, utilisee: true } };
   }
   // Reprise dans la période précédente : son « en cours » devient les droits à prendre depuis le 1er mai
   if (reprise && r && r >= precedente.du && r < actuelle.du) {
-    const aPrendre = { ...acquisitionBTP(s, absences, releves, lendemain(r), precedente.au, precedente.au, reprise.enCours), du: precedente.du };
-    const enCours = acquisitionBTP(s, absences, releves, actuelle.du, actuelle.au, aujourdhui);
+    const aPrendre = { ...acquisition(regle, s, absences, releves, lendemain(r), precedente.au, precedente.au, reprise.enCours), du: precedente.du };
+    const enCours = acquisition(regle, s, absences, releves, actuelle.du, actuelle.au, aujourdhui);
     const pris = compte(["Validé"], priseDu);
-    return { aPrendre, enCours, pris, enAttente: compte(["En attente"], priseDu), reste: Math.max(0, aPrendre.acquis - pris), priseDu, priseAu, reprise: { ...reprise, utilisee: true } };
+    return { regle, aPrendre, enCours, pris, enAttente: compte(["En attente"], priseDu), reste: Math.max(0, aPrendre.acquis - pris), priseDu, priseAu, reprise: { ...reprise, utilisee: true } };
   }
   // Sans reprise (ou reprise trop ancienne) : calcul complet
-  const aPrendre = acquisitionBTP(s, absences, releves, precedente.du, precedente.au);
-  const enCours = acquisitionBTP(s, absences, releves, actuelle.du, actuelle.au, aujourdhui);
+  const aPrendre = acquisition(regle, s, absences, releves, precedente.du, precedente.au);
+  const enCours = acquisition(regle, s, absences, releves, actuelle.du, actuelle.au, aujourdhui);
   const pris = compte(["Validé"], priseDu);
-  return { aPrendre, enCours, pris, enAttente: compte(["En attente"], priseDu), reste: Math.max(0, aPrendre.acquis - pris), priseDu, priseAu, reprise: reprise ? { ...reprise, utilisee: false } : null };
+  return { regle, aPrendre, enCours, pris, enAttente: compte(["En attente"], priseDu), reste: Math.max(0, aPrendre.acquis - pris), priseDu, priseAu, reprise: reprise ? { ...reprise, utilisee: false } : null };
 }
