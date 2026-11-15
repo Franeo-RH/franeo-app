@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { notifierClients } from "@/lib/notifications";
 import { STATUTS_DEMANDE, TYPES_DEMANDE } from "@/lib/apps-franeo";
+import { oublierSessions } from "@/lib/session";
 
 /** PUT (admin) { statut, reponse? } ; DELETE : le client annule une demande en attente (l'admin supprime) */
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -15,6 +16,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     where: { id },
     data: { statut, reponse: typeof reponse === "string" && reponse.trim() ? reponse.trim().slice(0, 3000) : undefined, traiteeAt: statut === "TRAITEE" || statut === "REFUSEE" ? new Date() : null },
   });
+  // Option Projets acceptée : le module est activé tout de suite (facturé 29 € HT/mois)
+  if (d.type === "OPTION_PROJETS" && statut === "TRAITEE") {
+    const e = await prisma.entreprise.findUnique({ where: { id: d.entrepriseId }, select: { permissions: true } });
+    if (e && !e.permissions.includes("projets")) {
+      await prisma.entreprise.update({ where: { id: d.entrepriseId }, data: { permissions: [...e.permissions, "projets"] } });
+      oublierSessions();
+    }
+  }
   await notifierClients(d.entrepriseId, {
     sujet: `Votre demande : ${TYPES_DEMANDE[d.type]?.label ?? d.type}`,
     titre: "📬 Votre demande a été mise à jour",

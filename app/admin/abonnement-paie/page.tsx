@@ -10,23 +10,10 @@ import OngletsAbonnements from "@/components/OngletsAbonnements";
 import ExportCSV from "@/components/ExportCSV";
 import { detailPaie } from "@/lib/grille";
 import EditeurTexteFormule from "@/components/EditeurTexteFormule";
+import CarteFormuleAdmin from "@/components/CarteFormuleAdmin";
 import { clePaie, CLE_MENTION, texteMention, textePaie, textesModifies } from "@/lib/textes-formules";
 
 export const dynamic = "force-dynamic";
-
-// Services comparés entre les formules (lignes du tableau)
-const SERVICES: { key: string; label: string }[] = [
-  { key: "entreesSortiesIncluses", label: "Arrivées & sorties incluses" },
-  { key: "espaceSalarieInclus", label: "Espace salarié inclus" },
-  { key: "relancesVariables", label: "Relance des variables" },
-  { key: "suiviRH", label: "Suivi des échéances" },
-  { key: "veillePaie", label: "Veille paie" },
-  { key: "suiviIJSS", label: "Suivi IJSS" },
-  { key: "conseilPaie", label: "Conseil paie" },
-  { key: "pointPaie", label: "Rendez-vous paie" },
-  { key: "recouvrementIJSS", label: "Recouvrement IJSS" },
-  { key: "assistanceURSSAF", label: "Assistance contrôle URSSAF" },
-];
 
 const TEINTE: Record<string, string> = { ESSENTIELLE: "#3b82f6", SERENITE: "#8b5cf6", PREMIUM: "#f59e0b", ENTREPRISE: "#111827" };
 const eur = (n: number) => `${Math.round(n * 100) / 100} €`.replace(".", ",");
@@ -92,59 +79,23 @@ export default async function AdminAbonnementPaie({ searchParams }: { searchPara
             </div>
           </div>
 
-          {/* Comparatif des formules */}
-          <div className="bg-white rounded-xl shadow p-6 mb-6" style={{ overflowX: "auto" }}>
-            <h1 className="text-2xl font-bold mb-4">📦 Formules paie</h1>
-            <table className="w-full text-sm fr-tableau-fixe" style={{ minWidth: "640px" }}>
-              <thead>
-                <tr>
-                  <th className="text-left py-2"></th>
-                  {formules.map((f) => (
-                    <th key={f.id} className="py-2 px-2 text-center" style={{ borderTop: `4px solid ${TEINTE[f.code] || "#9ca3af"}` }}>
-                      {detailPaie(f.code)?.recommande && <span className="inline-block bg-black text-white text-xs font-bold px-2 py-0.5 rounded-full mb-1">⭐ Recommandée</span>}
-                      <span className="block text-base font-bold">{f.nom.replace(/^Paie /, "")}</span>
-                      <span className="block text-2xl font-black">{f.prixMensuel} €</span>
-                      <span className="block text-xs text-gray-500 font-normal">{parFormule(f.id).length} client(s)</span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { label: "Bulletins inclus", v: (f: (typeof formules)[number]) => String(f.bulletinsInclus) },
-                  { label: "Bulletin en plus", v: (f: (typeof formules)[number]) => eur(f.prixBulletinSupp) },
-                  { label: "Tickets RH inclus / mois", v: (f: (typeof formules)[number]) => String(f.ticketsRHInclus) },
-                  { label: "Ticket RH en plus", v: (f: (typeof formules)[number]) => eur(f.prixTicketSupp) },
-                  { label: "Arrivée / sortie", v: (f: (typeof formules)[number]) => (f.entreesSortiesIncluses ? "incluses" : `${eur(f.prixEntree)} / ${eur(f.prixSortie)}`) },
-                  { label: "Espace salarié", v: (f: (typeof formules)[number]) => "inclus" },
-                  { label: "Rendez-vous paie", v: (f: (typeof formules)[number]) => { const d = detailPaie(f.code); return d ? (d.flags.pointPaie ? `trimestriel inclus, puis ${eur(d.prixRdv)}` : `${eur(d.prixRdv)} / rdv`) : "—"; } },
-                ].map((r) => (
-                  <tr key={r.label} className="border-t">
-                    <td className="py-2 font-semibold text-gray-600">{r.label}</td>
-                    {formules.map((f) => <td key={f.id} className="py-2 text-center font-semibold">{r.v(f)}</td>)}
-                  </tr>
-                ))}
-                {SERVICES.map((s) => (
-                  <tr key={s.key} className="border-t">
-                    <td className="py-2 text-gray-600">{s.label}</td>
-                    {formules.map((f) => {
-                      const ok = (f as unknown as Record<string, unknown>)[s.key] === true;
-                      return <td key={f.id} className="py-2 text-center" style={{ color: ok ? "#16a34a" : "#d1d5db", fontWeight: 700 }}>{ok ? "✓" : "—"}</td>;
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="grid gap-3 mt-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
-              {formules.map((f) => { const t = textePaie(modifs, f.code); return detailPaie(f.code) ? (
-                <div key={f.id} className="rounded-lg border p-3 text-xs">
-                  <EditeurTexteFormule cle={clePaie(f.code)} titre={`Ce que voit le client — ${f.nom}`} message={t.message} lignes={t.lignes} modifie={t.modifie} />
-                </div>
-              ) : null; })}
-            </div>
-            <div className="text-xs text-gray-500 mt-3"><EditeurTexteFormule cle={CLE_MENTION} titre="🩺 Mention sous les formules (RH et paie)" message={mention.message} lignes={[]} modifie={mention.modifie} avecLignes={false} /></div>
-            <p className="text-xs text-gray-400 mt-1">Mêmes formules et prix que la page client. Les textes modifiés avec ✏️ remplacent ceux de la grille et ne sont jamais écrasés par une mise à jour.</p>
+          {/* Formules : prix modifiables (✏️), suppression (🗑️), texte vu par le client */}
+          <h1 className="text-2xl font-bold mb-3">📦 Formules paie</h1>
+          <div className="grid gap-4 mb-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))" }}>
+            {formules.map((f) => {
+              const t = textePaie(modifs, f.code);
+              return (
+                <CarteFormuleAdmin key={f.id} couleur={TEINTE[f.code] || "#9ca3af"}
+                  f={{ type: "paie", id: f.id, nom: `Paie ${f.nom.replace(/^Paie /, "")}`, prixMensuel: f.prixMensuel, inclus: f.bulletinsInclus, prixSupp: f.prixBulletinSupp, tickets: f.ticketsRHInclus, prixTicket: f.prixTicketSupp, clients: parFormule(f.id).length, recommande: !!detailPaie(f.code)?.recommande }}>
+                  {detailPaie(f.code) ? <EditeurTexteFormule cle={clePaie(f.code)} message={t.message} lignes={t.lignes} modifie={t.modifie} /> : <p className="text-xs text-gray-500">Formule hors grille : elle n&apos;est pas proposée aux clients.</p>}
+                </CarteFormuleAdmin>
+              );
+            })}
           </div>
+          <details className="bg-white rounded-xl shadow p-4 mb-6 text-sm">
+            <summary className="font-semibold text-gray-600 cursor-pointer">🩺 Mention affichée sous les formules (RH et paie)</summary>
+            <div className="mt-3"><EditeurTexteFormule cle={CLE_MENTION} message={mention.message} lignes={[]} modifie={mention.modifie} avecLignes={false} /></div>
+          </details>
 
           {/* Clients */}
           <div className="bg-white rounded-xl shadow p-6">
@@ -163,7 +114,7 @@ export default async function AdminAbonnementPaie({ searchParams }: { searchPara
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b text-gray-500">
-                      <th className="py-2">Entreprise</th><th className="py-2">Bulletins ce mois</th><th className="py-2">Montant paie estimé</th><th className="py-2">Conseil</th><th className="py-2">Formule</th>
+                      <th className="py-2">Entreprise</th><th className="py-2">Bulletins ce mois</th><th className="py-2">Montant paie estimé</th><th className="py-2">Formule</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -181,8 +132,7 @@ export default async function AdminAbonnementPaie({ searchParams }: { searchPara
                             </>
                           ) : <span className="text-gray-400">{l.bulletins} salarié(s)</span>}
                         </td>
-                        <td className="py-2 font-semibold">{l.f ? eur(l.montant) : "—"}</td>
-                        <td className="py-2 text-xs">{l.mieux ? <span style={{ color: "#15803d", fontWeight: 600 }}>💡 {l.mieux.nom} reviendrait moins cher</span> : ""}</td>
+                        <td className="py-2 font-semibold">{l.f ? eur(l.montant) : "—"}{l.mieux && <span className="block text-xs font-normal" style={{ color: "#15803d" }}>💡 {l.mieux.nom} moins cher</span>}</td>
                         <td className="py-2"><BoutonAbonnementPaie entrepriseId={l.e.id} abonnementPaieId={l.e.abonnementPaieId || ""} formules={formules} /></td>
                       </tr>
                     ))}

@@ -10,6 +10,7 @@ import OngletsAbonnements from "@/components/OngletsAbonnements";
 import Link from "next/link";
 import { detailRH } from "@/lib/grille";
 import { texteMention, texteRH, textesModifies } from "@/lib/textes-formules";
+import OptionProjets from "@/components/OptionProjets";
 
 export default async function AbonnementClient() {
   await connection();
@@ -29,6 +30,9 @@ export default async function AbonnementClient() {
     prisma.abonnement.findMany({ orderBy: { prixMensuel: "asc" } }),
     textesModifies(),
   ]);
+
+  const demandeProjets = await prisma.demandeService.findFirst({ where: { entrepriseId: session.entrepriseId!, type: "OPTION_PROJETS", statut: { in: ["EN_ATTENTE", "EN_COURS"] } }, select: { id: true } });
+  const etatProjets = (session.entreprise?.permissions || []).includes("projets") ? "active" : demandeProjets ? "demandee" : "disponible";
 
   const demandeEnAttente = await prisma.demandeEvolution.findFirst({
     where: {
@@ -108,6 +112,8 @@ export default async function AbonnementClient() {
               </div>
             ))}
           </div>
+
+          <div className="mt-6"><OptionProjets etat={etatProjets} peutDemander={!session.etablissementId} /></div>
 
           <p className="text-sm text-gray-600 mt-6 bg-white rounded-xl shadow p-4">🩺 {texteMention(modifs).message}</p>
 

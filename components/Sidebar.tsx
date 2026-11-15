@@ -36,7 +36,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/entreprises/facturation", label: "🧾 Facturation" },
         { href: "/admin/entreprises/prestations", label: "➕ Prestations supplémentaires" },
         { href: "/admin/entreprises/devis", label: "🧾 Demandes de devis" },
-        { href: "/admin/entreprises/demandes-services", label: "📱 Apps, audits & formations" },
+        { href: "/admin/entreprises/demandes-services", label: "📬 Apps, options & formations" },
       ] };
     }
     if (dans("/admin/salaries")) {

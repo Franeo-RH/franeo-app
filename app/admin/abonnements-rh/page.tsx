@@ -12,6 +12,7 @@ import { PRIX_TICKET_SANS_ABONNEMENT } from "@/lib/facturation";
 import { detailRH } from "@/lib/grille";
 import { PRIX_OPTION_PROJETS } from "@/lib/projets-constantes";
 import EditeurTexteFormule from "@/components/EditeurTexteFormule";
+import CarteFormuleAdmin, { NouvelleFormuleRH } from "@/components/CarteFormuleAdmin";
 import { cleRH, CLE_MENTION, texteMention, texteRH, textesModifies } from "@/lib/textes-formules";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +59,6 @@ export default async function AdminAbonnementsRH({ searchParams }: { searchParam
   const nbBase = lignes.filter((l) => l.base).length;
 
   const puce = (actif: boolean) => `px-3 py-1 rounded-full text-sm font-semibold ${actif ? "bg-orange-500 text-white" : "bg-white text-gray-600 border"}`;
-  type Pack = (typeof packs)[number];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -87,57 +87,27 @@ export default async function AdminAbonnementsRH({ searchParams }: { searchParam
             </div>
           </div>
 
-          {/* Comparatif des packs */}
-          <div className="bg-white rounded-xl shadow p-6 mb-6" style={{ overflowX: "auto" }}>
-            <h1 className="text-2xl font-bold mb-4">💳 Packs Admin RH</h1>
-            <table className="w-full text-sm fr-tableau-fixe" style={{ minWidth: "640px" }}>
-              <thead>
-                <tr>
-                  <th className="text-left py-2"></th>
-                  {packs.map((p, i) => (
-                    <th key={p.id} className="py-2 px-2 text-center" style={{ borderTop: `4px solid ${TEINTES[(i % 4) + 1]}` }}>
-                      {detailRH(p.nom)?.recommande && <span className="inline-block bg-black text-white text-xs font-bold px-2 py-0.5 rounded-full mb-1">⭐ Recommandée</span>}
-                      <span className="block text-base font-bold">{p.nom}</span>
-                      <span className="block text-2xl font-black">{p.prixMensuel} €</span>
-                      <span className="block text-xs text-gray-500 font-normal">{parPack(p.id).length} client(s)</span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { label: "Salariés inclus", v: (p: Pack) => String(p.salariesInclus) },
-                  { label: "Salarié en plus", v: (p: Pack) => eur(p.prixSalarieSupp) },
-                  { label: "Tickets RH inclus / mois", v: (p: Pack) => String(p.ticketsRH) },
-                  { label: "Ticket RH en plus", v: (p: Pack) => eur(p.prixTicketSupp) },
-                  { label: "Conseil RH ponctuel", v: (p: Pack) => (/basic/i.test(p.nom) ? "—" : "illimité") },
-                  { label: "Suivi des échéances", v: (p: Pack) => (/basic/i.test(p.nom) ? "—" : "✓") },
-                  { label: "Saisie des infos de paie", v: (p: Pack) => (/s[ée]r[ée]nit[ée]|premium/i.test(p.nom) ? "✓" : "—") },
-                  { label: "Contrats depuis modèles", v: (p: Pack) => (/s[ée]r[ée]nit[ée]|premium/i.test(p.nom) ? "✓" : "—") },
-                  { label: "Espace salarié (badge, relevés…)", v: () => "inclus" },
-                  { label: `Option Projets (${PRIX_OPTION_PROJETS} € / mois)`, v: () => "en option" },
-                ].map((r) => (
-                  <tr key={r.label} className="border-t">
-                    <td className="py-2 font-semibold text-gray-600">{r.label}</td>
-                    {packs.map((p) => <td key={p.id} className="py-2 text-center font-semibold">{r.v(p)}</td>)}
-                  </tr>
-                ))}
-                <tr className="border-t align-top">
-                  <td className="py-2 font-semibold text-gray-600">Ce que voit le client <span className="block text-xs font-normal text-gray-400">✏️ pour modifier</span></td>
-                  {packs.map((p) => {
-                    const t = texteRH(modifs, p);
-                    return (
-                      <td key={p.id} className="py-2 px-2">
-                        <EditeurTexteFormule cle={cleRH(p.nom)} message={t.message} lignes={t.lignes} modifie={t.modifie} aide="Une ligne = un avantage affiché avec ✓." />
-                      </td>
-                    );
-                  })}
-                </tr>
-              </tbody>
-            </table>
-            <div className="text-xs text-gray-500 mt-3"><EditeurTexteFormule cle={CLE_MENTION} titre="🩺 Mention sous les formules (RH et paie)" message={mention.message} lignes={[]} modifie={mention.modifie} avecLignes={false} /></div>
-            <p className="text-xs text-gray-400 mt-1">Mêmes formules et prix que la page « Gestion de mes abonnements » du client. Les textes modifiés avec ✏️ remplacent ceux de la grille et ne sont jamais écrasés par une mise à jour.</p>
+          {/* Formules : prix modifiables (✏️), suppression (🗑️), texte vu par le client */}
+          <div className="flex justify-between items-baseline gap-3 flex-wrap mb-3">
+            <h1 className="text-2xl font-bold">💳 Formules RH</h1>
+            <p className="text-xs text-gray-500">Espace salarié inclus partout · option Projets {PRIX_OPTION_PROJETS} € / mois</p>
           </div>
+          <div className="grid gap-4 mb-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))" }}>
+            {packs.map((p, i) => {
+              const t = texteRH(modifs, p);
+              return (
+                <CarteFormuleAdmin key={p.id} couleur={TEINTES[(i % 4) + 1]}
+                  f={{ type: "rh", id: p.id, nom: p.nom, prixMensuel: p.prixMensuel, inclus: p.salariesInclus, prixSupp: p.prixSalarieSupp, tickets: p.ticketsRH, prixTicket: p.prixTicketSupp, clients: parPack(p.id).length, recommande: !!detailRH(p.nom)?.recommande }}>
+                  <EditeurTexteFormule cle={cleRH(p.nom)} message={t.message} lignes={t.lignes} modifie={t.modifie} aide="Une ligne = un avantage affiché avec ✓." />
+                </CarteFormuleAdmin>
+              );
+            })}
+            <NouvelleFormuleRH />
+          </div>
+          <details className="bg-white rounded-xl shadow p-4 mb-6 text-sm">
+            <summary className="font-semibold text-gray-600 cursor-pointer">🩺 Mention affichée sous les formules (RH et paie)</summary>
+            <div className="mt-3"><EditeurTexteFormule cle={CLE_MENTION} message={mention.message} lignes={[]} modifie={mention.modifie} avecLignes={false} /></div>
+          </details>
 
           {/* Clients */}
           <div className="bg-white rounded-xl shadow p-6">
@@ -157,7 +127,7 @@ export default async function AdminAbonnementsRH({ searchParams }: { searchParam
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b text-gray-500">
-                      <th className="py-2">Entreprise</th><th className="py-2">Salariés ce mois</th><th className="py-2">Tickets ce mois</th><th className="py-2">Montant RH estimé</th><th className="py-2">Conseil</th><th className="py-2">Pack</th>
+                      <th className="py-2">Entreprise</th><th className="py-2">Salariés ce mois</th><th className="py-2">Tickets ce mois</th><th className="py-2">Montant RH estimé</th><th className="py-2">Pack</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -171,11 +141,7 @@ export default async function AdminAbonnementsRH({ searchParams }: { searchParam
                           {l.p ? (<><strong>{l.salaries}</strong> / {l.p.salariesInclus}{l.supp > 0 && <span style={{ color: "#c2410c", fontWeight: 700 }}> (+{l.supp})</span>}</>) : <span className="text-gray-400">{l.salaries}</span>}
                         </td>
                         <td className="py-2">{l.nbTickets}{l.p ? ` / ${l.p.ticketsRH}` : l.base && l.nbTickets > 0 ? ` × ${PRIX_TICKET_SANS_ABONNEMENT} €` : ""}</td>
-                        <td className="py-2 font-semibold">{l.p || l.base ? eur(l.montant) : "—"}</td>
-                        <td className="py-2 text-xs">
-                          {l.mieux ? <span style={{ color: "#15803d", fontWeight: 600 }}>💡 {l.mieux.nom} reviendrait moins cher</span>
-                            : l.base && l.nbTickets * PRIX_TICKET_SANS_ABONNEMENT > (packs[0]?.prixMensuel ?? Infinity) ? <span style={{ color: "#15803d", fontWeight: 600 }}>💡 Un pack RH reviendrait moins cher</span> : ""}
-                        </td>
+                        <td className="py-2 font-semibold">{l.p || l.base ? eur(l.montant) : "—"}{l.mieux && <span className="block text-xs font-normal" style={{ color: "#15803d" }}>💡 {l.mieux.nom} moins cher</span>}</td>
                         <td className="py-2"><BoutonPackRH entrepriseId={l.e.id} abonnementId={l.e.abonnementId || ""} packs={packs.map((p) => ({ id: p.id, nom: p.nom, prixMensuel: p.prixMensuel }))} /></td>
                       </tr>
                     ))}

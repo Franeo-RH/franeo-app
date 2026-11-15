@@ -109,6 +109,7 @@ export const TYPES_DEMANDE: Record<string, { label: string; icone: string }> = {
   AUDIT: { label: "Audit RH", icone: "🔍" },
   FORMATION: { label: "Formation", icone: "🎓" },
   AUTRE: { label: "Autre demande", icone: "✍️" },
+  OPTION_PROJETS: { label: "Option Projets, planning & rentabilité", icone: "📐" },
 };
 
 export const STATUTS_DEMANDE: Record<string, { label: string; fond: string; texte: string }> = {

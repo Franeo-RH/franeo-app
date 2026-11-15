@@ -15,10 +15,12 @@ export type MiseAJour = {
 
 export const MISES_A_JOUR: MiseAJour[] = [
   {
-    version: "V39",
+    version: "V41",
     date: "novembre 2026",
-    titre: "Établissements, projets repensés et fichiers Excel fiabilisés",
+    titre: "Établissements, option Projets et fichiers Excel fiabilisés",
     clients: [
+      "📐 Option Projets, planning & rentabilité (29 € HT / mois) : demandez-la en un clic dans Mon entreprise › Abonnement.",
+      "💳 Formules RH : 2 € par salarié au-delà des salariés inclus, quelle que soit la formule.",
       "🔑 Accès dirigeants d'établissement : dans Mon entreprise, créez un accès pour le responsable de chaque établissement. Il ne voit que ses salariés, leurs absences, relevés, paie et les projets de son établissement.",
       "🏢 Établissements : ajoutez le SIRET de chacun (14 chiffres).",
       "📐 Projets : nouvelle présentation en cartes (ou en tableau), filtres par statut et par établissement, fiche projet organisée en onglets (synthèse, équipe & planning, étapes, temps, frais).",

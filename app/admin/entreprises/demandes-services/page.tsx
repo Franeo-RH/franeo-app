@@ -52,7 +52,7 @@ export default function AdminDemandesServices() {
                 <textarea value={reponses[d.id] ?? ""} onChange={(e) => setReponses({ ...reponses, [d.id]: e.target.value })} rows={2} placeholder="Réponse au client (facultatif)" className="border rounded-lg p-2 text-sm" aria-label="Réponse" />
                 <div className="flex gap-2 flex-wrap">
                   <button type="button" onClick={() => maj(d.id, "EN_COURS")} className="bg-blue-600 text-white px-3 py-1 rounded-lg font-semibold">En cours</button>
-                  <button type="button" onClick={() => maj(d.id, "TRAITEE")} className="bg-green-600 text-white px-3 py-1 rounded-lg font-semibold">Traitée</button>
+                  <button type="button" onClick={() => maj(d.id, "TRAITEE")} className="bg-green-600 text-white px-3 py-1 rounded-lg font-semibold">{d.type === "OPTION_PROJETS" ? "✅ Accepter et activer l'option" : "Traitée"}</button>
                   <button type="button" onClick={() => maj(d.id, "REFUSEE")} className="bg-red-600 text-white px-3 py-1 rounded-lg font-semibold">Refuser</button>
                   <button type="button" onClick={async () => { if (confirm("Supprimer ?")) { await fetch(`/api/demandes-services/${d.id}`, { method: "DELETE" }); charger(); } }} className="text-red-600 ml-auto">🗑️</button>
                 </div>

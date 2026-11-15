@@ -19,7 +19,7 @@ Puis ouvrir http://localhost:3000. Les données utilisées sont celles de la bas
 7. Buddy : « mes projets », « projets en alerte », « comment déclarer un arrêt maladie ? ».
 8. Pages /confidentialite et /mentions-legales (liens en bas de la page de connexion).
 9. Mon entreprise › Accès dirigeants d'établissement : créer un accès, ouvrir le lien dans une fenêtre privée, choisir le mot de passe. Ce compte ne doit voir que les salariés et les projets de son établissement.
-10. Tableau de bord : la carte « Mise à jour V39 » s'affiche ; « J'ai lu » la masque ; l'historique est dans Communication › Mises à jour.
+10. Tableau de bord : la carte « Mise à jour V41 » s'affiche ; « J'ai lu » la masque ; l'historique est dans Communication › Mises à jour.
 
 ## Variables d'environnement (Vercel › Settings › Environment Variables)
 

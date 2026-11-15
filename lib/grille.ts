@@ -2,33 +2,34 @@
 
 export const MENTION_VISITE_MEDICALE = "Suivi des visites médicales : suivi des échéances et convocation des salariés inclus ; le coût facturé par le service de santé au travail reste à votre charge.";
 
+// 2 € par salarié supplémentaire dans toutes les formules RH (grille du 15/11/2026)
 export const GRILLE_RH = [
   {
-    nom: "RH Basic", prixMensuel: 50, salariesInclus: 25, prixSalarieSupp: 5, ticketsRH: 0, prixTicketSupp: 70,
+    nom: "RH Basic", prixMensuel: 50, salariesInclus: 25, prixSalarieSupp: 2, ticketsRH: 0, prixTicketSupp: 70,
     recommande: false, message: "",
     features: [
-      "Jusqu'à 25 salariés inclus", "5 € / salarié supplémentaire",
+      "Jusqu'à 25 salariés inclus", "2 € / salarié supplémentaire",
       "Application RH : ajouter, modifier, importer et supprimer vos salariés",
-      "Mouvements du personnel", "Saisie des absences", "Communication & helpdesk",
+      "Mouvements du personnel", "Saisie des absences", "Communication & helpdesk", "Accès Module Paie",
       "Ticket RH à la demande : 70 € / demande",
       "Espace salarié inclus (absences, relevés, badge, notes de frais)",
     ],
   },
   {
-    nom: "RH Essentiel", prixMensuel: 149, salariesInclus: 25, prixSalarieSupp: 4, ticketsRH: 3, prixTicketSupp: 40,
-    recommande: false, message: "3 tickets RH par mois, conseil RH illimité, puis seulement 4 € par salarié supplémentaire.",
+    nom: "RH Essentiel", prixMensuel: 149, salariesInclus: 25, prixSalarieSupp: 2, ticketsRH: 3, prixTicketSupp: 40,
+    recommande: false, message: "3 tickets RH par mois, conseil RH illimité, puis seulement 2 € par salarié supplémentaire.",
     features: [
-      "Toutes les fonctionnalités Basic", "Jusqu'à 25 salariés inclus", "4 € / salarié supplémentaire",
-      "3 tickets RH / mois", "Conseil RH ponctuel illimité", "Suivi complet des échéances", "Suivi des périodes d'essai", "SharePoint inclus",
-      "Espace salarié inclus",
+      "Toutes les fonctionnalités Basic", "Jusqu'à 25 salariés inclus", "2 € / salarié supplémentaire",
+      "3 tickets RH / mois", "Conseil RH ponctuel illimité", "Suivi complet des échéances", "SharePoint inclus",
+      "Espace salarié inclus", "Accès Module Paie",
     ],
   },
   {
-    nom: "RH Sérénité", prixMensuel: 299, salariesInclus: 50, prixSalarieSupp: 3, ticketsRH: 5, prixTicketSupp: 30,
+    nom: "RH Sérénité", prixMensuel: 299, salariesInclus: 50, prixSalarieSupp: 2, ticketsRH: 5, prixTicketSupp: 30,
     recommande: true, message: "La formule idéale pour structurer sereinement la gestion RH de votre entreprise.",
     features: [
-      "Toutes les fonctionnalités Essentiel", "Jusqu'à 50 salariés inclus", "3 € / salarié supplémentaire",
-      "5 tickets RH / mois", "Saisie des informations de paie", "Contrats générés automatiquement depuis vos modèles",
+      "Toutes les fonctionnalités Essentiel", "Jusqu'à 50 salariés inclus", "2 € / salarié supplémentaire",
+      "5 tickets RH / mois", "Module Paie Inclus", "Contrats générés automatiquement depuis vos modèles",
       "Signatures électroniques illimitées", "Suivi des visites médicales (suivi et convocation, hors coût du centre de santé au travail)",
       "Assistance contrats & avenants",
     ],
@@ -46,9 +47,9 @@ export const GRILLE_RH = [
 
 export const GRILLE_PAIE = [
   {
-    code: "ESSENTIELLE", nom: "Paie Essentielle", couleur: "#6366f1", prixMensuel: 249, bulletinsInclus: 20, prixBulletinSupp: 15,
+    code: "ESSENTIELLE", nom: "Paie Essentielle", couleur: "#6366f1", prixMensuel: 249, bulletinsInclus: 25, prixBulletinSupp: 15,
     prixTicketSupp: 40, prixRdv: 49, recommande: false,
-    features: ["Jusqu'à 20 salariés", "Logiciel de paie inclus", "Application Franeo + Buddy", "DSN incluses", "Entrées / sorties incluses", "Reprise dossier incluse"],
+    features: ["Jusqu'à 25 salariés", "Logiciel de paie inclus", "Application Franeo + Buddy", "DSN incluses", "Entrées / sorties incluses", "Reprise dossier incluse"],
     options: ["Conseil RH / Paie : 40 € / ticket", "Rendez-vous paie : 49 € / rendez-vous", "Bulletin supplémentaire : 15 € / bulletin", "Assistance contrôle URSSAF : sur devis"],
     flags: { relancesVariables: false, suiviIJSS: false, suiviRH: false, veillePaie: false, conseilPaie: false, pointPaie: false, traitementPrioritaire: false },
   },

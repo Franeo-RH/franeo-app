@@ -33,6 +33,13 @@ export async function POST(request: NextRequest) {
   const app = type === "APP" ? appFraneo(String(b.app ?? "")) : null;
   if (type === "APP" && !app) return NextResponse.json({ erreur: "Choisissez une application." }, { status: 400 });
   const message = typeof b.message === "string" ? b.message.trim().slice(0, 4000) : "";
+  if (type === "OPTION_PROJETS") {
+    if (session.etablissementId) return NextResponse.json({ erreur: "Demande réservée au dirigeant de l'entreprise." }, { status: 403 });
+    if ((session.entreprise?.permissions || []).includes("projets")) return NextResponse.json({ erreur: "L'option Projets est déjà active." }, { status: 400 });
+    if (await prisma.demandeService.findFirst({ where: { entrepriseId: session.entrepriseId, type, statut: { in: ["EN_ATTENTE", "EN_COURS"] } } })) {
+      return NextResponse.json({ erreur: "Votre demande est déjà en cours de traitement." }, { status: 400 });
+    }
+  }
   if (type === "AUTRE" && !message) return NextResponse.json({ erreur: "Décrivez votre besoin." }, { status: 400 });
   const options = Array.isArray(b.options) ? b.options.filter((o: unknown) => typeof o === "string").slice(0, 20).map((o: string) => o.slice(0, 200)) : [];
   const abonne = estAbonne(session.entreprise);
