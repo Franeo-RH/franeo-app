@@ -4,8 +4,15 @@ import { useCallback, useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import { appFraneo, STATUTS_DEMANDE, TYPES_DEMANDE } from "@/lib/apps-franeo";
+import EchangeDemande from "@/components/EchangeDemande";
+import FacturerDemande from "@/components/FacturerDemande";
+import type { MessageFil } from "@/components/FilMessages";
+import type { PieceJointeVue } from "@/lib/devis";
 
-type D = { id: string; type: string; app: string | null; options: string[]; message: string | null; remise: number; auteur: string | null; statut: string; reponse: string | null; createdAt: string; entreprise: { nom: string } };
+type D = {
+  id: string; type: string; app: string | null; options: string[]; message: string | null; remise: number; auteur: string | null; statut: string; reponse: string | null; createdAt: string; entreprise: { nom: string };
+  messages: MessageFil[]; piecesJointes: PieceJointeVue[]; montantFacture: number | null; factureMois: number | null; factureAnnee: number | null;
+};
 
 /** Admin : demandes d'accès aux autres apps, d'audit, de formation et autres besoins */
 export default function AdminDemandesServices() {
@@ -30,7 +37,7 @@ export default function AdminDemandesServices() {
         <main className="flex-1 p-4 md:p-10 flex flex-col gap-6" style={{ minWidth: 0 }}>
           <div className="bg-white rounded-xl shadow p-6">
             <h1 className="text-3xl font-bold">📱 Apps, audits & formations</h1>
-            <p className="text-gray-500 mt-1">Demandes envoyées par les clients depuis « Autres apps & demandes » et « Demander un audit ».</p>
+            <p className="text-gray-500 mt-1">Demandes envoyées par les clients depuis « Autres apps & demandes » et « Demander un audit ». Échangez avec le client et déposez votre devis ; une fois validé, saisissez le montant : il s&apos;ajoute à la facture du mois choisi.</p>
             <select value={statut} onChange={(e) => setStatut(e.target.value)} className="border rounded-lg px-3 py-2 mt-4" aria-label="Statut">
               <option value="">Tous les statuts</option>
               {Object.entries(STATUTS_DEMANDE).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -49,6 +56,16 @@ export default function AdminDemandesServices() {
                 {d.options.length > 0 && <p className="text-sm"><strong>Choix :</strong> {d.options.join(", ")}</p>}
                 {d.message && <p className="text-sm whitespace-pre-wrap">{d.message}</p>}
                 {d.reponse && <p className="text-sm bg-green-50 rounded p-2">💬 {d.reponse}</p>}
+                <details open={d.messages.length + d.piecesJointes.length > 0}>
+                  <summary className="cursor-pointer text-sm font-semibold text-orange-600">💬 Échange et documents ({d.messages.length} message(s) · {d.piecesJointes.length} document(s))</summary>
+                  <div className="mt-2">
+                    <EchangeDemande moi="ADMIN" messages={d.messages} piecesJointes={d.piecesJointes}
+                      urlMessages={`/api/demandes-services/${d.id}/messages`} urlPj={`/api/demandes-services/${d.id}/pj`} onChange={charger} />
+                  </div>
+                </details>
+                {d.type !== "OPTION_PROJETS" && d.statut !== "REFUSEE" && (
+                  <FacturerDemande url={`/api/demandes-services/${d.id}`} montantFacture={d.montantFacture} factureMois={d.factureMois} factureAnnee={d.factureAnnee} onChange={charger} />
+                )}
                 <textarea value={reponses[d.id] ?? ""} onChange={(e) => setReponses({ ...reponses, [d.id]: e.target.value })} rows={2} placeholder="Réponse au client (facultatif)" className="border rounded-lg p-2 text-sm" aria-label="Réponse" />
                 <div className="flex gap-2 flex-wrap">
                   <button type="button" onClick={() => maj(d.id, "EN_COURS")} className="bg-blue-600 text-white px-3 py-1 rounded-lg font-semibold">En cours</button>

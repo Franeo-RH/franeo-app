@@ -12,4 +12,11 @@ export type DevisVue = {
   id: string; createdAt: string; statut: string; lignes: LigneDevis[]; totalIndicatif: number; message: string | null;
   montantPropose: number | null; reponse: string | null; auteur: string | null; entreprise?: { nom: string };
   messages?: { id: string; role: string; auteur: string; contenu: string; createdAt: string }[];
+  piecesJointes?: PieceJointeVue[];
+  montantFacture?: number | null; factureMois?: number | null; factureAnnee?: number | null;
 };
+
+export type PieceJointeVue = { id: string; nom: string; taille: number; auteur: string; role: string; createdAt: string };
+
+export const NOMS_MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+export const libelleMois = (mois: number, annee: number) => `${NOMS_MOIS[mois - 1] ?? mois} ${annee}`;

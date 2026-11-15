@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SELECT_PJ } from "@/lib/pieces-jointes";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
       ...(session.role === "ADMIN" ? { entreprise: { demo: false } } : { entrepriseId: session.entrepriseId ?? "-" }),
       ...(statut ? { statut } : {}),
     },
-    include: { entreprise: { select: { nom: true } } },
+    include: { entreprise: { select: { nom: true } }, messages: { orderBy: { createdAt: "asc" } }, piecesJointes: { select: SELECT_PJ, orderBy: { createdAt: "asc" } } },
     orderBy: { createdAt: "desc" },
     take: 300,
   });

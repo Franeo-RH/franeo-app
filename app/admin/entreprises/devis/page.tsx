@@ -5,7 +5,8 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import ExportCSV from "@/components/ExportCSV";
 import { STATUTS_DEVIS, type DevisVue } from "@/lib/devis";
-import FilMessages from "@/components/FilMessages";
+import EchangeDemande from "@/components/EchangeDemande";
+import FacturerDemande from "@/components/FacturerDemande";
 import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
 const eur = (n: number) => `${n.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} €`;
@@ -46,7 +47,7 @@ export default function AdminDevis() {
           <div className="bg-white rounded-xl shadow p-6">
             <h1 className="text-3xl font-bold">🧾 Demandes de devis</h1>
             <div className="flex gap-2 flex-wrap mt-3"><BoutonExportComplet jeu="devis" label="📥 Export complet (devis + échanges)" /></div>
-            <p className="text-gray-500 mt-1">Les clients composent leur devis depuis le catalogue. Envoyez une proposition chiffrée : ils l&apos;acceptent ou la refusent dans leur espace.</p>
+            <p className="text-gray-500 mt-1">Les clients composent leur devis depuis le catalogue. Envoyez une proposition chiffrée et déposez le devis PDF dans l&apos;échange. Une fois validé, saisissez le montant : il s&apos;ajoute à la facture du mois choisi.</p>
             <div className="flex gap-2 flex-wrap mt-4 items-center">
               <select value={statut} onChange={(e) => setStatut(e.target.value)} className="border rounded-lg px-3 py-2" aria-label="Statut">
                 <option value="">Tous les statuts</option>
@@ -99,22 +100,18 @@ export default function AdminDevis() {
                     </div>
                   </div>
                 )}
-                      <details className="mt-3" open={(d.messages?.length ?? 0) > 0}>
-                        <summary className="cursor-pointer text-sm font-semibold text-orange-600">💬 Échange ({d.messages?.length ?? 0})</summary>
-                        <div className="mt-2">
-                          <FilMessages
-                            moi="ADMIN"
-                            messages={d.messages ?? []}
-                            desactive={d.statut === "ANNULE"}
-                            placeholder="Écrire au client…"
-                            onEnvoyer={async (contenu) => {
-                              const res = await fetch(`/api/devis/${d.id}/messages`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contenu }) });
-                              if (res.ok) charger();
-                              return res.ok;
-                            }}
-                          />
-                        </div>
-                      </details>
+                <details className="mt-3" open={(d.messages?.length ?? 0) + (d.piecesJointes?.length ?? 0) > 0}>
+                  <summary className="cursor-pointer text-sm font-semibold text-orange-600">💬 Échange et documents ({d.messages?.length ?? 0} message(s) · {d.piecesJointes?.length ?? 0} document(s))</summary>
+                  <div className="mt-2">
+                    <EchangeDemande moi="ADMIN" messages={d.messages ?? []} piecesJointes={d.piecesJointes ?? []}
+                      urlMessages={`/api/devis/${d.id}/messages`} urlPj={`/api/devis/${d.id}/pj`} onChange={charger} desactive={d.statut === "ANNULE"} />
+                  </div>
+                </details>
+                {d.statut !== "ANNULE" && d.statut !== "REFUSE" && (
+                  <div className="mt-3">
+                    <FacturerDemande url={`/api/devis/${d.id}`} montantInitial={d.montantPropose ?? d.totalIndicatif} montantFacture={d.montantFacture} factureMois={d.factureMois} factureAnnee={d.factureAnnee} onChange={charger} />
+                  </div>
+                )}
                 {d.montantPropose !== null && d.statut !== "ENVOYE" && <p className="text-sm mt-2">Proposition envoyée : <strong>{eur(d.montantPropose)}</strong>{d.reponse ? ` — ${d.reponse}` : ""}</p>}
                 <div className="flex gap-2 mt-3 flex-wrap items-center">
                   <select value={d.statut} onChange={(e) => appeler(d.id, { action: "statut", statut: e.target.value })} className="border rounded-lg px-2 py-1 text-sm" aria-label="Changer le statut">

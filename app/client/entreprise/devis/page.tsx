@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import DemandesServices from "@/components/DemandesServices";
+import MesDevis from "@/components/MesDevis";
 import { estAbonne } from "@/lib/apps-franeo";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ export default async function PageAutresApps({ searchParams }: { searchParams: P
         <Sidebar role="CLIENT" />
         <main className="flex-1 p-4 md:p-10" style={{ minWidth: 0 }}>
           <DemandesServices abonne={estAbonne(session.entreprise)} typeInitial={sp.type} appInitiale={sp.app} />
+          <MesDevis />
         </main>
       </div>
     </div>

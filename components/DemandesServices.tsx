@@ -1,10 +1,16 @@
 "use client";
 
 import Image from "next/image";
+import EchangeDemande from "@/components/EchangeDemande";
+import type { MessageFil } from "@/components/FilMessages";
+import { libelleMois, type PieceJointeVue } from "@/lib/devis";
 import { useCallback, useEffect, useState } from "react";
 import { APPS_FRANEO, appFraneo, MODULES_FORMATION, prixRemise, REMISE_APPS, REMISE_AUDIT, STATUTS_DEMANDE, TYPES_DEMANDE } from "@/lib/apps-franeo";
 
-type Demande = { id: string; type: string; app: string | null; options: string[]; message: string | null; remise: number; statut: string; reponse: string | null; createdAt: string };
+type Demande = {
+  id: string; type: string; app: string | null; options: string[]; message: string | null; remise: number; statut: string; reponse: string | null; createdAt: string;
+  messages?: MessageFil[]; piecesJointes?: PieceJointeVue[]; montantFacture?: number | null; factureMois?: number | null; factureAnnee?: number | null;
+};
 type Onglet = "APP" | "AUDIT" | "FORMATION" | "AUTRE";
 
 const prix = (p: number | null, unite = "", remise = 0) =>
@@ -152,11 +158,21 @@ export default function DemandesServices({ abonne, typeInitial, appInitiale, seu
               const st = STATUTS_DEMANDE[d.statut] || STATUTS_DEMANDE.EN_ATTENTE;
               return (
                 <div key={d.id} className="py-3 flex justify-between gap-3 flex-wrap">
-                  <div style={{ minWidth: 0 }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
                     <p className="font-semibold">{TYPES_DEMANDE[d.type]?.icone} {TYPES_DEMANDE[d.type]?.label}{d.app ? ` — ${appFraneo(d.app)?.nom ?? d.app}` : ""}</p>
                     <p className="text-xs text-gray-500">{new Date(d.createdAt).toLocaleDateString("fr-FR")}{d.options.length ? ` · ${d.options.join(", ")}` : ""}{d.remise ? ` · remise ${Math.round(d.remise * 100)} %` : ""}</p>
                     {d.message && <p className="text-sm text-gray-600">{d.message}</p>}
                     {d.reponse && <p className="text-sm mt-1" style={{ background: "#f0fdf4", borderRadius: 8, padding: "6px 10px" }}>💬 FRANEO RH : {d.reponse}</p>}
+                    {d.montantFacture && d.factureMois && d.factureAnnee && (
+                      <p className="text-sm mt-1 font-semibold" style={{ color: "#15803d" }}>✅ Validé : {d.montantFacture.toLocaleString("fr-FR")} € HT sur la facture de {libelleMois(d.factureMois, d.factureAnnee)}</p>
+                    )}
+                    <details className="mt-2" open={(d.messages?.length ?? 0) + (d.piecesJointes?.length ?? 0) > 0 && d.statut !== "TRAITEE"}>
+                      <summary className="cursor-pointer text-sm font-semibold text-orange-600">💬 Échange avec FRANEO RH ({d.messages?.length ?? 0} message(s) · {d.piecesJointes?.length ?? 0} document(s))</summary>
+                      <div className="mt-2">
+                        <EchangeDemande moi="CLIENT" messages={d.messages ?? []} piecesJointes={d.piecesJointes ?? []}
+                          urlMessages={`/api/demandes-services/${d.id}/messages`} urlPj={`/api/demandes-services/${d.id}/pj`} onChange={charger} desactive={d.statut === "REFUSEE"} />
+                      </div>
+                    </details>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <span style={{ background: st.fond, color: st.texte, borderRadius: 999, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>{st.label}</span>

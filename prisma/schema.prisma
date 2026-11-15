@@ -684,6 +684,12 @@ model Devis {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
   messages       MessageDevis[]
+  piecesJointes  PieceJointe[]
+  // Devis validé : montant ajouté à la facture du mois choisi (ligne de prestation)
+  commandeId     String?
+  montantFacture Float?
+  factureMois    Int?
+  factureAnnee   Int?
 
   @@index([entrepriseId, statut])
 }
@@ -870,8 +876,28 @@ model DemandeService {
   reponse      String?
   createdAt    DateTime   @default(now())
   traiteeAt    DateTime?
+  messages       MessageDemandeService[]
+  piecesJointes  PieceJointe[]
+  // Demande validée : montant ajouté à la facture du mois choisi (ligne de prestation)
+  commandeId     String?
+  montantFacture Float?
+  factureMois    Int?
+  factureAnnee   Int?
 
   @@index([entrepriseId, statut])
+}
+
+// Échange écrit entre le client et FRANEO RH sur une demande complémentaire
+model MessageDemandeService {
+  id        String         @id @default(cuid())
+  demandeId String
+  demande   DemandeService @relation(fields: [demandeId], references: [id], onDelete: Cascade)
+  role      String         // ADMIN | CLIENT
+  auteur    String
+  contenu   String
+  createdAt DateTime       @default(now())
+
+  @@index([demandeId])
 }
 
 // Journal des saisies et modifications de paie (date et heure)
@@ -907,8 +933,13 @@ model PieceJointe {
   id           String     @id @default(cuid())
   entrepriseId String
   entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
-  questionId   String
-  question     QuestionRH @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  // Une pièce jointe appartient à une demande RH, un devis ou une demande complémentaire
+  questionId   String?
+  question     QuestionRH? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  devisId          String?
+  devis            Devis?          @relation(fields: [devisId], references: [id], onDelete: Cascade)
+  demandeServiceId String?
+  demandeService   DemandeService? @relation(fields: [demandeServiceId], references: [id], onDelete: Cascade)
   nom          String
   mime         String
   taille       Int
@@ -919,6 +950,8 @@ model PieceJointe {
   createdAt    DateTime   @default(now())
 
   @@index([questionId])
+  @@index([devisId])
+  @@index([demandeServiceId])
   @@index([entrepriseId]) // ajouté pour accélérer les recherches
 }
 

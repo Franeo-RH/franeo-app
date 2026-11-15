@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { notifierAdmin } from "@/lib/notifications";
+import { notifierAdmin, notifierClients } from "@/lib/notifications";
+import { facturer, libelleMois, lireMois, lireMontant, retirerFacturation } from "@/lib/facturer-demande";
+import { supprimerFichiersDe } from "@/lib/pieces-jointes";
 
 /**
  * PUT
  *  admin  : { action: "repondre", montant, reponse } → ENVOYE ; { action: "statut", statut }
+ *           { action: "facturer", montant, mois, annee } → ACCEPTE + montant ajouté à la facture du mois ; { action: "retirerFacture" }
  *  client : { action: "accepter" | "refuser" } sur un devis ENVOYE ; { action: "annuler" } sur un devis EN_ATTENTE
  */
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -24,6 +27,30 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         where: { id },
         data: { statut: "ENVOYE", montantPropose: Math.round(montant * 100) / 100, reponse: typeof corps.reponse === "string" ? corps.reponse.trim().slice(0, 3000) : null, reponduAt: new Date() },
       });
+      return NextResponse.json({ succes: true, devis });
+    }
+    if (corps.action === "facturer") {
+      const montant = lireMontant(corps.montant);
+      const periode = lireMois(corps.mois, corps.annee);
+      if (!montant) return NextResponse.json({ erreur: "Montant invalide" }, { status: 400 });
+      if (!periode) return NextResponse.json({ erreur: "Mois invalide" }, { status: 400 });
+      const libelle = `Devis validé du ${d.createdAt.toLocaleDateString("fr-FR")}`;
+      const commandeId = await facturer({ entrepriseId: d.entrepriseId, commandeId: d.commandeId, code: "DEVIS", libelle, montant, ...periode, auteur: "FRANEO RH" });
+      const devis = await prisma.devis.update({
+        where: { id },
+        data: { statut: "ACCEPTE", decideAt: d.decideAt ?? new Date(), commandeId, montantFacture: montant, factureMois: periode.mois, factureAnnee: periode.annee },
+      });
+      await notifierClients(d.entrepriseId, {
+        sujet: "Votre devis est validé",
+        titre: "✅ Devis validé",
+        lignes: [`Montant : ${montant.toLocaleString("fr-FR")} € HT, ajouté à votre facture de ${libelleMois(periode.mois, periode.annee)}.`],
+        lien: "/client/entreprise/devis",
+      });
+      return NextResponse.json({ succes: true, devis });
+    }
+    if (corps.action === "retirerFacture") {
+      await retirerFacturation(d.commandeId);
+      const devis = await prisma.devis.update({ where: { id }, data: { commandeId: null, montantFacture: null, factureMois: null, factureAnnee: null } });
       return NextResponse.json({ succes: true, devis });
     }
     if (corps.action === "statut" && ["EN_ATTENTE", "ENVOYE", "ACCEPTE", "REFUSE", "ANNULE"].includes(corps.statut)) {
@@ -57,6 +84,11 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   const session = await getSession();
   if (!session || session.role !== "ADMIN") return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   const { id } = await params;
+  const d = await prisma.devis.findUnique({ where: { id }, select: { commandeId: true } });
+  if (d) {
+    await retirerFacturation(d.commandeId);
+    await supprimerFichiersDe({ devisId: id });
+  }
   await prisma.devis.delete({ where: { id } }).catch(() => null);
   return NextResponse.json({ succes: true });
 }

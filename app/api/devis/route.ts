@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import { notifierAdmin } from "@/lib/notifications";
 import { OFFRES } from "@/lib/catalogue";
 import { aDroit } from "@/lib/droits";
+import { SELECT_PJ } from "@/lib/pieces-jointes";
 
 // GET : devis du client (ou tous pour l'admin, filtrables par ?entrepriseId=&statut=)
 export async function GET(request: NextRequest) {
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     },
     orderBy: { createdAt: "desc" },
     take: 200,
-    include: { entreprise: { select: { nom: true } }, messages: { orderBy: { createdAt: "asc" } } },
+    include: { entreprise: { select: { nom: true } }, messages: { orderBy: { createdAt: "asc" } }, piecesJointes: { select: SELECT_PJ, orderBy: { createdAt: "asc" } } },
   });
   return NextResponse.json(devis);
 }
