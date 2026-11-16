@@ -7,7 +7,7 @@ import OptionPayante, { type EtatOption } from "@/components/OptionPayante";
 export default function OptionProjets({ etat, peutDemander, inclus = false }: { etat: EtatOption; peutDemander: boolean; inclus?: boolean }) {
   return (
     <OptionPayante
-      type="OPTION_PROJETS" icone="📐" titre="Projets, planning & rentabilité"
+      option="projets" icone="📐" titre="Projets, planning & rentabilité"
       description="Planifiez vos équipes par projet ou chantier, suivez les heures pointées et le coût réel au jour le jour, comparez au prévisionnel et voyez la marge de chaque projet."
       prix={PRIX_OPTION_PROJETS} conditions="avec les formules Basic et Essentiel, inclus dès Sérénité" inclus={inclus} etat={etat} peutDemander={peutDemander}
     />

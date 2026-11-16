@@ -10,6 +10,10 @@ import AccesEtablissements from "@/components/AccesEtablissements";
 import AvantagesEntreprise from "@/components/AvantagesEntreprise";
 import LogoEntreprise from "@/components/LogoEntreprise";
 import { aDroit } from "@/lib/droits";
+import { etatOptions } from "@/lib/options-serveur";
+import { calculerFacture } from "@/lib/facturation";
+import OptionDocuments from "@/components/OptionDocuments";
+import OptionProjets from "@/components/OptionProjets";
 
 export default async function EntrepriseClient() {
   await connection();
@@ -28,6 +32,13 @@ export default async function EntrepriseClient() {
   });
 
   if (!entreprise) redirect("/login");
+
+  // Options (prenables à tout moment) et estimation de la facture du mois, options comprises
+  const maintenant = new Date();
+  const dirigeant = !session.etablissementId;
+  const [options, estimation] = dirigeant
+    ? await Promise.all([etatOptions(session), aDroit(session.entreprise?.permissions, "entreprise.supplements") ? calculerFacture(entreprise.id, maintenant.getMonth() + 1, maintenant.getFullYear()) : Promise.resolve(null)])
+    : [null, null];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -92,11 +103,29 @@ export default async function EntrepriseClient() {
                 <Info label="Tickets RH inclus / mois" value={entreprise.abonnement?.ticketsRH.toString()} />
                 <Info label="Formule paie" value={entreprise.abonnementPaie ? `Paie ${entreprise.abonnementPaie.nom} — ${entreprise.abonnementPaie.prixMensuel} €/mois` : "—"} />
               </div>
-              <Link href="/client/entreprise/abonnement" className="block mt-4 text-orange-500 font-semibold hover:underline">
-                Gérer mes abonnements →
-              </Link>
+              {estimation && (
+                <div className="flex justify-between items-baseline mt-3 rounded-lg px-3 py-2" style={{ background: "#fff7ed" }}>
+                  <span className="text-sm text-gray-600">Estimation du mois ({maintenant.toLocaleDateString("fr-FR", { month: "long" })}), options comprises</span>
+                  <span className="font-bold text-orange-600">{estimation.montant.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} € HT</span>
+                </div>
+              )}
+              <div className="flex gap-4 flex-wrap mt-4">
+                <Link href="/client/entreprise/abonnement" className="text-orange-500 font-semibold hover:underline">Gérer mes abonnements →</Link>
+                {estimation && <Link href="/client/entreprise/supplements" className="text-gray-600 font-semibold hover:underline">Détail du mois →</Link>}
+              </div>
             </div>
               </>
+            )}
+
+            {options && (
+              <div className="col-span-2 flex flex-col gap-4">
+                <div>
+                  <h2 className="text-xl font-bold">🧩 Options</h2>
+                  <p className="text-sm text-gray-500">Activez ou arrêtez une option à tout moment : elle est ajoutée tout de suite au calcul de votre facture du mois (sauf si votre formule l&apos;inclut).</p>
+                </div>
+                <OptionDocuments etat={options.documents} inclus={options.documentsInclus} peutDemander={dirigeant} />
+                <OptionProjets etat={options.projets} inclus={options.projetsInclus} peutDemander={dirigeant} />
+              </div>
             )}
 
             <GestionEtablissements modifiable={aDroit(session.entreprise?.permissions, "entreprise.modifier")} />
