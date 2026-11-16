@@ -22,7 +22,11 @@ Puis ouvrir http://localhost:3000. Les données utilisées sont celles de la bas
 11. Gestion RH › Soldes de congés : tous les salariés à 0 au départ ; modifier un solde ou importer le modèle, enregistrer, vérifier la fiche du salarié, son espace et l'espace de son manager. BTP : mettre « BTP » (ou l'IDCC) dans la convention collective.
 12. Admin › Entreprises › Ajouter : plus de mot de passe à saisir. Le client reçoit l'e-mail « Activez votre compte » (en local sans `RESEND_API_KEY`, le lien s'affiche à la place). Fiche entreprise › Gestion des accès › Modifier › Mot de passe : « Envoyer un lien d'activation ».
 13. Admin › Demandes des clients › Devis (et Apps, options & formations) : écrire au client, déposer un PDF, puis « Valider et ajouter à la facture » avec un montant et un mois. Le montant apparaît dans la facture de ce mois et sur les tableaux de bord ; côté client, l'échange et les documents sont dans Mon entreprise › Autres apps & demandes.
-10. Tableau de bord : la carte « Mise à jour V44 » s'affiche ; « J'ai lu » la masque ; l'historique est dans Communication › Mises à jour.
+14. Gestion RH › Courriers & modèles : choisir « Rupture de la période d'essai », un salarié, compléter, « Imprimer / PDF » ; créer un modèle personnel.
+15. Espace salarié › Absences › « Déclarer un accident » ; côté client, Gestion RH › Accidents du travail : le dossier apparaît avec la date limite de la DAT.
+16. Paie › Déclarer une sortie : la sortie apparaît dans Admin › Salariés › Demandes clients (ou directement sur la fiche sans formule paie).
+17. Admin › Communication › Questions Buddy : ajouter une réponse « 🔎 Chercher dans l'app › Soldes de congés » avec la question « solde de congés », puis demander à Buddy côté client « quel est le solde de congés de Marie ».
+10. Tableau de bord : la carte « Mise à jour V52 » s'affiche ; « J'ai lu » la masque ; l'historique est dans Communication › Mises à jour.
 
 ## Variables d'environnement (Vercel › Settings › Environment Variables)
 

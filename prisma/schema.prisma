@@ -91,6 +91,8 @@ model Entreprise {
   trames            TrameContrat[]
   contrats          DemandeContrat[]
   piecesJointes     PieceJointe[]
+  modelesCourriers  ModeleCourrier[]
+  accidents         AccidentTravail[]
   pointages         Pointage[]
   projets           Projet[]
   devisProjets      DevisProjet[]
@@ -279,6 +281,8 @@ model Salarie {
   congesRepriseDate     DateTime?
   congesRepriseReste    Float?   // jours restant à prendre à la date de reprise
   congesRepriseEnCours  Float?   // jours acquis sur la période en cours à la date de reprise
+  motifSortie           String?  // renseigné à la déclaration de sortie (Paie › Déclarer une sortie)
+  accidents             AccidentTravail[]
   formations            Formation[]
   rappels               RappelSalarie[]
   compte                Utilisateur?
@@ -940,6 +944,8 @@ model PieceJointe {
   devis            Devis?          @relation(fields: [devisId], references: [id], onDelete: Cascade)
   demandeServiceId String?
   demandeService   DemandeService? @relation(fields: [demandeServiceId], references: [id], onDelete: Cascade)
+  accidentId       String?
+  accident         AccidentTravail? @relation(fields: [accidentId], references: [id], onDelete: Cascade)
   nom          String
   mime         String
   taille       Int
@@ -952,6 +958,7 @@ model PieceJointe {
   @@index([questionId])
   @@index([devisId])
   @@index([demandeServiceId])
+  @@index([accidentId])
   @@index([entrepriseId]) // ajouté pour accélérer les recherches
 }
 
@@ -1020,6 +1027,8 @@ model BuddyQuestion {
   normalisee   String   @unique
   motsCles     String[]
   reponse      String?
+  // Réponse « chercher dans l'app » : Buddy va lire l'information demandée (absences, congés, échéances…)
+  source       String?
   statut       String   @default("A_TRAITER")
   occurrences  Int      @default(1)
   entreprises  String[]
@@ -1251,4 +1260,75 @@ model TexteFormule {
   message   String?
   lignes    String[] @default([])
   updatedAt DateTime @updatedAt
+}
+
+
+// ───────── Modèles de courriers et e-mails (rupture / prolongation de période d'essai, relances, attestations…) ─────────
+// entrepriseId vide = modèle FRANEO RH proposé à tous les clients ; sinon modèle propre au client.
+// Le contenu contient des champs {{salarie.prenom}}, {{entreprise.nom}}… ou {{Texte libre à compléter}}.
+model ModeleCourrier {
+  id           String      @id @default(cuid())
+  entrepriseId String?
+  entreprise   Entreprise? @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  nom          String
+  categorie    String      @default("Mes modèles")
+  format       String      @default("COURRIER") // COURRIER | MAIL
+  objet        String?
+  contenu      String
+  auteur       String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([entrepriseId])
+}
+
+// ───────── Accidents du travail / de trajet ─────────
+// Déclaré par le salarié (espace salarié) ou par l'employeur. L'employeur complète les informations
+// de la déclaration (DAT, sous 48 h) puis les réponses au questionnaire de la CPAM.
+// statut : A_DECLARER | DECLARE | INSTRUCTION | DECIDE | CLOS
+model AccidentTravail {
+  id               String     @id @default(cuid())
+  entrepriseId     String
+  entreprise       Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  salarieId        String
+  salarie          Salarie    @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+  declarePar       String     @default("SALARIE") // SALARIE | EMPLOYEUR
+  auteur           String?
+  statut           String     @default("A_DECLARER")
+  type             String     @default("TRAVAIL")  // TRAVAIL | TRAJET
+  // L'accident (décrit par le salarié)
+  dateAccident     DateTime
+  heure            String?
+  lieu             String?
+  activite         String?
+  circonstances    String?
+  siegeLesions     String?
+  natureLesions    String?
+  temoins          String?
+  premierePersonne String?
+  soins            String?    // a consulté un médecin, hôpital…
+  arret            Boolean    @default(false)
+  tiers            String?
+  // Employeur (déclaration d'accident du travail)
+  connuLe          DateTime?
+  horaires         String?
+  constate         String?    // CONSTATE (par l'employeur) | DECRIT (par la victime)
+  registreBenins   Boolean    @default(false)
+  datDate          DateTime?
+  datReference     String?
+  reserves         String?
+  // Instruction CPAM
+  questionnaireRecuLe DateTime?
+  questionnaire    Json?      // réponses aux questions de la CPAM { cle: réponse }
+  questionnaireEnvoyeLe DateTime?
+  decision         String?    // PRISE_EN_CHARGE | REFUS
+  decisionLe       DateTime?
+  repriseLe        DateTime?
+  notes            String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  piecesJointes    PieceJointe[]
+
+  @@index([entrepriseId, statut])
+  @@index([salarieId])
 }

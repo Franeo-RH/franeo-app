@@ -26,6 +26,10 @@ export const PAGE = {
   profil: "/client/profil",
   projets: "/client/projets",
   rentabilite: "/client/projets/rentabilite",
+  conges: "/client/salaries/conges",
+  courriers: "/client/salaries/courriers",
+  accidents: "/client/salaries/accidents",
+  sorties: "/client/paie/sorties",
 } as const;
 
 export type ClePage = keyof typeof PAGE;
@@ -34,6 +38,10 @@ export type ClePage = keyof typeof PAGE;
 export const NAVIGATION: { cle: ClePage; label: string; mots: string[]; module: string }[] = [
   { cle: "salarieNouveau", label: "Nouveau salarié", mots: ["nouveau salarie", "ajouter un salarie", "creer un salarie"], module: "salaries" },
   { cle: "mouvements", label: "Mouvements du personnel", mots: ["mouvements", "entrees et sorties", "entrees sorties"], module: "salaries" },
+  { cle: "conges", label: "Soldes de congés", mots: ["soldes de conges", "solde de conges", "soldes conges", "compteur de conges", "compteurs de conges"], module: "absences" },
+  { cle: "courriers", label: "Courriers & modèles", mots: ["courriers", "courrier", "lettre type", "lettres types", "modeles de courrier", "attestation employeur", "rupture de periode d essai", "renouvellement de periode d essai", "prolongation de periode d essai"], module: "salaries" },
+  { cle: "accidents", label: "Accidents du travail", mots: ["accident du travail", "accidents du travail", "accident de trajet", "questionnaire cpam", "declaration d accident"], module: "salaries" },
+  { cle: "sorties", label: "Déclarer une sortie", mots: ["declarer une sortie", "sortie de salarie", "declaration de sortie", "solde de tout compte"], module: "paie" },
   { cle: "salaries", label: "Salariés", mots: ["salaries", "salarie", "employes", "personnel", "effectif", "equipe"], module: "salaries" },
   { cle: "absences", label: "Absences", mots: ["absences", "absence", "conges", "calendrier des absences"], module: "absences" },
   { cle: "saisie", label: "Saisie des variables", mots: ["saisie", "variables", "variable", "primes", "saisie de paie"], module: "paie" },

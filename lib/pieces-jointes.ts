@@ -10,7 +10,7 @@ export const MAX_PJ = 15;
 export const SELECT_PJ = { id: true, nom: true, taille: true, auteur: true, role: true, createdAt: true } as const;
 export type { PieceJointeVue } from "@/lib/devis";
 
-type Cible = { devisId: string } | { demandeServiceId: string };
+type Cible = { devisId: string } | { demandeServiceId: string } | { accidentId: string };
 
 /** Ajoute le fichier du formulaire (champ « fichier ») à un devis ou une demande ; renvoie une réponse HTTP */
 export async function ajouterPieceJointe(request: Request, cible: Cible, entrepriseId: string, session: { role: string; prenom: string }) {

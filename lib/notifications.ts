@@ -91,3 +91,23 @@ export async function notifierClients(entrepriseId: string, options: { sujet: st
   });
   await envoyerMail({ a: clients.map((u) => u.email), ...options });
 }
+
+/** E-mail rédigé (courrier type envoyé à un salarié) : texte brut mis en forme, réponse possible à l'expéditeur */
+export async function envoyerMailTexte(options: { a: string; sujet: string; texte: string; repondreA?: string | null }): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY || !options.a) return false;
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    await resend.emails.send({
+      from: EXPEDITEUR,
+      to: options.a,
+      ...(options.repondreA ? { replyTo: options.repondreA } : {}),
+      subject: options.sujet,
+      text: options.texte,
+      html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:640px;color:#111827;font-size:14px;line-height:1.55;white-space:pre-line">${echapper(options.texte)}</div>`,
+    });
+    return true;
+  } catch (e) {
+    console.error("Mail non envoyé :", e);
+    return false;
+  }
+}

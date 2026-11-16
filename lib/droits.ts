@@ -29,6 +29,8 @@ export const ACTIONS = [
   { id: "rh.services", module: "salaries", label: "Organiser les services et l'organigramme" },
   { id: "rh.documents", module: "salaries", label: "Déposer et consulter les documents des salariés" },
   { id: "rh.contrats", module: "salaries", label: "Générer des contrats depuis un modèle (à partir de Sérénité)" },
+  { id: "rh.courriers", module: "salaries", label: "Courriers et e-mails types (période d'essai, relances, attestations…)" },
+  { id: "rh.accidents", module: "salaries", label: "Suivre les accidents du travail (déclaration, questionnaire CPAM)" },
   { id: "rh.frais", module: "espace-salaries", label: "Gestion RH : valider les notes de frais" },
   { id: "rh.questions", module: "espace-salaries", label: "Gestion RH : répondre aux questions des salariés" },
   // Absences
@@ -41,6 +43,7 @@ export const ACTIONS = [
   { id: "paie.historique", module: "paie", label: "Voir l'historique de paie" },
   { id: "paie.import", module: "paie", label: "Importer des variables en masse" },
   { id: "paie.cloture", module: "paie", label: "Demander la clôture / réouverture du mois" },
+  { id: "paie.sorties", module: "paie", label: "Déclarer la sortie d'un salarié" },
   // Tickets RH
   { id: "tickets.creer", module: "tickets", label: "Ouvrir des tickets RH" },
   { id: "tickets.recrutement", module: "tickets", label: "Demander un recrutement" },
@@ -93,6 +96,9 @@ export const DROITS_PAGES: { prefixe: string; droit: ActionId }[] = [
   { prefixe: "/client/salaries/documents", droit: "rh.documents" },
   { prefixe: "/client/salaries/pointages", droit: "espace.badge" },
   { prefixe: "/client/salaries/contrats", droit: "rh.contrats" },
+  { prefixe: "/client/salaries/courriers", droit: "rh.courriers" },
+  { prefixe: "/client/salaries/accidents", droit: "rh.accidents" },
+  { prefixe: "/client/paie/sorties", droit: "paie.sorties" },
   { prefixe: "/client/salaries/frais", droit: "rh.frais" },
   { prefixe: "/client/salaries/questions", droit: "rh.questions" },
   { prefixe: "/client/paie/import", droit: "paie.import" },

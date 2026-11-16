@@ -263,7 +263,7 @@ export async function lireAbsences(m: Msg, env: Env): Promise<ReponseBuddy> {
       parType.set(x.type, (parType.get(x.type) ?? 0) + compterJours(debut, fin).ouvres);
     }
     const lignes = Array.from(parType.entries()).map(([t, n]) => `${LABELS_ABSENCE[t] ?? t} : ${pluriel(n, "jour ouvré", "jours ouvrés")}`);
-    return rep(`📊 Absences ${annee}${salaries.length === 1 ? ` — ${nomComplet(salaries[0])}` : ""} (demandes en attente comprises) :\n${puces(lignes)}\n\nJe n'ai pas accès aux soldes de congés, seulement aux jours déclarés.`, {
+    return rep(`📊 Absences ${annee}${salaries.length === 1 ? ` — ${nomComplet(salaries[0])}` : ""} (demandes en attente comprises) :\n${puces(lignes)}\n\nLes soldes de congés sont dans Gestion RH › Soldes de congés.`, {
       humeur: "neutre",
       liens: [{ label: "Voir les absences", href: PAGE.absences }],
     });

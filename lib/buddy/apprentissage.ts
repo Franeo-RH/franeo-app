@@ -13,18 +13,26 @@ export function motsClesDe(texte: string): string[] {
   return [...new Set(normaliser(texte).split(" ").filter((m) => m.length > 2 && !VIDES.has(m)))].slice(0, 12);
 }
 
-/** Réponse apprise : la question doit contenir au moins 60 % des mots-clés d'une réponse rédigée par l'admin */
-export async function reponseApprise(texte: string): Promise<string | null> {
+export type ReponseApprise = { reponse: string | null; source: string | null };
+
+/**
+ * Réponse apprise : la question doit contenir au moins 60 % des mots-clés d'une réponse rédigée par l'admin.
+ * `source` : l'admin a demandé à Buddy d'aller chercher l'information dans l'application (lib/buddy/sources.ts).
+ */
+export async function reponseApprise(texte: string): Promise<ReponseApprise | null> {
   const mots = new Set(normaliser(texte).split(" "));
-  const appris = await prisma.buddyQuestion.findMany({ where: { statut: "REPONDUE", reponse: { not: null } }, select: { motsCles: true, reponse: true } });
-  let meilleure: { score: number; reponse: string } | null = null;
+  const appris = await prisma.buddyQuestion.findMany({
+    where: { statut: "REPONDUE", OR: [{ reponse: { not: null } }, { source: { not: null } }] },
+    select: { motsCles: true, reponse: true, source: true },
+  });
+  let meilleure: { score: number; r: ReponseApprise } | null = null;
   for (const a of appris) {
-    if (a.motsCles.length === 0) continue;
+    if (a.motsCles.length === 0 || (!a.reponse?.trim() && !a.source)) continue;
     const trouves = a.motsCles.filter((m) => mots.has(m)).length;
     const score = trouves / a.motsCles.length;
-    if (trouves >= 1 && score >= 0.6 && (!meilleure || score > meilleure.score)) meilleure = { score, reponse: a.reponse! };
+    if (trouves >= 1 && score >= 0.6 && (!meilleure || score > meilleure.score)) meilleure = { score, r: { reponse: a.reponse?.trim() || null, source: a.source } };
   }
-  return meilleure?.reponse ?? null;
+  return meilleure?.r ?? null;
 }
 
 /** Note une question restée sans réponse (regroupée si elle a déjà été posée) */

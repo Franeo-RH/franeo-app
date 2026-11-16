@@ -12,6 +12,7 @@ import CongesEquipe from "@/components/CongesEquipe";
 import BandeauDemo from "@/components/BandeauDemo";
 import ReleveHeuresSalarie from "@/components/ReleveHeuresSalarie";
 import EspaceSalarieRH from "@/components/EspaceSalarieRH";
+import AccidentSalarie from "@/components/AccidentSalarie";
 import { libelleRappel, typeDe } from "@/lib/rappels";
 import { BoutonAnnulerAbsence, FormulaireAbsenceSalarie, FormulaireArretSalarie } from "@/components/EspaceSalarieActions";
 
@@ -156,6 +157,10 @@ export default async function EspaceSalarie() {
               <section style={carte} aria-labelledby="t-arret">
                 <h2 id="t-arret" style={{ margin: "0 0 12px", fontSize: "18px" }}>🤒 Déclarer un arrêt de travail</h2>
                 <FormulaireArretSalarie />
+              </section>
+              <section style={carte} aria-labelledby="t-accident">
+                <h2 id="t-accident" style={{ margin: "0 0 12px", fontSize: "18px" }}>🩹 Accident du travail ou de trajet</h2>
+                <AccidentSalarie />
               </section>
               <section style={carte} aria-labelledby="t-absences">
                 <h2 id="t-absences" style={{ margin: "0 0 4px", fontSize: "18px" }}>Mes absences à venir</h2>

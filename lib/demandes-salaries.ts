@@ -7,13 +7,15 @@ import { lireRappel } from "@/lib/rappels";
 import { matriculeDejaPris, nettoyerMatricule } from "@/lib/matricule";
 import { notifierAdmin } from "@/lib/notifications";
 import { supprimerSalarieComplet } from "@/lib/rgpd";
+import { libelleMotif, PREAVIS } from "@/lib/sorties";
 
-export type TypeDemande = "AJOUT" | "MODIFICATION" | "SUPPRESSION";
+export type TypeDemande = "AJOUT" | "MODIFICATION" | "SUPPRESSION" | "SORTIE";
 
 export const LIBELLES_TYPE: Record<string, string> = {
   AJOUT: "Ajout de salarié",
   MODIFICATION: "Modification",
   SUPPRESSION: "Suppression",
+  SORTIE: "Sortie de salarié",
 };
 
 const nombre = (v: unknown) => (v === undefined || v === null || v === "" ? null : parseFloat(String(v)));
@@ -68,6 +70,14 @@ async function resumer(type: TypeDemande, donnees: Record<string, unknown>, sala
   const avant = salarieId ? await prisma.salarie.findUnique({ where: { id: salarieId } }) : null;
   const nom = avant ? `${avant.prenom} ${avant.nom}` : "salarié";
   if (type === "SUPPRESSION") return `Supprimer ${nom}`;
+  if (type === "SORTIE") {
+    return [
+      `Sortie de ${nom} : ${libelleMotif(donnees.motif)}`,
+      `fin de contrat le ${fr(donnees.dateFin)}`,
+      donnees.dernierJour ? `dernier jour travaillé le ${fr(donnees.dernierJour)}` : "",
+      donnees.preavis ? PREAVIS[String(donnees.preavis)] ?? "" : "",
+    ].filter(Boolean).join(", ");
+  }
 
   // Modification : on liste ce qui change
   if (!avant) return `Modifier ${nom}`;
@@ -192,6 +202,10 @@ export async function appliquerDemande(demandeId: string): Promise<{ erreur?: st
     await prisma.salarie.update({ where: { id: salarie.id }, data: { ...champs, ...(modifierMatricule ? { matricule } : {}) } });
   } else if (d.type === "SUPPRESSION") {
     await supprimerSalarieComplet(salarie.id);
+  } else if (d.type === "SORTIE") {
+    const fin = date(donnees.dateFin);
+    if (!fin || Number.isNaN(fin.getTime())) return { erreur: "Date de fin de contrat manquante." };
+    await prisma.salarie.update({ where: { id: salarie.id }, data: { dateFin: fin, motifSortie: libelleMotif(donnees.motif) || null } });
   }
 
   await prisma.demandeSalarie.update({ where: { id: d.id }, data: { statut: "VALIDEE", traiteAt: new Date() } });

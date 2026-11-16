@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { analyser, aPrefixe, aujourdhui, a, matchSalaries, type Msg } from "@/lib/buddy/outils";
 import { noterQuestion, reponseApprise } from "@/lib/buddy/apprentissage";
+import { executerSource } from "@/lib/buddy/sources";
 import { chargerCtx, sauverCtx, viderFlux } from "@/lib/buddy/contexte";
 import { continuerFlux, demarrerFlux, rep } from "@/lib/buddy/moteur";
 import { detecter, moduleDe, type Intention } from "@/lib/buddy/intentions";
@@ -376,7 +377,12 @@ async function traiter(m: Msg, env: Env, ctx: Ctx): Promise<ReponseBuddy> {
 
   /* 4) Rien de reconnu : d'abord les réponses paramétrées par FRANEO RH (Admin › Questions Buddy), puis la FAQ */
   const reponseAdmin = await reponseApprise(m.brut);
-  if (reponseAdmin) return rep(reponseAdmin, { humeur: "content", suggestions: ["Aide"] });
+  if (reponseAdmin?.source) {
+    // Réponse « chercher dans l'app » : Buddy lit l'information, avec le texte de l'admin en introduction
+    const trouve = await executerSource(reponseAdmin.source, m, env, ctx);
+    if (trouve) return reponseAdmin.reponse ? { ...trouve, reponse: `${reponseAdmin.reponse}\n\n${trouve.reponse}` } : trouve;
+  }
+  if (reponseAdmin?.reponse) return rep(reponseAdmin.reponse, { humeur: "content", suggestions: ["Aide"] });
 
   const faq = await lireFaq(m, env.entreprise.id);
   if (faq) return faq;

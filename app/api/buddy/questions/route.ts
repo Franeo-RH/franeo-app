@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { motsClesDe, normaliser } from "@/lib/buddy/apprentissage";
+import { SOURCES_BUDDY } from "@/lib/buddy/sources-liste";
 
 /** GET ?statut= (admin) : questions posées à Buddy restées sans réponse, ou réponses déjà rédigées */
 export async function GET(request: NextRequest) {
@@ -14,20 +15,21 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(l.map((q) => ({ ...q, entreprisesNoms: q.entreprises.map((id) => ents.find((e) => e.id === id)?.nom).filter(Boolean) })));
 }
 
-/** POST (admin) { question, reponse, motsCles? } : ajoute directement une réponse à Buddy */
+/** POST (admin) { question, reponse?, source?, motsCles? } : ajoute directement une réponse à Buddy (texte et/ou recherche dans l'app) */
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   const b = await request.json().catch(() => ({}));
   const question = String(b.question || "").trim().slice(0, 500);
   const reponse = String(b.reponse || "").trim().slice(0, 3000);
-  if (!question || !reponse) return NextResponse.json({ erreur: "Question et réponse obligatoires." }, { status: 400 });
+  const source = SOURCES_BUDDY.some((s) => s.code === b.source) ? String(b.source) : null;
+  if (!question || (!reponse && !source)) return NextResponse.json({ erreur: "Écrivez la question et une réponse, ou choisissez où Buddy doit chercher." }, { status: 400 });
   const motsCles = Array.isArray(b.motsCles) && b.motsCles.length ? (b.motsCles as unknown[]).map((m) => normaliser(String(m))).filter(Boolean).slice(0, 12) : motsClesDe(question);
   const normalisee = normaliser(question).slice(0, 300);
   await prisma.buddyQuestion.upsert({
     where: { normalisee },
-    create: { question, normalisee, motsCles, reponse, statut: "REPONDUE", entreprises: [] },
-    update: { reponse, motsCles, statut: "REPONDUE" },
+    create: { question, normalisee, motsCles, reponse: reponse || null, source, statut: "REPONDUE", entreprises: [] },
+    update: { reponse: reponse || null, source, motsCles, statut: "REPONDUE" },
   });
   return NextResponse.json({ succes: true });
 }
