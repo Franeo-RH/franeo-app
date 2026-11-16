@@ -12,7 +12,7 @@ export const MODULES = [
   { id: "helpdesk", label: "🆘 Helpdesk" },
   { id: "entreprise", label: "🏢 Mon entreprise (infos, abonnements, factures)" },
   { id: "espace-salaries", label: "📱 Espace salarié (inclus dans toutes les formules)" },
-  { id: "projets", label: "📐 Projets, planning & rentabilité (29 € HT/mois, inclus dès Sérénité RH ou paie)" },
+  { id: "projets", label: "📐 Projets, coût et gain par projet (29 € HT/mois, inclus avec RH Premium et Paie Premium)" },
 ] as const;
 
 export const ACTIONS = [
@@ -28,10 +28,10 @@ export const ACTIONS = [
   { id: "salaries.demandes", module: "salaries", label: "Voir ses demandes de validation" },
   { id: "rh.services", module: "salaries", label: "Organiser les services et l'organigramme" },
   { id: "rh.documents", module: "salaries", label: "Déposer et consulter les documents des salariés" },
-  { id: "rh.contrats", module: "salaries", label: "Générer des contrats depuis un modèle (inclus dès Essentiel, option 5 € avec Basic)" },
-  { id: "rh.courriers", module: "salaries", label: "Courriers et e-mails types (inclus dès Essentiel, option 5 € avec Basic)" },
+  { id: "rh.contrats", module: "salaries", label: "Générer des contrats depuis un modèle (option 5 €, incluse dès RH Essentiel ou Paie Sérénité)" },
+  { id: "rh.courriers", module: "salaries", label: "Courriers et e-mails types (option 5 €, incluse dès RH Essentiel ou Paie Sérénité)" },
   { id: "rh.accidents", module: "salaries", label: "Suivre les accidents du travail (déclaration, questionnaire CPAM)" },
-  { id: "rh.medical", module: "salaries", label: "Suivi médical complet (option 5 €, incluse dès Sérénité)" },
+  { id: "rh.medical", module: "salaries", label: "Suivi médical complet (option 5 €, incluse avec RH ou Paie Sérénité et Premium)" },
   { id: "rh.frais", module: "espace-salaries", label: "Gestion RH : valider les notes de frais" },
   { id: "rh.questions", module: "espace-salaries", label: "Gestion RH : répondre aux questions des salariés" },
   // Absences
@@ -184,23 +184,28 @@ export function niveauPaie(entreprise: EntrepriseOptions): number {
   if (n.includes("serenite")) return 3;
   return 2;
 }
-/** Niveau le plus élevé entre la formule RH et la formule paie */
-export const niveauFormule = (e: EntrepriseOptions) => Math.max(niveauRH(e), niveauPaie(e));
+/**
+ * Pack RH inclus dans la formule paie (grille du 16/11/2026) :
+ * Paie Essentielle et Paie Sérénité → RH Basic (1) ; Paie Premium → RH Sérénité (3).
+ */
+export const niveauPackPaie = (e: EntrepriseOptions) => { const p = niveauPaie(e); return p >= 4 ? 3 : p > 0 ? 1 : 0; };
+/** Pack RH dont profite réellement le client : le sien, ou celui inclus dans sa formule paie s'il est meilleur */
+export const niveauFormule = (e: EntrepriseOptions) => Math.max(niveauRH(e), niveauPackPaie(e));
 
-/** Option Documents & contrats (courriers types, contrats depuis modèle) : 5 € HT/mois ; incluse avec RH Essentiel ou dès Sérénité (RH ou paie) */
+/** Option Génération de contrats et documents : 5 € HT/mois ; incluse avec RH Essentiel, Sérénité, Premium et Paie Sérénité, Premium */
 export const PERMISSION_DOCUMENTS = "option-documents";
 export const documentsInclus = (e: EntrepriseOptions) => niveauRH(e) >= 2 || niveauPaie(e) >= 3;
 export const aAccesDocuments = (e: EntrepriseOptions) => !!e && (documentsInclus(e) || (e.permissions || []).includes(PERMISSION_DOCUMENTS));
 
-/** Option Projets : 29 € HT/mois ; incluse dès Sérénité (RH ou paie) */
-export const projetsInclus = (e: EntrepriseOptions) => niveauFormule(e) >= 3;
+/** Option Projets : 29 € HT/mois ; incluse avec RH Premium et Paie Premium */
+export const projetsInclus = (e: EntrepriseOptions) => niveauRH(e) >= 4 || niveauPaie(e) >= 4;
 
-/** Option Suivi médical complet : 5 € HT/mois ; incluse dès Sérénité (RH ou paie) */
+/** Option Suivi médical complet : 5 € HT/mois ; incluse avec RH Sérénité, Premium et Paie Sérénité, Premium */
 export const PERMISSION_MEDICAL = "option-medical";
-export const medicalInclus = (e: EntrepriseOptions) => niveauFormule(e) >= 3;
+export const medicalInclus = (e: EntrepriseOptions) => niveauRH(e) >= 3 || niveauPaie(e) >= 3;
 export const aAccesMedical = (e: EntrepriseOptions) => !!e && (medicalInclus(e) || (e.permissions || []).includes(PERMISSION_MEDICAL));
 
-/** Conseil RH ponctuel : 5 demandes / mois en Basic, 10 en Essentiel, illimité dès Sérénité (null = illimité) */
+/** Conseil RH ponctuel selon le pack RH (le sien ou celui inclus dans la paie) : 5 / mois en Basic, 10 en Essentiel, illimité dès Sérénité */
 export function quotaConseil(e: EntrepriseOptions): number | null {
   const n = niveauFormule(e);
   return n >= 3 ? null : n === 2 ? 10 : 5;
@@ -208,10 +213,10 @@ export function quotaConseil(e: EntrepriseOptions): number | null {
 
 // ── Accès par formule (bloc « Accès & droits » de l'admin) ──
 export const ACCES_FORMULES = [
-  { id: "BASIC", label: "Basic", detail: "Salariés (ajout, modif, import, suppression), mouvements, absences, espace salarié, conseil RH ponctuel (5 demandes / mois). Pas d'échéances, pas de paie. Tickets à 70 €." },
-  { id: "ESSENTIEL", label: "Essentiel", detail: "Basic + 3 tickets RH, échéances complètes, conseil RH ponctuel (10 demandes / mois), contrats et courriers types." },
-  { id: "SERENITE", label: "Sérénité", detail: "Essentiel + 5 tickets RH, conseil RH illimité, saisie des informations de paie, options Projets et Suivi médical incluses." },
-  { id: "PREMIUM", label: "Premium", detail: "Sérénité + 10 tickets RH, saisie des informations de paie, Franeo Analytics sur demande." },
+  { id: "BASIC", label: "Basic", detail: "Salariés (ajout, modif, import, suppression), mouvements, absences, espace salarié, conseil RH ponctuel (5 demandes / mois). Pas d'échéances, pas de paie. Tickets à 50 €." },
+  { id: "ESSENTIEL", label: "Essentiel", detail: "Basic + 3 tickets RH, échéances et suivi des périodes d'essai, conseil RH ponctuel (10 demandes / mois), SharePoint, génération de contrats et documents." },
+  { id: "SERENITE", label: "Sérénité", detail: "Essentiel + 5 tickets RH, conseil RH illimité, signatures électroniques, assistance contrats, saisie des informations de paie, Suivi médical complet inclus." },
+  { id: "PREMIUM", label: "Premium", detail: "Sérénité + 10 tickets RH, diagnostic RH initial, accompagnement prioritaire, option Projets incluse." },
   { id: "PERSO", label: "Personnalisé", detail: "Vous cochez vous-même chaque onglet et chaque action." },
 ] as const;
 

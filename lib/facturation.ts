@@ -4,7 +4,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { PRIX_OPTION_DOCUMENTS, PRIX_OPTION_MEDICAL, PRIX_OPTION_PROJETS } from "@/lib/projets-constantes";
-import { documentsInclus, medicalInclus, PERMISSION_DOCUMENTS, PERMISSION_MEDICAL, projetsInclus } from "@/lib/droits";
+import { documentsInclus, medicalInclus, niveauPackPaie, niveauRH, PERMISSION_DOCUMENTS, PERMISSION_MEDICAL, projetsInclus } from "@/lib/droits";
+import { GRILLE_RH } from "@/lib/grille";
 import { categorieRecrutement, LANCEMENT_RECRUTEMENT } from "@/lib/recrutement";
 
 type FormuleRH = { nom: string; prixMensuel: number; salariesInclus: number; prixSalarieSupp: number; ticketsRH: number; prixTicketSupp: number } | null;
@@ -20,10 +21,22 @@ export const PRIX_TICKET_SANS_ABONNEMENT = 70;
 export const PRIX_ESPACE_PAR_SALARIE = 3;
 export const PRIX_ESPACE_FORFAIT = 15;
 
-/** Tickets RH inclus chaque mois (abonnement RH + formule paie) et prix d'un ticket supplémentaire */
+/**
+ * Le pack RH est-il couvert par la formule paie ? (Paie Essentielle et Sérénité incluent RH Basic, Paie Premium inclut RH Sérénité.)
+ * Dans ce cas, le pack RH n'est pas facturé en plus.
+ */
+export function packRHInclusDansPaie(e: { abonnement: { nom: string } | null; abonnementPaie: { nom: string } | null }): boolean {
+  const pack = niveauPackPaie(e);
+  return pack > 0 && (!e.abonnement || niveauRH(e) <= pack);
+}
+
+/** Tickets RH inclus chaque mois (pack RH, ou pack inclus dans la paie) et prix d'un ticket supplémentaire */
 export function quotaTickets(e: { abonnement: FormuleRH; abonnementPaie: FormulePaie }) {
   if (!e.abonnement && !e.abonnementPaie) return { inclus: 0, prixSupp: PRIX_TICKET_SANS_ABONNEMENT };
-  const inclus = (e.abonnement?.ticketsRH || 0) + (e.abonnementPaie?.ticketsRHInclus || 0);
+  // Tickets du pack RH dont le client profite : le sien, ou celui inclus dans la formule paie (RH Sérénité = 5 tickets)
+  const pack = niveauPackPaie(e);
+  const ticketsPack = packRHInclusDansPaie(e) ? GRILLE_RH[pack - 1]?.ticketsRH ?? 0 : e.abonnement?.ticketsRH || 0;
+  const inclus = ticketsPack + (e.abonnementPaie?.ticketsRHInclus || 0);
   // Le prix de la formule paie prime (c'est elle qui fixe le prix des tickets supplémentaires)
   const prixSupp = e.abonnementPaie && e.abonnementPaie.prixTicketSupp > 0
     ? e.abonnementPaie.prixTicketSupp
@@ -135,7 +148,9 @@ export async function lignesFacture(entrepriseId: string, mois: number, annee: n
   };
 
   // ── Abonnements ──
-  if (abo) {
+  // Formule paie : elle inclut un pack RH (Basic, ou Sérénité avec Paie Premium) qui n'est alors pas facturé en plus
+  const rhInclus = packRHInclusDansPaie(entreprise);
+  if (abo && !rhInclus) {
     ajouter({ categorie: "ABONNEMENT", libelle: abo.nom, quantite: 1, prixUnitaire: abo.prixMensuel });
     const supp = Math.max(nbSalaries - abo.salariesInclus, 0);
     if (supp > 0) ajouter({ categorie: "SALARIES", libelle: `${nbSalaries} salariés dont ${supp} supp.`, quantite: supp, prixUnitaire: abo.prixSalarieSupp });

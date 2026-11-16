@@ -12,7 +12,8 @@ export type Offre = {
   note?: string;
 };
 
-export const NIVEAUX = { S: { label: "Simple", prix: 30 }, M: { label: "Standard", prix: 50 }, C: { label: "Complexe", prix: 100 } } as const;
+/** Prestations à l'unité : un ticket RH couvre n'importe laquelle, sans supplément (inclus dans le pack, sinon 20 à 50 € selon la formule) */
+export const NIVEAUX = { S: { label: "Simple", prix: 20 }, M: { label: "Standard", prix: 20 }, C: { label: "Complexe", prix: 20 } } as const;
 
 // 130 prestations à l'unité : [catégorie, libellé, niveau]
 const UNITAIRES: [string, string, keyof typeof NIVEAUX][] = [
@@ -159,7 +160,8 @@ export const OFFRES: Offre[] = [
     libelle,
     prix: NIVEAUX[n].prix,
     apartir: true,
-    note: NIVEAUX[n].label,
+    unite: "ticket RH",
+    note: `${NIVEAUX[n].label} · 1 ticket RH (inclus dans votre pack, sinon 20 à 50 € selon la formule)`,
   })),
   // Recrutement : lancement + primes au succès
   { code: "RECRUT_NON_QUALIFIE", famille: "Recrutement", categorie: "Recrutement", libelle: "Recrutement non qualifié / administratif", prix: 1600, note: "400 € de lancement + 400 € à la signature + 800 € fin de période d'essai" },

@@ -1,3 +1,5 @@
+import { MENTIONS_TARIFS } from "@/lib/grille";
+
 /** Mentions affichées sous les formules et les factures */
 export default function MentionsFacturation({ logiciel = false }: { logiciel?: boolean }) {
   return (
@@ -10,6 +12,7 @@ export default function MentionsFacturation({ logiciel = false }: { logiciel?: b
           ℹ️ Sous réserve d&apos;étude en cours, le prix inclut le logiciel de paie.
         </p>
       )}
+      {MENTIONS_TARIFS.map((m) => <p key={m} style={{ margin: 0, fontSize: "13px" }}>• {m}</p>)}
       <p style={{ margin: 0, fontSize: "13px", color: "#6b7280" }}>
         Les tickets RH inclus sont valables pour le mois en cours et ne sont pas reportés. Les options marquées « € » sont facturées à l&apos;acte et se commandent dans Paie › Prestations.
       </p>

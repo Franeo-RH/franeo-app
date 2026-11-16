@@ -1,5 +1,5 @@
 // lib/quota-conseil.ts
-// Conseil RH ponctuel (demandes RH simples) : 5 par mois en Basic, 10 en Essentiel, illimité dès Sérénité (RH ou paie).
+// Conseil RH ponctuel (demandes RH simples) selon le pack RH (le sien ou celui inclus dans la paie) : 5 par mois en Basic, 10 en Essentiel, illimité en Sérénité et Premium.
 
 import { prisma } from "@/lib/prisma";
 import { quotaConseil } from "@/lib/droits";

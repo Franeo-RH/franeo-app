@@ -15,6 +15,18 @@ export type MiseAJour = {
 
 export const MISES_A_JOUR: MiseAJour[] = [
   {
+    version: "V59",
+    date: "novembre 2026",
+    titre: "Nouvelle grille tarifaire FRANEO RH",
+    clients: [
+      "💳 Packs RH : Basic 50 €, Essentiel 149 €, Sérénité 299 €, Premium 449 € par mois (2 € par salarié supplémentaire). Ticket RH supplémentaire : 50 € en Basic, 40 € en Essentiel, 30 € en Sérénité, 20 € en Premium.",
+      "💰 Formules paie : un pack RH est inclus (RH Basic avec Paie Essentielle et Sérénité, RH Sérénité avec Paie Premium) et n'est plus facturé en plus. Reprise du dossier incluse, assistance contrôle URSSAF sur devis.",
+      "🧩 Options : génération de contrats et documents 5 € (incluse avec RH Essentiel, Sérénité, Premium et Paie Sérénité, Premium), suivi médical complet 5 € (inclus avec RH et Paie Sérénité, Premium), Projets 29 € (inclus avec RH Premium et Paie Premium).",
+      "🎫 Un ticket RH couvre n'importe quelle prestation du catalogue à l'unité, sans supplément.",
+      "🎁 Essai gratuit de l'application Franeo RH jusqu'au 31/12/2026.",
+    ],
+  },
+  {
     version: "V57",
     date: "novembre 2026",
     titre: "Nouveaux modèles de contrats de travail, à votre logo",

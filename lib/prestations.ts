@@ -34,7 +34,7 @@ export const PRESTATIONS: Prestation[] = [
     code: "RELANCE_IJSS", libelle: "Relance et recouvrement des IJSS",
     description: "Relances CPAM et contrôle des indemnités journalières perçues.",
     unite: "dossier", avecSalarie: true,
-    prix: { ESSENTIELLE: null, SERENITE: null, PREMIUM: 20, ENTREPRISE: 0 },
+    prix: { ESSENTIELLE: null, SERENITE: 0, PREMIUM: 0, ENTREPRISE: 0 }, // suivi des IJSS inclus dès Paie Sérénité
   },
   {
     code: "RUPTURE_CONV", libelle: "Rupture conventionnelle",
@@ -45,13 +45,13 @@ export const PRESTATIONS: Prestation[] = [
   {
     code: "CONTROLE_URSSAF", libelle: "Assistance contrôle URSSAF",
     description: "Préparation des pièces et accompagnement pendant un contrôle URSSAF.",
-    prix: { ESSENTIELLE: 150, SERENITE: 150, PREMIUM: 150, ENTREPRISE: 0 },
+    prix: { ESSENTIELLE: null, SERENITE: null, PREMIUM: null, ENTREPRISE: null }, // sur devis (grille du 16/11/2026)
   },
   {
     code: "REPRISE_DOSSIER", libelle: "Reprise du dossier paie", horsApp: true,
     description: "Import des salariés, reprise des cumuls et paramétrage du logiciel de paie.",
     unite: "salarié",
-    prix: { ESSENTIELLE: 10, SERENITE: 5, PREMIUM: 0, ENTREPRISE: 0 },
+    prix: { ESSENTIELLE: 0, SERENITE: 0, PREMIUM: 0, ENTREPRISE: 0 }, // reprise du dossier incluse dans toutes les formules
   },
   {
     code: "MUTUELLE", libelle: "Paramétrage mutuelle / prévoyance",
