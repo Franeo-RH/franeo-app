@@ -15,6 +15,17 @@ export type MiseAJour = {
 
 export const MISES_A_JOUR: MiseAJour[] = [
   {
+    version: "V56",
+    date: "novembre 2026",
+    titre: "Options à la carte et suivi médical complet",
+    clients: [
+      "🧩 Activez ou arrêtez vos options à tout moment dans Mon entreprise : Documents & contrats (5 € HT/mois), Suivi médical complet (5 € HT/mois), Projets (29 € HT/mois). Elles sont incluses dès les formules Sérénité, RH comme paie (et Documents & contrats dès RH Essentiel).",
+      "🩺 Suivi médical complet (Gestion RH › Dossiers) : type de suivi de chaque salarié, prochaine visite calculée automatiquement et ajoutée à vos échéances, visites de reprise après un arrêt et visite de mi-carrière.",
+      "💬 Conseil RH ponctuel : 5 demandes par mois avec la formule Basic, 10 avec Essentiel, illimité dès Sérénité. Votre compteur du mois est affiché sur la page des demandes.",
+      "💶 L'estimation de votre facture du mois, options comprises, est affichée dans Mon entreprise.",
+    ],
+  },
+  {
     version: "V52",
     date: "novembre 2026",
     titre: "Courriers types, accidents du travail et déclaration de sortie",

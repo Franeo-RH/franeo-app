@@ -12,6 +12,7 @@ import { detailRH } from "@/lib/grille";
 import { texteMention, texteRH, textesModifies } from "@/lib/textes-formules";
 import OptionProjets from "@/components/OptionProjets";
 import OptionDocuments from "@/components/OptionDocuments";
+import OptionMedical from "@/components/OptionMedical";
 import { etatOptions } from "@/lib/options-serveur";
 
 export default async function AbonnementClient() {
@@ -116,6 +117,7 @@ export default async function AbonnementClient() {
 
           <div className="mt-6 flex flex-col gap-4">
             <OptionDocuments etat={options.documents} inclus={options.documentsInclus} peutDemander={!session.etablissementId} />
+            <OptionMedical etat={options.medical} inclus={options.medicalInclus} peutDemander={!session.etablissementId} />
             <OptionProjets etat={options.projets} inclus={options.projetsInclus} peutDemander={!session.etablissementId} />
           </div>
 

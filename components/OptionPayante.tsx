@@ -12,7 +12,7 @@ export type EtatOption = "active" | "demandee" | "disponible";
 export default function OptionPayante({
   option, icone, titre, description, prix, conditions, inclus, etat, peutDemander,
 }: {
-  option: "projets" | "documents";
+  option: "projets" | "documents" | "medical";
   icone: string; titre: string; description: string;
   prix: number; conditions: string; inclus: boolean; etat: EtatOption; peutDemander: boolean;
 }) {
@@ -50,7 +50,7 @@ export default function OptionPayante({
         {active && <span className="bg-green-100 text-green-700 font-semibold rounded-lg px-4 py-2 text-sm">✅ {inclus ? "Activée" : "Option active"}</span>}
         {peutDemander ? (
           active
-            ? (!(inclus && option === "documents") && <button type="button" onClick={() => changer("arreter")} disabled={envoi} className="text-sm text-gray-500 underline disabled:opacity-50">{envoi ? "…" : "Arrêter l'option"}</button>)
+            ? (!inclus && <button type="button" onClick={() => changer("arreter")} disabled={envoi} className="text-sm text-gray-500 underline disabled:opacity-50">{envoi ? "…" : "Arrêter l'option"}</button>)
             : <button type="button" onClick={() => changer("activer")} disabled={envoi} className={`${inclus ? "bg-green-600" : "bg-orange-500"} text-white font-semibold rounded-lg px-5 py-3 disabled:opacity-50`}>{envoi ? "…" : inclus ? "Activer" : `Activer (+${prix} € / mois)`}</button>
         ) : !active && <span className="text-sm text-gray-500">Réservé au dirigeant de l&apos;entreprise.</span>}
         {erreur && <p className="text-sm text-red-700">{erreur}</p>}

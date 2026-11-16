@@ -12,7 +12,7 @@ export const MODULES = [
   { id: "helpdesk", label: "🆘 Helpdesk" },
   { id: "entreprise", label: "🏢 Mon entreprise (infos, abonnements, factures)" },
   { id: "espace-salaries", label: "📱 Espace salarié (inclus dans toutes les formules)" },
-  { id: "projets", label: "📐 Projets, planning & rentabilité (29 € HT/mois avec Basic ou Essentiel, inclus dès Sérénité)" },
+  { id: "projets", label: "📐 Projets, planning & rentabilité (29 € HT/mois, inclus dès Sérénité RH ou paie)" },
 ] as const;
 
 export const ACTIONS = [
@@ -31,6 +31,7 @@ export const ACTIONS = [
   { id: "rh.contrats", module: "salaries", label: "Générer des contrats depuis un modèle (inclus dès Essentiel, option 5 € avec Basic)" },
   { id: "rh.courriers", module: "salaries", label: "Courriers et e-mails types (inclus dès Essentiel, option 5 € avec Basic)" },
   { id: "rh.accidents", module: "salaries", label: "Suivre les accidents du travail (déclaration, questionnaire CPAM)" },
+  { id: "rh.medical", module: "salaries", label: "Suivi médical complet (option 5 €, incluse dès Sérénité)" },
   { id: "rh.frais", module: "espace-salaries", label: "Gestion RH : valider les notes de frais" },
   { id: "rh.questions", module: "espace-salaries", label: "Gestion RH : répondre aux questions des salariés" },
   // Absences
@@ -47,7 +48,7 @@ export const ACTIONS = [
   // Tickets RH
   { id: "tickets.creer", module: "tickets", label: "Ouvrir des tickets RH" },
   { id: "tickets.recrutement", module: "tickets", label: "Demander un recrutement" },
-  { id: "tickets.questions", module: "tickets", label: "Poser des questions RH ponctuelles" },
+  { id: "tickets.questions", module: "tickets", label: "Poser des questions RH ponctuelles (5 / mois en Basic, 10 en Essentiel, illimité ensuite)" },
   // Mon entreprise
   { id: "entreprise.modifier", module: "entreprise", label: "Modifier les informations de l'entreprise" },
   { id: "entreprise.factures", module: "entreprise", label: "Voir les factures" },
@@ -98,6 +99,7 @@ export const DROITS_PAGES: { prefixe: string; droit: ActionId }[] = [
   { prefixe: "/client/salaries/contrats", droit: "rh.contrats" },
   { prefixe: "/client/salaries/courriers", droit: "rh.courriers" },
   { prefixe: "/client/salaries/accidents", droit: "rh.accidents" },
+  { prefixe: "/client/salaries/suivi-medical", droit: "rh.medical" },
   { prefixe: "/client/paie/sorties", droit: "paie.sorties" },
   { prefixe: "/client/salaries/frais", droit: "rh.frais" },
   { prefixe: "/client/salaries/questions", droit: "rh.questions" },
@@ -170,23 +172,45 @@ export function aAccesContrats(entreprise: EntrepriseOptions): boolean {
   return !!entreprise && aDroit(entreprise.permissions, "rh.contrats") && aAccesDocuments(entreprise);
 }
 
-/* ───────── Options payantes selon la formule RH ───────── */
+/* ───────── Options payantes selon la formule (RH ou paie) ───────── */
 
-type EntrepriseOptions = { permissions?: string[] | null; abonnement?: { nom: string } | null } | null | undefined;
+type EntrepriseOptions = { permissions?: string[] | null; abonnement?: { nom: string } | null; abonnementPaie?: { nom: string } | null } | null | undefined;
 
-/** Option Documents & contrats (courriers types, contrats depuis modèle) : 5 € HT/mois avec Basic, incluse dès Essentiel */
+/** Niveau de la formule paie : 0 aucune, 2 Essentielle, 3 Sérénité, 4 Premium (même échelle que les formules RH) */
+export function niveauPaie(entreprise: EntrepriseOptions): number {
+  const n = (entreprise?.abonnementPaie?.nom || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (!n) return 0;
+  if (n.includes("premium")) return 4;
+  if (n.includes("serenite")) return 3;
+  return 2;
+}
+/** Niveau le plus élevé entre la formule RH et la formule paie */
+export const niveauFormule = (e: EntrepriseOptions) => Math.max(niveauRH(e), niveauPaie(e));
+
+/** Option Documents & contrats (courriers types, contrats depuis modèle) : 5 € HT/mois ; incluse avec RH Essentiel ou dès Sérénité (RH ou paie) */
 export const PERMISSION_DOCUMENTS = "option-documents";
-export const documentsInclus = (e: EntrepriseOptions) => niveauRH(e) >= 2;
+export const documentsInclus = (e: EntrepriseOptions) => niveauRH(e) >= 2 || niveauPaie(e) >= 3;
 export const aAccesDocuments = (e: EntrepriseOptions) => !!e && (documentsInclus(e) || (e.permissions || []).includes(PERMISSION_DOCUMENTS));
 
-/** Option Projets : 29 € HT/mois avec Basic ou Essentiel (ou sans formule RH), incluse dès Sérénité */
-export const projetsInclus = (e: EntrepriseOptions) => niveauRH(e) >= 3;
+/** Option Projets : 29 € HT/mois ; incluse dès Sérénité (RH ou paie) */
+export const projetsInclus = (e: EntrepriseOptions) => niveauFormule(e) >= 3;
+
+/** Option Suivi médical complet : 5 € HT/mois ; incluse dès Sérénité (RH ou paie) */
+export const PERMISSION_MEDICAL = "option-medical";
+export const medicalInclus = (e: EntrepriseOptions) => niveauFormule(e) >= 3;
+export const aAccesMedical = (e: EntrepriseOptions) => !!e && (medicalInclus(e) || (e.permissions || []).includes(PERMISSION_MEDICAL));
+
+/** Conseil RH ponctuel : 5 demandes / mois en Basic, 10 en Essentiel, illimité dès Sérénité (null = illimité) */
+export function quotaConseil(e: EntrepriseOptions): number | null {
+  const n = niveauFormule(e);
+  return n >= 3 ? null : n === 2 ? 10 : 5;
+}
 
 // ── Accès par formule (bloc « Accès & droits » de l'admin) ──
 export const ACCES_FORMULES = [
-  { id: "BASIC", label: "Basic", detail: "Salariés (ajout, modif, import, suppression), mouvements, absences, espace salarié. Pas d'échéances, pas de question RH simple, pas de paie. Tickets à 70 €." },
-  { id: "ESSENTIEL", label: "Essentiel", detail: "Basic + 3 tickets RH, échéances complètes, conseil RH ponctuel illimité, contrats et courriers types." },
-  { id: "SERENITE", label: "Sérénité", detail: "Essentiel + 5 tickets RH, saisie des informations de paie, option Projets incluse." },
+  { id: "BASIC", label: "Basic", detail: "Salariés (ajout, modif, import, suppression), mouvements, absences, espace salarié, conseil RH ponctuel (5 demandes / mois). Pas d'échéances, pas de paie. Tickets à 70 €." },
+  { id: "ESSENTIEL", label: "Essentiel", detail: "Basic + 3 tickets RH, échéances complètes, conseil RH ponctuel (10 demandes / mois), contrats et courriers types." },
+  { id: "SERENITE", label: "Sérénité", detail: "Essentiel + 5 tickets RH, conseil RH illimité, saisie des informations de paie, options Projets et Suivi médical incluses." },
   { id: "PREMIUM", label: "Premium", detail: "Sérénité + 10 tickets RH, saisie des informations de paie, Franeo Analytics sur demande." },
   { id: "PERSO", label: "Personnalisé", detail: "Vous cochez vous-même chaque onglet et chaque action." },
 ] as const;
@@ -196,11 +220,12 @@ export function permissionsFormule(niveau: string, actuelles: string[] = [], ave
   const base = ["salaries", "absences", "tickets", "helpdesk", "entreprise"];
   const retirer: ActionId[] = [];
   // Contrats et courriers types : inclus dès Essentiel ; avec Basic, l'option Documents (5 € HT/mois) les débloque
-  if (niveau === "BASIC") retirer.push("salaries.echeances", "salaries.echeances-modifier", "tickets.questions", "rh.documents");
+  // Conseil RH ponctuel : ouvert à toutes les formules, avec un quota mensuel (voir quotaConseil)
+  if (niveau === "BASIC") retirer.push("salaries.echeances", "salaries.echeances-modifier", "rh.documents");
   const modules = niveau === "SERENITE" || niveau === "PREMIUM" || avecFormulePaie ? [...base, "paie"] : base;
   // L'espace salarié est inclus dans toutes les formules ; les fonctions retirées par l'admin restent retirées
   // L'option Projets n'est liée à aucune formule : elle est conservée telle quelle
-  const garder = actuelles.filter((p) => p.startsWith("-espace.") || p === "projets" || p.startsWith("-projets.") || p === PERMISSION_DOCUMENTS);
+  const garder = actuelles.filter((p) => p.startsWith("-espace.") || p === "projets" || p.startsWith("-projets.") || p === PERMISSION_DOCUMENTS || p === PERMISSION_MEDICAL);
   return [...modules, "espace-salaries", ...garder, ...retirer.map((a) => `-${a}`), `@acces:${niveau}`];
 }
 

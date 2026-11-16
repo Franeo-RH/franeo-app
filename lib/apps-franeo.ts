@@ -111,6 +111,7 @@ export const TYPES_DEMANDE: Record<string, { label: string; icone: string }> = {
   AUTRE: { label: "Autre demande", icone: "✍️" },
   OPTION_PROJETS: { label: "Option Projets, planning & rentabilité", icone: "📐" },
   OPTION_DOCUMENTS: { label: "Option Documents & contrats", icone: "📄" },
+  OPTION_MEDICAL: { label: "Option Suivi médical complet", icone: "🩺" },
 };
 
 export const STATUTS_DEMANDE: Record<string, { label: string; fond: string; texte: string }> = {

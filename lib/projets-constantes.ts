@@ -4,6 +4,8 @@
 export const PRIX_OPTION_PROJETS = 29;
 /** Option Documents & contrats (courriers types + contrats depuis modèle) : payante avec la formule Basic */
 export const PRIX_OPTION_DOCUMENTS = 5;
+/** Option Suivi médical complet : payante jusqu'à Essentiel (RH ou paie), incluse dès Sérénité */
+export const PRIX_OPTION_MEDICAL = 5;
 
 export const STATUTS_PROJET = {
   PREVU: { label: "Prévu", couleur: "#6b7280" },

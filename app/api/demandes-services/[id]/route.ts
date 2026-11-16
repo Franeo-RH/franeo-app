@@ -50,9 +50,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     data: { statut, reponse: typeof reponse === "string" && reponse.trim() ? reponse.trim().slice(0, 3000) : undefined, traiteeAt: statut === "TRAITEE" || statut === "REFUSEE" ? new Date() : null },
   });
   // Option acceptée : activée tout de suite (facturée selon la formule, voir lib/facturation.ts)
-  if ((d.type === "OPTION_PROJETS" || d.type === "OPTION_DOCUMENTS") && statut === "TRAITEE") {
+  if ((d.type === "OPTION_PROJETS" || d.type === "OPTION_DOCUMENTS" || d.type === "OPTION_MEDICAL") && statut === "TRAITEE") {
     const e = await prisma.entreprise.findUnique({ where: { id: d.entrepriseId }, select: { permissions: true } });
-    const perm = d.type === "OPTION_PROJETS" ? "projets" : "option-documents";
+    const perm = d.type === "OPTION_PROJETS" ? "projets" : d.type === "OPTION_MEDICAL" ? "option-medical" : "option-documents";
     if (e && !e.permissions.includes(perm)) {
       // Documents : on rend aussi les contrats et courriers s'ils avaient été retirés
       const perms = d.type === "OPTION_DOCUMENTS" ? e.permissions.filter((p) => p !== "-rh.contrats" && p !== "-rh.courriers") : e.permissions;

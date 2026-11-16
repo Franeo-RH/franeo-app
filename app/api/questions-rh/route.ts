@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { notifierAdmin } from "@/lib/notifications";
 import { aDroit } from "@/lib/droits";
+import { usageConseil } from "@/lib/quota-conseil";
 
 // GET : demandes RH ponctuelles (client : les siennes ; admin : toutes, filtres ?statut=&entrepriseId=)
 export async function GET(request: NextRequest) {
@@ -31,6 +32,14 @@ export async function POST(request: NextRequest) {
   const { sujet, contenu } = await request.json().catch(() => ({}));
   if (typeof contenu !== "string" || !contenu.trim()) return NextResponse.json({ erreur: "Écrivez votre question." }, { status: 400 });
   const titre = (typeof sujet === "string" && sujet.trim() ? sujet.trim() : contenu.trim()).slice(0, 120);
+
+  // Quota mensuel selon la formule (5 en Basic, 10 en Essentiel, illimité dès Sérénité)
+  if (session.entreprise) {
+    const u = await usageConseil(session.entreprise);
+    if (u.quota !== null && u.utilisees >= u.quota) {
+      return NextResponse.json({ erreur: `Vous avez utilisé vos ${u.quota} demandes de conseil RH ponctuel de ce mois-ci. Ouvrez un ticket RH, ou passez à une formule supérieure pour en avoir plus (illimité dès Sérénité).` }, { status: 403 });
+    }
+  }
 
   const q = await prisma.questionRH.create({
     data: {

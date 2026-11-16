@@ -26,7 +26,9 @@ Puis ouvrir http://localhost:3000. Les données utilisées sont celles de la bas
 15. Espace salarié › Absences › « Déclarer un accident » ; côté client, Gestion RH › Accidents du travail : le dossier apparaît avec la date limite de la DAT.
 16. Paie › Déclarer une sortie : la sortie apparaît dans Admin › Salariés › Demandes clients (ou directement sur la fiche sans formule paie).
 17. Admin › Communication › Questions Buddy : ajouter une réponse « 🔎 Chercher dans l'app › Soldes de congés » avec la question « solde de congés », puis demander à Buddy côté client « quel est le solde de congés de Marie ».
-10. Tableau de bord : la carte « Mise à jour V52 » s'affiche ; « J'ai lu » la masque ; l'historique est dans Communication › Mises à jour.
+18. Mon entreprise › Options : activer puis arrêter une option ; l'estimation du mois change. Gestion RH › Suivi médical : changer un type de suivi, saisir une dernière visite, vérifier l'échéance créée.
+19. Conseil RH ponctuel (formule Basic) : la 6e demande du mois est refusée.
+10. Tableau de bord : la carte « Mise à jour V56 » s'affiche ; « J'ai lu » la masque ; l'historique est dans Communication › Mises à jour.
 
 ## Variables d'environnement (Vercel › Settings › Environment Variables)
 

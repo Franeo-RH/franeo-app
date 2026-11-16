@@ -282,6 +282,8 @@ model Salarie {
   congesRepriseReste    Float?   // jours restant à prendre à la date de reprise
   congesRepriseEnCours  Float?   // jours acquis sur la période en cours à la date de reprise
   motifSortie           String?  // renseigné à la déclaration de sortie (Paie › Déclarer une sortie)
+  suiviMedical          String?  // SIG (général) | SIA (adapté) | SIR (renforcé) — option Suivi médical complet
+  derniereVisite        DateTime? // date de la dernière visite auprès de la santé au travail
   accidents             AccidentTravail[]
   formations            Formation[]
   rappels               RappelSalarie[]

@@ -9,7 +9,7 @@ export default function OptionProjets({ etat, peutDemander, inclus = false }: { 
     <OptionPayante
       option="projets" icone="📐" titre="Projets, planning & rentabilité"
       description="Planifiez vos équipes par projet ou chantier, suivez les heures pointées et le coût réel au jour le jour, comparez au prévisionnel et voyez la marge de chaque projet."
-      prix={PRIX_OPTION_PROJETS} conditions="avec les formules Basic et Essentiel, inclus dès Sérénité" inclus={inclus} etat={etat} peutDemander={peutDemander}
+      prix={PRIX_OPTION_PROJETS} conditions="inclus dès Sérénité (formule RH ou paie)" inclus={inclus} etat={etat} peutDemander={peutDemander}
     />
   );
 }

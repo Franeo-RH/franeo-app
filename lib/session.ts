@@ -20,7 +20,7 @@ function lireUtilisateur(id: string) {
     where: { id },
     include: {
       entreprise: {
-        include: { abonnement: true },
+        include: { abonnement: true, abonnementPaie: true },
       },
       etablissement: { select: { id: true, nom: true } },
     },

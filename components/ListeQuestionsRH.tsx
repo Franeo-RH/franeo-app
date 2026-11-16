@@ -38,6 +38,9 @@ export default function ListeQuestionsRH({ admin = false, mode = "liste" }: { ad
 
   useEffect(() => { charger(); }, [charger]);
   useEffect(() => { if (admin) fetch("/api/entreprises").then((r) => r.json()).then((d) => Array.isArray(d) && setEntreprises(d)); }, [admin]);
+  // Conseil RH ponctuel : quota du mois selon la formule
+  const [quota, setQuota] = useState<{ utilisees: number; quota: number | null; restantes: number | null } | null>(null);
+  useEffect(() => { if (!admin) fetch("/api/questions-rh/quota").then((r) => (r.ok ? r.json() : null)).then(setQuota).catch(() => {}); }, [admin, questions.length]);
 
   async function poser(e: React.FormEvent) {
     e.preventDefault();
@@ -64,12 +67,19 @@ export default function ListeQuestionsRH({ admin = false, mode = "liste" }: { ad
     <div className="flex flex-col gap-6">
       <div className="bg-white rounded-xl shadow p-6">
         <h1 className="text-3xl font-bold">{admin ? "💬 Demandes RH ponctuelles" : mode === "nouvelle" ? "➕ Nouvelle demande ponctuelle" : "💬 Mes demandes ponctuelles"}</h1>
+        {!admin && quota && (
+          <p className="mt-2 text-sm font-semibold" style={{ color: quota.quota !== null && quota.restantes === 0 ? "#b91c1c" : "#374151" }}>
+            {quota.quota === null
+              ? `♾️ Conseil RH ponctuel illimité avec votre formule · ${quota.utilisees} demande(s) ce mois-ci`
+              : `📊 ${quota.utilisees} / ${quota.quota} demandes utilisées ce mois-ci${quota.restantes === 0 ? " : quota atteint, ouvrez un ticket RH ou passez à une formule supérieure" : ` · ${quota.restantes} restante(s)`}`}
+          </p>
+        )}
         {!admin && mode === "liste" && <a href="/client/tickets/questions/nouvelle" className="inline-block mt-3 bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold">➕ Nouvelle demande ponctuelle</a>}
         {admin && <div className="flex gap-2 flex-wrap mt-3"><BoutonExportComplet jeu="questions" label="📥 Export complet (questions + échanges)" /></div>}
         <p className="text-gray-500 mt-1">
           {admin
-            ? "Questions simples des clients, incluses dans toutes les formules et non décomptées des tickets. Pour une demande plus lourde, utilisez la réponse rapide « ouvrir un ticket »."
-            : "Une question simple ? Posez-la ici pour un échange rapide avec FRANEO RH. C'est inclus dans toutes les formules et ne compte pas dans vos tickets RH."}
+            ? "Questions simples des clients, non décomptées des tickets : 5 par mois en Basic, 10 en Essentiel, illimitées dès Sérénité (RH ou paie). Pour une demande plus lourde, utilisez la réponse rapide « ouvrir un ticket »."
+            : "Une question simple ? Posez-la ici pour un échange rapide avec FRANEO RH. Ces demandes ne comptent pas dans vos tickets RH : 5 par mois en Basic, 10 en Essentiel, illimitées dès Sérénité."}
         </p>
         {admin && (
           <div className="flex gap-2 flex-wrap mt-4">

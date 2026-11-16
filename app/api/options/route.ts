@@ -1,19 +1,20 @@
 // app/api/options/route.ts
-// POST { option: "projets" | "documents", action: "activer" | "arreter" }
+// POST { option: "projets" | "documents" | "medical", action: "activer" | "arreter" }
 // Le dirigeant active ou arrête une option à tout moment. Elle est ajoutée au calcul de la facture du mois
 // (si la formule ne l'inclut pas) et FRANEO RH est prévenu ; une trace reste dans les demandes.
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, oublierSessions } from "@/lib/session";
-import { aDroit, documentsInclus, PERMISSION_DOCUMENTS, projetsInclus } from "@/lib/droits";
+import { aDroit, documentsInclus, medicalInclus, PERMISSION_DOCUMENTS, PERMISSION_MEDICAL, projetsInclus } from "@/lib/droits";
 import { estSessionDemo } from "@/lib/demo";
 import { notifierAdmin } from "@/lib/notifications";
-import { PRIX_OPTION_DOCUMENTS, PRIX_OPTION_PROJETS } from "@/lib/projets-constantes";
+import { PRIX_OPTION_DOCUMENTS, PRIX_OPTION_MEDICAL, PRIX_OPTION_PROJETS } from "@/lib/projets-constantes";
 
 const OPTIONS = {
   projets: { permission: "projets", type: "OPTION_PROJETS", nom: "Option Projets, planning & rentabilité", prix: PRIX_OPTION_PROJETS, inclus: projetsInclus },
   documents: { permission: PERMISSION_DOCUMENTS, type: "OPTION_DOCUMENTS", nom: "Option Documents & contrats", prix: PRIX_OPTION_DOCUMENTS, inclus: documentsInclus },
+  medical: { permission: PERMISSION_MEDICAL, type: "OPTION_MEDICAL", nom: "Option Suivi médical complet", prix: PRIX_OPTION_MEDICAL, inclus: medicalInclus },
 } as const;
 
 export async function POST(request: NextRequest) {
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
   const o = OPTIONS[b.option as keyof typeof OPTIONS];
   if (!o || (b.action !== "activer" && b.action !== "arreter")) return NextResponse.json({ erreur: "Demande invalide" }, { status: 400 });
 
-  const e = await prisma.entreprise.findUnique({ where: { id: session.entrepriseId }, select: { nom: true, permissions: true, abonnement: { select: { nom: true } } } });
+  const e = await prisma.entreprise.findUnique({ where: { id: session.entrepriseId }, select: { nom: true, permissions: true, abonnement: { select: { nom: true } }, abonnementPaie: { select: { nom: true } } } });
   if (!e) return NextResponse.json({ erreur: "Entreprise introuvable" }, { status: 404 });
   const active = e.permissions.includes(o.permission);
   const inclus = o.inclus(e);

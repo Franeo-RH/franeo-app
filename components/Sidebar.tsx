@@ -116,6 +116,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
       { href: "/client/salaries/documents", label: "📁 Documents", groupe: "📂 Dossiers" },
       { href: "/client/salaries/contrats", label: "📝 Contrats", groupe: "📂 Dossiers" },
       { href: "/client/salaries/echeances", label: "⏰ Échéances", groupe: "📂 Dossiers" },
+      { href: "/client/salaries/suivi-medical", label: "🩺 Suivi médical", groupe: "📂 Dossiers" },
       { href: "/client/salaries/courriers", label: "✉️ Courriers & modèles", groupe: "📂 Dossiers" },
       { href: "/client/salaries/accidents", label: "🩹 Accidents du travail", groupe: "📂 Dossiers" },
       { href: "/client/salaries/frais", label: "🧾 Notes de frais", groupe: "💬 Demandes des salariés" },

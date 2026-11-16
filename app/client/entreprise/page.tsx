@@ -13,6 +13,7 @@ import { aDroit } from "@/lib/droits";
 import { etatOptions } from "@/lib/options-serveur";
 import { calculerFacture } from "@/lib/facturation";
 import OptionDocuments from "@/components/OptionDocuments";
+import OptionMedical from "@/components/OptionMedical";
 import OptionProjets from "@/components/OptionProjets";
 
 export default async function EntrepriseClient() {
@@ -124,6 +125,7 @@ export default async function EntrepriseClient() {
                   <p className="text-sm text-gray-500">Activez ou arrêtez une option à tout moment : elle est ajoutée tout de suite au calcul de votre facture du mois (sauf si votre formule l&apos;inclut).</p>
                 </div>
                 <OptionDocuments etat={options.documents} inclus={options.documentsInclus} peutDemander={dirigeant} />
+                <OptionMedical etat={options.medical} inclus={options.medicalInclus} peutDemander={dirigeant} />
                 <OptionProjets etat={options.projets} inclus={options.projetsInclus} peutDemander={dirigeant} />
               </div>
             )}
