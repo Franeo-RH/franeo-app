@@ -69,7 +69,7 @@ export default function Courriers() {
     const e = d?.entreprise;
     const w = window.open("", "_blank");
     if (!w) { setMsg({ ok: false, t: "Autorisez les fenêtres pop-up pour imprimer." }); return; }
-    const adresseEnt = e ? [e.rue, [e.codePostal, e.ville].filter(Boolean).join(" ")].filter(Boolean).map(echapper).join("<br>") : "";
+    const adresseEnt = e ? [e.rue, [e.codePostal, e.ville].filter(Boolean).join(" ")].filter(Boolean).map((x) => echapper(String(x))).join("<br>") : "";
     const adresseSal = salarie ? [`${salarie.prenom} ${salarie.nom}`, salarie.rue, [salarie.codePostal, salarie.ville].filter(Boolean).join(" ")].filter(Boolean).map((x) => echapper(String(x))).join("<br>") : "";
     const estMail = modele.format === "MAIL";
     w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${echapper(objet)}</title>

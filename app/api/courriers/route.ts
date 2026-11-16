@@ -22,7 +22,7 @@ export async function GET() {
       select: { id: true, prenom: true, nom: true, poste: true, typeContrat: true, dateDebut: true, dateFin: true, dateNaissance: true, rue: true, codePostal: true, ville: true, heuresHebdomadaires: true, matricule: true, email: true, statut: true },
       orderBy: [{ nom: "asc" }, { prenom: "asc" }],
     }),
-    prisma.entreprise.findUnique({ where: { id: a.entrepriseId }, select: { nom: true, rue: true, codePostal: true, ville: true, siret: true, telephone: true, email: true, logoClient: { select: { id: true } } } }),
+    prisma.entreprise.findUnique({ where: { id: a.entrepriseId }, select: { nom: true, rue: true, codePostal: true, ville: true, siret: true, telephone: true, email: true, logoClient: { select: { entrepriseId: true } } } }),
   ]);
   const iso = (d: Date | null) => (d ? d.toISOString() : null);
   const listeSalaries: (SalarieCourrier & { actif: boolean })[] = salaries.map((s) => ({
