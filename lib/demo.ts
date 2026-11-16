@@ -84,6 +84,10 @@ async function assurerEntrepriseEtUtilisateur() {
   if (!entreprise.permissions.includes("projets")) {
     entreprise = await prisma.entreprise.update({ where: { id: entreprise.id }, data: { permissions: { push: "projets" } } });
   }
+  // Toutes les options sont visibles dans la démo (consultation seule)
+  for (const option of ["option-documents", "option-medical"]) {
+    if (!entreprise.permissions.includes(option)) entreprise = await prisma.entreprise.update({ where: { id: entreprise.id }, data: { permissions: { push: option } } });
+  }
   // Les indicateurs RH sont visibles dans la démo
   if (!entreprise.permissions.includes("indicateurs-rh")) {
     entreprise = await prisma.entreprise.update({ where: { id: entreprise.id }, data: { permissions: { push: "indicateurs-rh" } } });

@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const res = NextResponse.json({ ok: true, role: salarie ? "SALARIE" : "CLIENT" });
     const compte = await prisma.utilisateur.findUnique({ where: { id: userId }, select: { id: true, motDePasse: true } });
     if (!compte) throw new Error("Compte démo introuvable");
-    return ouvrirSession(res, compte, 60 * 60 * 8); // la session démo expire au bout de 8 h
+    return ouvrirSession(res, compte, 60 * 60 * 8, { demo: true }); // session démo de 8 h, en consultation seule
   } catch (e) {
     console.error("Démo indisponible", e);
     return NextResponse.json({ erreur: "La démo est momentanément indisponible, réessayez dans un instant." }, { status: 500 });

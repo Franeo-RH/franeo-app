@@ -5,6 +5,7 @@
 // - l'expiration est contrôlée côté serveur ;
 // - l'empreinte du mot de passe déconnecte toutes les sessions quand le mot de passe change.
 import crypto from "crypto";
+import { COOKIE_DEMO } from "@/lib/demo-lecture";
 import type { NextResponse } from "next/server";
 
 export const NOM_COOKIE = "franeo_session";
@@ -49,8 +50,8 @@ export function lireJeton(jeton: string | undefined | null): { userId: string; e
   return { userId: deB64(id64), empreinte: emp };
 }
 
-/** Pose le cookie de session signé sur la réponse */
-export function ouvrirSession(res: NextResponse, utilisateur: { id: string; motDePasse: string }, dureeSecondes: number) {
+/** Pose le cookie de session signé sur la réponse (demo : session « Tester la démo », en consultation seule) */
+export function ouvrirSession(res: NextResponse, utilisateur: { id: string; motDePasse: string }, dureeSecondes: number, options: { demo?: boolean } = {}) {
   res.cookies.set(NOM_COOKIE, creerJeton(utilisateur.id, utilisateur.motDePasse, dureeSecondes), {
     httpOnly: true,
     sameSite: "lax",
@@ -59,12 +60,15 @@ export function ouvrirSession(res: NextResponse, utilisateur: { id: string; motD
     maxAge: dureeSecondes,
   });
   res.cookies.set(ANCIEN_COOKIE, "", { path: "/", maxAge: 0 });
+  // Marque de la démo (lue par proxy.ts) : posée pour la démo, effacée pour toute autre connexion
+  res.cookies.set(COOKIE_DEMO, options.demo ? "1" : "", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: options.demo ? dureeSecondes : 0 });
   return res;
 }
 
 /** Efface les cookies de session */
 export function fermerSession(res: NextResponse) {
   res.cookies.set(NOM_COOKIE, "", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 0 });
+  res.cookies.set(COOKIE_DEMO, "", { path: "/", maxAge: 0 });
   res.cookies.set(ANCIEN_COOKIE, "", { path: "/", maxAge: 0 });
   return res;
 }
