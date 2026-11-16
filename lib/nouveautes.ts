@@ -15,6 +15,16 @@ export type MiseAJour = {
 
 export const MISES_A_JOUR: MiseAJour[] = [
   {
+    version: "V57",
+    date: "novembre 2026",
+    titre: "Nouveaux modèles de contrats de travail, à votre logo",
+    clients: [
+      "📝 Contrats : 7 modèles détaillés prêts à l'emploi — CDI et CDD de droit commun, ouvrier du Bâtiment (BTP), Syntec, hôtels-cafés-restaurants, commerce alimentaire, propreté. Le modèle de votre convention collective est mis en avant et les clauses propres à la convention sont pré-remplies.",
+      "🏢 Votre logo apparaît en haut de chaque page des contrats générés, y compris avec vos propres modèles Word.",
+      "🧩 Rappel : options à la carte dans Mon entreprise (Documents & contrats, Suivi médical complet, Projets) et suivi médical complet dans Gestion RH › Dossiers.",
+    ],
+  },
+  {
     version: "V56",
     date: "novembre 2026",
     titre: "Options à la carte et suivi médical complet",

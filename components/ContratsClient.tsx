@@ -2,13 +2,28 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ChoixFichier from "@/components/ChoixFichier";
-import { CHAMPS_CONTRAT, champsDuTexte, formaterValeur, GROUPES_CONTRAT, libelleChamp, type ChampContrat } from "@/lib/contrats";
+import { CHAMPS_CONTRAT, champsDuTexte, formaterValeur, GROUPES_CONTRAT, libelleChamp, MODELES_INTEGRES, modeleConseille, type ChampContrat } from "@/lib/contrats";
+import { ajouterLogo, type Logo, type ZipLike } from "@/lib/docx-logo";
 
 type Trame = { id: string; nom: string; champs: string[]; taille: number; createdAt: string };
 type Historique = { id: string; intitule: string; typeContrat: string; trameNom: string | null; auteur: string; verification: boolean; createdAt: string };
 type S = { id: string; prenom: string; nom: string };
 
-const MODELE_FRANEO = { id: "_franeo", nom: "Modèle FRANEO RH (exemple CDI / CDD)", url: "/modeles/modele-contrat-franeo.docx" };
+const MODELE_SIMPLE = { id: "_franeo", nom: "Modèle simple (CDI / CDD)", url: "/modeles/modele-contrat-franeo.docx" };
+const integre = (id: string) => (id === MODELE_SIMPLE.id ? { ...MODELE_SIMPLE, description: "", defauts: {} as Record<string, string> } : MODELES_INTEGRES.find((m) => m.id === id));
+
+/** Logo de l'entreprise (Mon entreprise › Logo), pour l'en-tête du contrat */
+async function chargerLogo(): Promise<Logo | null> {
+  try {
+    const r = await fetch(`/api/entreprises/logo?v=${Date.now()}`);
+    if (!r.ok) return null;
+    const blob = await r.blob();
+    const type = blob.type.includes("png") ? "png" : blob.type.includes("jpeg") || blob.type.includes("jpg") ? "jpeg" : null;
+    if (!type) return null;
+    const img = await createImageBitmap(blob);
+    return { octets: new Uint8Array(await blob.arrayBuffer()), type, largeur: img.width, hauteur: img.height };
+  } catch { return null; }
+}
 const MIME_DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const iso = (d?: string | null) => (d ? String(d).slice(0, 10) : "");
 
@@ -37,6 +52,14 @@ export default function ContratsClient() {
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [occupe, setOccupe] = useState(false);
   const [aide, setAide] = useState(false);
+  const [logo, setLogo] = useState<Logo | null>(null);
+  const [avecLogo, setAvecLogo] = useState(true);
+  const [ccn, setCcn] = useState<string | null>(null);
+  useEffect(() => {
+    chargerLogo().then(setLogo);
+    fetch("/api/entreprises/moi").then((r) => r.json()).then((e) => setCcn(e?.ccn ?? null)).catch(() => {});
+  }, []);
+  const conseille = modeleConseille(ccn);
 
   const charger = useCallback(async () => {
     const [t, h, s] = await Promise.all([
@@ -51,7 +74,7 @@ export default function ContratsClient() {
   useEffect(() => { charger(); }, [charger]);
 
   // Infos de l'entreprise pré-remplies
-  const preRemplir = useCallback(async (sid: string) => {
+  const preRemplir = useCallback(async (sid: string, defauts: Record<string, string> = {}) => {
     const [e, s] = await Promise.all([
       fetch("/api/entreprises/moi").then((r) => r.json()).catch(() => null),
       sid ? fetch(`/api/salaries/${sid}`).then((r) => r.json()).catch(() => null) : Promise.resolve(null),
@@ -74,21 +97,25 @@ export default function ContratsClient() {
         type_contrat: s.typeContrat === "CDD" ? "DÉTERMINÉE" : "INDÉTERMINÉE",
       });
     }
+    // Valeurs proposées par le modèle (convention collective…) quand la fiche ne dit rien
+    for (const [k, val] of Object.entries(defauts)) if (!v[k]?.trim()) v[k] = val;
+    if (defauts.type_contrat) v.type_contrat = defauts.type_contrat;
     setValeurs(v);
   }, []);
 
   async function choisirModele(id: string) {
     setMsg(null); setOccupe(true);
     try {
-      const url = id === MODELE_FRANEO.id ? MODELE_FRANEO.url : `/api/contrats/trames/${id}`;
+      const fourni = integre(id);
+      const url = fourni ? fourni.url : `/api/contrats/trames/${id}`;
       const r = await fetch(url);
       if (!r.ok) throw new Error("Modèle introuvable");
       const buffer = await r.arrayBuffer();
       const doc = await ouvrirModele(buffer);
       const champs = champsDuTexte(doc.getFullText());
-      const nom = id === MODELE_FRANEO.id ? MODELE_FRANEO.nom : trames.find((t) => t.id === id)?.nom || "Modèle";
+      const nom = fourni ? fourni.nom : trames.find((t) => t.id === id)?.nom || "Modèle";
       setModele({ id, nom, champs, buffer });
-      await preRemplir(salarieId);
+      await preRemplir(salarieId, fourni?.defauts);
       setEtape("infos");
     } catch (e) {
       setMsg({ ok: false, t: `Impossible de lire ce modèle : ${messageErreur(e)}` });
@@ -134,7 +161,9 @@ export default function ContratsClient() {
       const donnees: Record<string, string> = {};
       for (const c of modele.champs) donnees[c] = formaterValeur(CHAMPS_CONTRAT.find((x) => x.cle === c), valeurs[c] || "");
       doc.render(donnees);
-      const blob: Blob = doc.getZip().generate({ type: "blob", mimeType: MIME_DOCX });
+      const zip = doc.getZip();
+      if (logo && avecLogo) ajouterLogo(zip as unknown as ZipLike, logo);
+      const blob: Blob = zip.generate({ type: "blob", mimeType: MIME_DOCX });
       const nomFichier = `Contrat ${valeurs.prenom || ""} ${valeurs.nom || ""}`.replace(/\s+/g, " ").trim() || "Contrat";
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${nomFichier}.docx`; a.click();
       await fetch("/api/contrats", {
@@ -173,10 +202,16 @@ export default function ContratsClient() {
               {salaries.map((s) => <option key={s.id} value={s.id}>{s.nom} {s.prenom}</option>)}
             </select>
             <p className="text-xs text-gray-500">Avec un salarié existant, sa fiche pré-remplit le contrat.</p>
-            <h2 className="text-lg font-bold mt-2">Choisir un modèle</h2>
-            <button type="button" disabled={occupe} onClick={() => choisirModele(MODELE_FRANEO.id)} className="text-left border-2 border-orange-200 rounded-lg p-3 hover:bg-orange-50">
-              <strong>⭐ {MODELE_FRANEO.nom}</strong><span className="block text-xs text-gray-500">Base proposée par FRANEO RH, à adapter à votre situation.</span>
-            </button>
+            <h2 className="text-lg font-bold mt-2">Modèles FRANEO RH</h2>
+            {[...MODELES_INTEGRES].sort((a, b) => (a.id === conseille ? -1 : b.id === conseille ? 1 : 0)).map((m) => (
+              <button key={m.id} type="button" disabled={occupe} onClick={() => choisirModele(m.id)}
+                className={`text-left rounded-lg p-3 hover:bg-orange-50 ${m.id === conseille ? "border-2 border-orange-400 bg-orange-50" : "border"}`}>
+                <strong>{m.id === conseille ? "⭐ " : "📘 "}{m.nom}</strong>
+                {m.id === conseille && <span className="ml-2 text-xs font-bold text-orange-700">Conseillé pour votre convention</span>}
+                <span className="block text-xs text-gray-500">{m.description}</span>
+              </button>
+            ))}
+            {trames.length > 0 && <h2 className="text-lg font-bold mt-2">Mes modèles</h2>}
             {trames.map((t) => (
               <div key={t.id} className="flex items-center gap-2">
                 <button type="button" disabled={occupe} onClick={() => choisirModele(t.id)} className="flex-1 text-left border rounded-lg p-3 hover:bg-orange-50">
@@ -196,7 +231,7 @@ export default function ContratsClient() {
                 <p>1. Ouvrez votre contrat habituel dans Word.</p>
                 <p>2. Remplacez chaque information qui change par un champ entre doubles accolades, par exemple : <code className="bg-gray-100 px-1">{"{{prenom}}"}</code>, <code className="bg-gray-100 px-1">{"{{date_debut}}"}</code>, <code className="bg-gray-100 px-1">{"{{salaire_brut_mensuel}}"}</code>.</p>
                 <p>3. Enregistrez en .docx et importez-le ici. Vous pouvez inventer vos propres champs (ex. <code className="bg-gray-100 px-1">{"{{prime_objectifs}}"}</code>) : ils apparaîtront dans le formulaire.</p>
-                <p>4. Le plus simple : <a href={MODELE_FRANEO.url} download className="text-orange-600 font-semibold underline">téléchargez le modèle FRANEO RH</a>, modifiez le texte autour des champs, puis importez-le.</p>
+                <p>4. Le plus simple : <a href={MODELES_INTEGRES[0].url} download className="text-orange-600 font-semibold underline">téléchargez un modèle FRANEO RH</a> (ou <a href={MODELES_INTEGRES.find((m) => m.id === conseille)?.url ?? MODELES_INTEGRES[2].url} download className="text-orange-600 font-semibold underline">celui de votre convention</a>), modifiez le texte autour des champs, puis importez-le.</p>
                 <details><summary className="cursor-pointer font-semibold">Champs reconnus automatiquement</summary>
                   <ul className="mt-2 text-xs columns-2">{CHAMPS_CONTRAT.map((c) => <li key={c.cle}><code>{`{{${c.cle}}}`}</code> {c.label}</li>)}</ul>
                 </details>
@@ -233,6 +268,9 @@ export default function ContratsClient() {
           ))}
           <div className={`${carte} flex flex-col gap-3`}>
             {manquants.length > 0 && <p className="text-sm text-orange-600">⚠️ {manquants.length} information(s) vide(s) : elles resteront en blanc dans le contrat ({manquants.slice(0, 6).map(libelleChamp).join(", ")}{manquants.length > 6 ? "…" : ""}).</p>}
+            {logo
+              ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={avecLogo} onChange={(e) => setAvecLogo(e.target.checked)} /> Ajouter le logo de l&apos;entreprise en haut de chaque page</label>
+              : <p className="text-xs text-gray-500">💡 Ajoutez votre logo dans Mon entreprise : il apparaîtra en haut de vos contrats.</p>}
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={verification} onChange={(e) => setVerification(e.target.checked)} /> Demander une relecture par FRANEO RH</label>
             <button type="button" disabled={occupe} onClick={generer} className="bg-orange-500 text-white px-6 py-3 rounded-lg font-bold self-start">{occupe ? "Génération…" : "📄 Générer le contrat Word"}</button>
           </div>
