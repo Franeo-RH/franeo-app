@@ -25,7 +25,8 @@ export type SalarieCourrier = {
   matricule: string | null; email: string | null;
 };
 
-export type EntrepriseCourrier = { nom: string; rue: string | null; codePostal: string | null; ville: string | null; siret: string | null; telephone: string | null; email: string | null; logo: boolean };
+/** logo : image du logo du client (data:image/…), placée en haut des courriers */
+export type EntrepriseCourrier = { nom: string; rue: string | null; codePostal: string | null; ville: string | null; siret: string | null; telephone: string | null; email: string | null; logo: string | null };
 
 /** Champs remplis automatiquement, proposés dans l'éditeur de modèles */
 export const VARIABLES: { cle: string; label: string }[] = [

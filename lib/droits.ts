@@ -12,7 +12,7 @@ export const MODULES = [
   { id: "helpdesk", label: "🆘 Helpdesk" },
   { id: "entreprise", label: "🏢 Mon entreprise (infos, abonnements, factures)" },
   { id: "espace-salaries", label: "📱 Espace salarié (inclus dans toutes les formules)" },
-  { id: "projets", label: "📐 Projets, planning & rentabilité (option 29 € HT/mois · 🚧 en cours de développement)" },
+  { id: "projets", label: "📐 Projets, planning & rentabilité (29 € HT/mois avec Basic ou Essentiel, inclus dès Sérénité)" },
 ] as const;
 
 export const ACTIONS = [
@@ -28,8 +28,8 @@ export const ACTIONS = [
   { id: "salaries.demandes", module: "salaries", label: "Voir ses demandes de validation" },
   { id: "rh.services", module: "salaries", label: "Organiser les services et l'organigramme" },
   { id: "rh.documents", module: "salaries", label: "Déposer et consulter les documents des salariés" },
-  { id: "rh.contrats", module: "salaries", label: "Générer des contrats depuis un modèle (à partir de Sérénité)" },
-  { id: "rh.courriers", module: "salaries", label: "Courriers et e-mails types (période d'essai, relances, attestations…)" },
+  { id: "rh.contrats", module: "salaries", label: "Générer des contrats depuis un modèle (inclus dès Essentiel, option 5 € avec Basic)" },
+  { id: "rh.courriers", module: "salaries", label: "Courriers et e-mails types (inclus dès Essentiel, option 5 € avec Basic)" },
   { id: "rh.accidents", module: "salaries", label: "Suivre les accidents du travail (déclaration, questionnaire CPAM)" },
   { id: "rh.frais", module: "espace-salaries", label: "Gestion RH : valider les notes de frais" },
   { id: "rh.questions", module: "espace-salaries", label: "Gestion RH : répondre aux questions des salariés" },
@@ -166,15 +166,27 @@ export function aAccesPaie(entreprise: { permissions?: string[] | null } | null 
 }
 
 /** Contrats générés depuis un modèle : uniquement selon les accès cochés par l'admin (action « rh.contrats ») */
-export function aAccesContrats(entreprise: { permissions?: string[] | null } | null | undefined): boolean {
-  return !!entreprise && aDroit(entreprise.permissions, "rh.contrats");
+export function aAccesContrats(entreprise: EntrepriseOptions): boolean {
+  return !!entreprise && aDroit(entreprise.permissions, "rh.contrats") && aAccesDocuments(entreprise);
 }
+
+/* ───────── Options payantes selon la formule RH ───────── */
+
+type EntrepriseOptions = { permissions?: string[] | null; abonnement?: { nom: string } | null } | null | undefined;
+
+/** Option Documents & contrats (courriers types, contrats depuis modèle) : 5 € HT/mois avec Basic, incluse dès Essentiel */
+export const PERMISSION_DOCUMENTS = "option-documents";
+export const documentsInclus = (e: EntrepriseOptions) => niveauRH(e) >= 2;
+export const aAccesDocuments = (e: EntrepriseOptions) => !!e && (documentsInclus(e) || (e.permissions || []).includes(PERMISSION_DOCUMENTS));
+
+/** Option Projets : 29 € HT/mois avec Basic ou Essentiel (ou sans formule RH), incluse dès Sérénité */
+export const projetsInclus = (e: EntrepriseOptions) => niveauRH(e) >= 3;
 
 // ── Accès par formule (bloc « Accès & droits » de l'admin) ──
 export const ACCES_FORMULES = [
   { id: "BASIC", label: "Basic", detail: "Salariés (ajout, modif, import, suppression), mouvements, absences, espace salarié. Pas d'échéances, pas de question RH simple, pas de paie. Tickets à 70 €." },
-  { id: "ESSENTIEL", label: "Essentiel", detail: "Basic + 3 tickets RH, échéances complètes, conseil RH ponctuel illimité." },
-  { id: "SERENITE", label: "Sérénité", detail: "Essentiel + 5 tickets RH, saisie des informations de paie, contrats depuis modèle." },
+  { id: "ESSENTIEL", label: "Essentiel", detail: "Basic + 3 tickets RH, échéances complètes, conseil RH ponctuel illimité, contrats et courriers types." },
+  { id: "SERENITE", label: "Sérénité", detail: "Essentiel + 5 tickets RH, saisie des informations de paie, option Projets incluse." },
   { id: "PREMIUM", label: "Premium", detail: "Sérénité + 10 tickets RH, saisie des informations de paie, Franeo Analytics sur demande." },
   { id: "PERSO", label: "Personnalisé", detail: "Vous cochez vous-même chaque onglet et chaque action." },
 ] as const;
@@ -183,12 +195,12 @@ export const ACCES_FORMULES = [
 export function permissionsFormule(niveau: string, actuelles: string[] = [], avecFormulePaie = false): string[] {
   const base = ["salaries", "absences", "tickets", "helpdesk", "entreprise"];
   const retirer: ActionId[] = [];
-  if (niveau === "BASIC") retirer.push("salaries.echeances", "salaries.echeances-modifier", "tickets.questions", "rh.contrats", "rh.documents");
-  if (niveau === "ESSENTIEL") retirer.push("rh.contrats");
+  // Contrats et courriers types : inclus dès Essentiel ; avec Basic, l'option Documents (5 € HT/mois) les débloque
+  if (niveau === "BASIC") retirer.push("salaries.echeances", "salaries.echeances-modifier", "tickets.questions", "rh.documents");
   const modules = niveau === "SERENITE" || niveau === "PREMIUM" || avecFormulePaie ? [...base, "paie"] : base;
   // L'espace salarié est inclus dans toutes les formules ; les fonctions retirées par l'admin restent retirées
   // L'option Projets n'est liée à aucune formule : elle est conservée telle quelle
-  const garder = actuelles.filter((p) => p.startsWith("-espace.") || p === "projets" || p.startsWith("-projets."));
+  const garder = actuelles.filter((p) => p.startsWith("-espace.") || p === "projets" || p.startsWith("-projets.") || p === PERMISSION_DOCUMENTS);
   return [...modules, "espace-salaries", ...garder, ...retirer.map((a) => `-${a}`), `@acces:${niveau}`];
 }
 

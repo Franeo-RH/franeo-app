@@ -40,7 +40,16 @@ type Question = { id: string; sujet: string; statut: string; versFraneo: boolean
 type Frais = { id: string; date: string; montant: number; motif: string; statut: string; motifRefus: string | null };
 
 /** Espace salarié : organisation, notes de frais, questions au N+1 et, pour les managers et dirigeants, la validation de l'équipe */
-export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, prenom, avecBadge = false, avecProjets = false, avecFrais = true, avecQuestions = true }: { avecPaie: boolean; accueil: React.ReactNode; absences?: React.ReactNode; releve?: React.ReactNode; prenom: string; avecBadge?: boolean; avecProjets?: boolean; avecFrais?: boolean; avecQuestions?: boolean }) {
+export default function EspaceSalarieRH({
+  avecPaie, accueil, conge, arret, accident, recap, releve, prenom, entrepriseNom, logoVersion = null,
+  avecBadge = false, avecProjets = false, avecFrais = true, avecQuestions = true,
+}: {
+  avecPaie: boolean; accueil: React.ReactNode;
+  /** Démarches et suivi (chacune devient une entrée de la barre latérale) */
+  conge?: React.ReactNode; arret?: React.ReactNode; accident?: React.ReactNode; recap?: React.ReactNode; releve?: React.ReactNode;
+  prenom: string; entrepriseNom?: string | null; logoVersion?: number | null;
+  avecBadge?: boolean; avecProjets?: boolean; avecFrais?: boolean; avecQuestions?: boolean;
+}) {
   const [onglet, setOnglet] = useState("accueil");
   const [menu, setMenu] = useState(false);
   useEffect(() => { try { const o = sessionStorage.getItem("fr-onglet-salarie"); if (o) setOnglet(o); } catch {} }, []);
@@ -257,31 +266,62 @@ export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, p
   const nbAValider = eq ? eq.releves.length + eq.absences.length + eq.frais.length : 0;
   const questionsEnAttente = recues.filter((q) => q.statut === "OUVERTE" && !q.versFraneo).length;
 
-  // Même logique que le reste du site : des onglets en haut (avec leurs logos), des rubriques dans la barre latérale
-  type Rubrique = { id: string; label: string; icone: string; badge?: number; contenu: React.ReactNode };
-  type Module = { id: string; label: string; logo: string; badge?: number; rubriques: Rubrique[] };
-  const modules: Module[] = [
-    { id: "accueil", label: "Dashboard", logo: "/DASHBOARD-LOGO.png", rubriques: [{ id: "accueil", label: "Tableau de bord", icone: "📊", contenu: <>{avecBadge && <BadgeSalarie compact />}{avecProjets && <PlanningSemaineSalarie />}{accueil}{avecBadge && <HistoriqueBadge />}{blocOrga}</> }] },
-    ...(avecBadge ? [{ id: "badge", label: "Badge", logo: "/TICKET-LOGO.png", rubriques: [{ id: "badge", label: "Pointer", icone: "📍", contenu: <BadgeSalarie /> }, { id: "badge-historique", label: "Mon historique", icone: "🕓", contenu: <HistoriqueBadge /> }, ...(avecProjets ? [{ id: "badge-projets", label: "Mes projets", icone: "📐", contenu: <MesProjetsSalarie /> }] : [])] }] : []),
-    ...(valideur ? [{
-      id: "equipe", label: "Mon équipe", logo: "/SALARIE-LOGO.png", badge: nbAValider, rubriques: [
-        { id: "valider", label: "À valider", icone: "✅", badge: nbAValider, contenu: blocValidation },
-        { id: "rma", label: "Relevés de l'équipe", icone: "⏱️", contenu: <RelevesEquipe /> },
-        ...(avecBadge ? [{ id: "presences", label: "Présences du jour", icone: "📍", contenu: <TableauPresences api="/api/espace-salarie/presences" /> }] : []),
-        ...(eq?.peutSaisirVariables && avecPaie ? [{ id: "variables", label: "Saisir une variable", icone: "✏️", contenu: blocVariables }] : []),
-      ],
-    }] : []),
-    ...(absences || releve ? [{
-      id: "temps", label: "Mon temps", logo: "/PAIE-LOGO.png", rubriques: [
-        ...(absences ? [{ id: "absences", label: "Absences", icone: "🏖️", contenu: absences }] : []),
-        ...(releve ? [{ id: "releve", label: "Relevé mensuel", icone: "⏱️", contenu: releve }] : []),
-      ],
-    }] : []),
-    ...(avecFrais ? [{ id: "frais", label: "Notes de frais", logo: "/ENTREPRISE-LOGO.png", rubriques: [{ id: "frais", label: "Mes notes de frais", icone: "🧾", contenu: blocFrais }] }] : []),
-    ...(avecQuestions ? [{ id: "questions", label: "Questions", logo: "/HELPDESK-LOGO.png", badge: questionsEnAttente, rubriques: [{ id: "questions", label: "Mes questions", icone: "💬", badge: questionsEnAttente, contenu: blocQuestions }] }] : []),
-  ];
-  const moduleCourant = modules.find((m) => m.rubriques.some((r) => r.id === onglet)) ?? modules[0];
-  const courant = moduleCourant.rubriques.find((r) => r.id === onglet) ?? moduleCourant.rubriques[0];
+  // Une seule barre latérale, rangée par démarches : chaque action est à un clic
+  type Rubrique = { id: string; label: string; icone: string; groupe: string | null; badge?: number; contenu: React.ReactNode };
+  const raccourcis: { id: string; label: string; icone: string; couleur: string; badge?: number }[] = [];
+  const rubriques: Rubrique[] = [];
+  const ajouter = (r: Rubrique, raccourci?: string) => { rubriques.push(r); if (raccourci) raccourcis.push({ id: r.id, label: r.label, icone: r.icone, couleur: raccourci, badge: r.badge }); };
+
+  ajouter({ id: "accueil", label: "Accueil", icone: "🏠", groupe: null, contenu: null });
+  if (valideur) ajouter({ id: "valider", label: "À valider", icone: "✅", groupe: "Mon équipe", badge: nbAValider, contenu: blocValidation }, "#16a34a");
+  if (conge) ajouter({ id: "conge", label: "Demander un congé", icone: "🌴", groupe: "Mes démarches", contenu: conge }, "#0ea5e9");
+  if (arret) ajouter({ id: "arret", label: "Déclarer un arrêt", icone: "🤒", groupe: "Mes démarches", contenu: arret }, "#8b5cf6");
+  if (accident) ajouter({ id: "accident", label: "Déclarer un accident du travail", icone: "🩹", groupe: "Mes démarches", contenu: accident }, "#dc2626");
+  if (avecFrais) ajouter({ id: "frais", label: "Note de frais", icone: "🧾", groupe: "Mes démarches", contenu: blocFrais }, "#f59e0b");
+  if (avecQuestions) ajouter({ id: "questions", label: "Poser une question", icone: "💬", groupe: "Mes démarches", badge: questionsEnAttente, contenu: blocQuestions }, "#6366f1");
+  if (recap) ajouter({ id: "recap", label: "Récapitulatif", icone: "📋", groupe: "Mon suivi", contenu: recap }, "#64748b");
+  if (releve) ajouter({ id: "releve", label: "Relevé mensuel", icone: "⏱️", groupe: "Mon suivi", contenu: releve }, "#f97316");
+  if (avecBadge) {
+    ajouter({ id: "badge", label: "Pointer", icone: "📍", groupe: "Mon suivi", contenu: <BadgeSalarie /> });
+    ajouter({ id: "badge-historique", label: "Mes pointages", icone: "🕓", groupe: "Mon suivi", contenu: <HistoriqueBadge /> });
+  }
+  if (avecProjets) ajouter({ id: "badge-projets", label: "Mes projets", icone: "📐", groupe: "Mon suivi", contenu: <MesProjetsSalarie /> });
+  if (valideur) {
+    ajouter({ id: "rma", label: "Relevés de l'équipe", icone: "⏱️", groupe: "Mon équipe", contenu: <RelevesEquipe /> });
+    if (avecBadge) ajouter({ id: "presences", label: "Présences du jour", icone: "📍", groupe: "Mon équipe", contenu: <TableauPresences api="/api/espace-salarie/presences" /> });
+    if (eq?.peutSaisirVariables && avecPaie) ajouter({ id: "variables", label: "Saisir une variable", icone: "✏️", groupe: "Mon équipe", contenu: blocVariables });
+  }
+
+  // Accueil : les raccourcis en grandes tuiles, puis le tableau de bord
+  rubriques[0].contenu = (
+    <>
+      {avecBadge && <BadgeSalarie compact />}
+      <section style={carte} aria-label="Raccourcis">
+        <p style={{ margin: "0 0 2px", fontSize: "22px", fontWeight: 800 }}>Bonjour {prenom} 👋</p>
+        <p style={{ margin: "0 0 14px", color: "#6b7280", fontSize: "14px" }}>Que souhaitez-vous faire ?</p>
+        <div className="fr-es-raccourcis">
+          {raccourcis.map((r) => (
+            <button key={r.id} type="button" onClick={() => choisir(r.id)} className="fr-es-tuile" style={{ "--teinte": r.couleur } as React.CSSProperties}>
+              <span className="fr-es-tuile-icone" aria-hidden="true">{r.icone}</span>
+              <span className="fr-es-tuile-texte">{r.label}</span>
+              {!!r.badge && <span className="fr-side-badge" style={{ position: "absolute", top: 8, right: 8 }}>{r.badge}</span>}
+            </button>
+          ))}
+        </div>
+      </section>
+      {avecProjets && <PlanningSemaineSalarie />}
+      {accueil}
+      {avecBadge && <HistoriqueBadge />}
+      {blocOrga}
+    </>
+  );
+
+  // Anciens noms d'onglets mémorisés (avant le nouveau menu)
+  const ANCIENS: Record<string, string> = { absences: "recap", equipe: "valider" };
+  const courant = rubriques.find((r) => r.id === (ANCIENS[onglet] ?? onglet)) ?? rubriques[0];
+  const ORDRE = [null, "Mes démarches", "Mon suivi", "Mon équipe"];
+  const groupes = [...new Set(rubriques.map((r) => r.groupe))].sort((a, b) => ORDRE.indexOf(a) - ORDRE.indexOf(b));
+  const totalBadges = rubriques.reduce((t, r) => t + (r.badge ?? 0), 0);
   function choisir(id: string) {
     setOnglet(id);
     setMenu(false);
@@ -301,6 +341,25 @@ export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, p
       <button type="button" onClick={deconnexion} className="fr-nav-deco">Déconnexion</button>
     </>
   );
+  // Logo de l'employeur, comme dans l'espace client
+  const logoClient = logoVersion
+    // eslint-disable-next-line @next/next/no-img-element
+    ? <img src={`/api/entreprises/logo?v=${logoVersion}`} alt={entrepriseNom ? `Logo ${entrepriseNom}` : "Logo de l'entreprise"} className="fr-nav-logo-client" />
+    : null;
+
+  const liensMenu = (classe: string) => groupes.map((g) => (
+    <div key={g ?? "accueil"}>
+      {g && <p className={classe === "fr-side-lien" ? "fr-side-titre fr-es-groupe" : "fr-deroulant-groupe"}>{g}</p>}
+      {rubriques.filter((r) => r.groupe === g).map((r) => (
+        <button key={r.id} type="button" onClick={() => choisir(r.id)} className={`${classe}${r.id === courant.id ? " fr-actif" : ""}`} aria-current={r.id === courant.id ? "page" : undefined}
+          style={classe === "fr-side-lien" ? { border: "none", background: r.id === courant.id ? undefined : "none", width: "100%", textAlign: "left", cursor: "pointer" } : undefined}>
+          <span className={classe === "fr-side-lien" ? "fr-side-icone" : undefined} aria-hidden="true" style={classe === "fr-side-lien" ? undefined : { width: 24, textAlign: "center" }}>{r.icone}</span>
+          <span className={classe === "fr-side-lien" ? "fr-side-texte" : undefined} style={classe === "fr-side-lien" ? undefined : { flex: 1 }}>{r.label}</span>
+          {!!r.badge && <span className="fr-side-badge">{r.badge}</span>}
+        </button>
+      ))}
+    </div>
+  ));
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -310,73 +369,43 @@ export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, p
           <button type="button" onClick={() => choisir("accueil")} className="fr-nav-logo" aria-label="Accueil" style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
             <Image src="/FRANEO-Logo-Orange.png" alt="Franeo RH" width={41} height={50} style={{ objectFit: "contain" }} priority />
           </button>
-          <div className="fr-nav-liens">
-            {modules.map((m) => (
-              <button key={m.id} type="button" onClick={() => choisir(m.rubriques[0].id)} className={`fr-nav-lien${m.id === moduleCourant.id ? " fr-actif" : ""}`} style={{ border: "none", cursor: "pointer", position: "relative" }}>
-                <Image src={m.logo} alt="" width={18} height={18} className="invert" style={{ objectFit: "contain" }} />
-                <span>{m.label}</span>
-                {!!m.badge && <span className="fr-side-badge" style={{ position: "absolute", top: 2, right: 4 }}>{m.badge}</span>}
-              </button>
-            ))}
+          <div className="fr-es-nav-centre">
+            <span className="fr-es-nav-titre">Espace {role === "Espace salarié" ? "salarié" : role.toLowerCase()}</span>
+            {entrepriseNom && <span className="fr-nav-petit">{entrepriseNom}</span>}
           </div>
-          <div className="fr-nav-profil">
-            <span className="fr-nav-prenom">{prenom}</span>
-            {profil}
+          <div className="fr-nav-droite">
+            {logoClient}
+            <div className="fr-nav-profil">
+              <span className="fr-nav-prenom">{prenom}</span>
+              {profil}
+            </div>
           </div>
-          <button type="button" className="fr-burger" aria-label={menu ? "Fermer le menu" : "Ouvrir le menu"} aria-expanded={menu} onClick={() => setMenu((o) => !o)}>
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              {menu ? (<><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></>) : (<><line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" /></>)}
-            </svg>
-          </button>
         </div>
-        {menu && (
-          <div className="fr-menu-mobile">
-            <div className="fr-menu-grille">
-              {modules.map((m) => (
-                <button key={m.id} type="button" onClick={() => choisir(m.rubriques[0].id)} className={`fr-menu-lien${m.id === moduleCourant.id ? " fr-actif" : ""}`} style={{ border: "none", cursor: "pointer" }}>
-                  <Image src={m.logo} alt="" width={22} height={22} className="invert" style={{ objectFit: "contain" }} />
-                  <span>{m.label}{m.badge ? ` (${m.badge})` : ""}</span>
-                </button>
-              ))}
-            </div>
-            <div className="fr-menu-pied">
-              <span>👤 {prenom}</span>
-              <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>{profil}</div>
-            </div>
-          </div>
-        )}
       </nav>
 
-      {/* Téléphone : pas de barre noire, une barre avec le logo et toutes les rubriques dans un menu déroulant */}
+      {/* Téléphone : logos et toutes les démarches dans un menu déroulant */}
       <div className={`fr-deroulant fr-es-mobile${menu ? " ouvert" : ""}`}>
-        <button type="button" onClick={() => choisir("accueil")} aria-label="Accueil" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+        <button type="button" onClick={() => choisir("accueil")} aria-label="Accueil" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
           <Image src="/FRANEO-Logo-Orange.png" alt="Franeo RH" width={30} height={37} style={{ objectFit: "contain" }} />
+          {logoVersion ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={`/api/entreprises/logo?v=${logoVersion}`} alt="" className="fr-es-logo-mobile" />
+          ) : null}
         </button>
         <button type="button" className="fr-deroulant-bouton" aria-expanded={menu} aria-haspopup="true" onClick={() => setMenu((o) => !o)}>
           <span aria-hidden="true" style={{ fontSize: "20px" }}>{courant.icone}</span>
           <span style={{ minWidth: 0, textAlign: "left" }}>
-            <span className="fr-deroulant-petit">{moduleCourant.label}</span>
+            <span className="fr-deroulant-petit">{courant.groupe ?? "Mon espace"}</span>
             <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{courant.label}</span>
           </span>
-          {!menu && modules.some((m) => m.badge) && <span className="fr-side-badge">{modules.reduce((t, m) => t + (m.badge ?? 0), 0)}</span>}
+          {!menu && totalBadges > 0 && <span className="fr-side-badge">{totalBadges}</span>}
           <span className="fr-deroulant-fleche" aria-hidden="true">▾</span>
         </button>
         {menu && (
           <>
             <div className="fr-deroulant-fond" onClick={() => setMenu(false)} aria-hidden="true" />
             <nav className="fr-deroulant-panneau" aria-label="Menu">
-              {modules.map((m) => (
-                <div key={m.id}>
-                  {(modules.length > 1 || m.rubriques.length > 1) && <p className="fr-deroulant-groupe">{m.label}</p>}
-                  {m.rubriques.map((x) => (
-                    <button key={x.id} type="button" onClick={() => choisir(x.id)} className={`fr-deroulant-lien${x.id === courant.id ? " fr-actif" : ""}`} aria-current={x.id === courant.id ? "page" : undefined}>
-                      <span aria-hidden="true" style={{ width: 24, textAlign: "center" }}>{x.icone}</span>
-                      <span style={{ flex: 1 }}>{x.label}</span>
-                      {!!x.badge && <span className="fr-side-badge">{x.badge}</span>}
-                    </button>
-                  ))}
-                </div>
-              ))}
+              {liensMenu("fr-deroulant-lien")}
               <div className="fr-deroulant-pied">
                 <span>👤 {prenom}</span>
                 <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>{profil}</div>
@@ -387,20 +416,22 @@ export default function EspaceSalarieRH({ avecPaie, accueil, absences, releve, p
       </div>
 
       <div className="flex">
-        <aside className="fr-sidebar" aria-label={moduleCourant.label}>
-          <p className="fr-side-titre">{moduleCourant.label}</p>
-          {moduleCourant.rubriques.map((r) => (
-            <button key={r.id} type="button" onClick={() => choisir(r.id)} className={`fr-side-lien${r.id === courant.id ? " fr-actif" : ""}`} aria-current={r.id === courant.id ? "page" : undefined} style={{ border: "none", background: r.id === courant.id ? undefined : "none", width: "100%", textAlign: "left", cursor: "pointer" }}>
-              <span className="fr-side-icone" aria-hidden="true">{r.icone}</span>
-              <span className="fr-side-texte">{r.label}</span>
-              {!!r.badge && <span className="fr-side-badge">{r.badge}</span>}
-            </button>
-          ))}
+        <aside className="fr-sidebar" aria-label="Mon espace">
+          {liensMenu("fr-side-lien")}
+          {logoVersion ? (
+            <div className="fr-side-pied">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/api/entreprises/logo?v=${logoVersion}`} alt="" className="fr-side-logo-client" />
+            </div>
+          ) : null}
         </aside>
-        <main className="flex-1 p-4 md:p-8 flex flex-col gap-4" style={{ minWidth: 0, maxWidth: "900px" }}>
-          <div className="bg-white rounded-xl shadow p-6 fr-es-titre-carte">
-            <h1 className="text-3xl font-bold">{courant.icone} {courant.label}</h1>
-          </div>
+        <main className="flex-1 p-4 md:p-8 flex flex-col gap-4" style={{ minWidth: 0, maxWidth: "960px" }}>
+          {courant.id !== "accueil" && (
+            <div className="bg-white rounded-xl shadow p-6 fr-es-titre-carte flex items-center justify-between gap-3">
+              <h1 className="text-2xl font-bold">{courant.icone} {courant.label}</h1>
+              <button type="button" onClick={() => choisir("accueil")} className="text-sm font-semibold text-gray-500 hover:text-orange-600">← Accueil</button>
+            </div>
+          )}
           {courant.contenu}
           <p className="text-center text-xs text-gray-500 mt-2">Vos demandes sont validées par votre manager ou votre employeur. Pour toute question sur votre paie, adressez-vous à lui.</p>
         </main>

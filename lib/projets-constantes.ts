@@ -2,6 +2,8 @@
 
 /** Prix de l'option Projets, planning & rentabilité (HT, par mois et par entreprise) */
 export const PRIX_OPTION_PROJETS = 29;
+/** Option Documents & contrats (courriers types + contrats depuis modèle) : payante avec la formule Basic */
+export const PRIX_OPTION_DOCUMENTS = 5;
 
 export const STATUTS_PROJET = {
   PREVU: { label: "Prévu", couleur: "#6b7280" },

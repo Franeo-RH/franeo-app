@@ -64,6 +64,7 @@ export default async function EspaceSalarie() {
     echeances: aDroit(permsEnt, "espace.echeances"),
     communications: aDroit(permsEnt, "espace.communications"),
   };
+  const logo = s.utilisateur.entrepriseId ? await prisma.logoEntreprise.findUnique({ where: { entrepriseId: s.utilisateur.entrepriseId }, select: { updatedAt: true } }) : null;
   const miseAJour = await derniereMiseAJour({ id: s.utilisateur.id, role: "SALARIE", entrepriseId: s.utilisateur.entrepriseId });
   const [absences, rappels, communications] = await Promise.all([
     prisma.absence.findMany({ where: { salarieId: s.salarie.id }, orderBy: { dateDebut: "desc" }, take: 50 }),
@@ -96,6 +97,8 @@ export default async function EspaceSalarie() {
 
         <EspaceSalarieRH
           prenom={s.salarie.prenom}
+          entrepriseNom={s.utilisateur.entreprise?.nom ?? null}
+          logoVersion={logo ? logo.updatedAt.getTime() : null}
           avecBadge={aDroit(permsEnt, "espace.badge")}
           avecProjets={aDroit(permsEnt, "espace.projets")}
           avecFrais={aDroit(permsEnt, "espace.frais")}
@@ -103,10 +106,6 @@ export default async function EspaceSalarie() {
           avecPaie={permsEnt.includes("paie")}
           accueil={
             <>
-              <div style={carte}>
-                <p style={{ margin: 0, fontSize: "20px", fontWeight: 700 }}>Bonjour {s.salarie.prenom} 👋</p>
-                <p style={{ margin: "4px 0 0", color: "#4b5563", fontSize: "14px" }}>{s.salarie.poste} · {s.utilisateur.entreprise?.nom}</p>
-              </div>
               <CarteMiseAJour miseAJour={miseAJour} />
               {voit.communications && <BandeauCommunications communications={communications} />}
               {voit.echeances && (rappels.length > 0 || s.salarie.dateFin) && (
@@ -148,20 +147,27 @@ export default async function EspaceSalarie() {
               </section>
             </>
           }
-          absences={voit.absences ? (
+          conge={voit.absences ? (
+            <section style={carte} aria-labelledby="t-demande">
+              <h2 id="t-demande" style={{ margin: "0 0 12px", fontSize: "18px" }}>🌴 Ma demande</h2>
+              <FormulaireAbsenceSalarie />
+            </section>
+          ) : undefined}
+          arret={voit.absences ? (
+            <section style={carte} aria-labelledby="t-arret">
+              <h2 id="t-arret" style={{ margin: "0 0 12px", fontSize: "18px" }}>🤒 Envoyer mon arrêt de travail</h2>
+              <FormulaireArretSalarie />
+            </section>
+          ) : undefined}
+          accident={voit.absences ? (
+            <section style={carte} aria-labelledby="t-accident">
+              <h2 id="t-accident" style={{ margin: "0 0 12px", fontSize: "18px" }}>🩹 Accident du travail ou de trajet</h2>
+              <AccidentSalarie />
+            </section>
+          ) : undefined}
+          recap={voit.absences ? (
             <>
-              <section style={carte} aria-labelledby="t-demande">
-                <h2 id="t-demande" style={{ margin: "0 0 12px", fontSize: "18px" }}>📅 Demander une absence</h2>
-                <FormulaireAbsenceSalarie />
-              </section>
-              <section style={carte} aria-labelledby="t-arret">
-                <h2 id="t-arret" style={{ margin: "0 0 12px", fontSize: "18px" }}>🤒 Déclarer un arrêt de travail</h2>
-                <FormulaireArretSalarie />
-              </section>
-              <section style={carte} aria-labelledby="t-accident">
-                <h2 id="t-accident" style={{ margin: "0 0 12px", fontSize: "18px" }}>🩹 Accident du travail ou de trajet</h2>
-                <AccidentSalarie />
-              </section>
+              <CompteurConges espaceSalarie />
               <section style={carte} aria-labelledby="t-absences">
                 <h2 id="t-absences" style={{ margin: "0 0 4px", fontSize: "18px" }}>Mes absences à venir</h2>
                 {aVenir.length === 0 ? (

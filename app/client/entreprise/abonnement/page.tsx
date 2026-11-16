@@ -11,6 +11,8 @@ import Link from "next/link";
 import { detailRH } from "@/lib/grille";
 import { texteMention, texteRH, textesModifies } from "@/lib/textes-formules";
 import OptionProjets from "@/components/OptionProjets";
+import OptionDocuments from "@/components/OptionDocuments";
+import { etatOptions } from "@/lib/options-serveur";
 
 export default async function AbonnementClient() {
   await connection();
@@ -31,8 +33,7 @@ export default async function AbonnementClient() {
     textesModifies(),
   ]);
 
-  const demandeProjets = await prisma.demandeService.findFirst({ where: { entrepriseId: session.entrepriseId!, type: "OPTION_PROJETS", statut: { in: ["EN_ATTENTE", "EN_COURS"] } }, select: { id: true } });
-  const etatProjets = (session.entreprise?.permissions || []).includes("projets") ? "active" : demandeProjets ? "demandee" : "disponible";
+  const options = await etatOptions(session);
 
   const demandeEnAttente = await prisma.demandeEvolution.findFirst({
     where: {
@@ -113,7 +114,10 @@ export default async function AbonnementClient() {
             ))}
           </div>
 
-          <div className="mt-6"><OptionProjets etat={etatProjets} peutDemander={!session.etablissementId} /></div>
+          <div className="mt-6 flex flex-col gap-4">
+            <OptionDocuments etat={options.documents} inclus={options.documentsInclus} peutDemander={!session.etablissementId} />
+            <OptionProjets etat={options.projets} inclus={options.projetsInclus} peutDemander={!session.etablissementId} />
+          </div>
 
           <p className="text-sm text-gray-600 mt-6 bg-white rounded-xl shadow p-4">🩺 {texteMention(modifs).message}</p>
 

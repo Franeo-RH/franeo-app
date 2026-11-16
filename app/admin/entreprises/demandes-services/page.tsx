@@ -63,13 +63,13 @@ export default function AdminDemandesServices() {
                       urlMessages={`/api/demandes-services/${d.id}/messages`} urlPj={`/api/demandes-services/${d.id}/pj`} onChange={charger} />
                   </div>
                 </details>
-                {d.type !== "OPTION_PROJETS" && d.statut !== "REFUSEE" && (
+                {!d.type.startsWith("OPTION_") && d.statut !== "REFUSEE" && (
                   <FacturerDemande url={`/api/demandes-services/${d.id}`} montantFacture={d.montantFacture} factureMois={d.factureMois} factureAnnee={d.factureAnnee} onChange={charger} />
                 )}
                 <textarea value={reponses[d.id] ?? ""} onChange={(e) => setReponses({ ...reponses, [d.id]: e.target.value })} rows={2} placeholder="Réponse au client (facultatif)" className="border rounded-lg p-2 text-sm" aria-label="Réponse" />
                 <div className="flex gap-2 flex-wrap">
                   <button type="button" onClick={() => maj(d.id, "EN_COURS")} className="bg-blue-600 text-white px-3 py-1 rounded-lg font-semibold">En cours</button>
-                  <button type="button" onClick={() => maj(d.id, "TRAITEE")} className="bg-green-600 text-white px-3 py-1 rounded-lg font-semibold">{d.type === "OPTION_PROJETS" ? "✅ Accepter et activer l'option" : "Traitée"}</button>
+                  <button type="button" onClick={() => maj(d.id, "TRAITEE")} className="bg-green-600 text-white px-3 py-1 rounded-lg font-semibold">{d.type.startsWith("OPTION_") ? "✅ Accepter et activer l'option" : "Traitée"}</button>
                   <button type="button" onClick={() => maj(d.id, "REFUSEE")} className="bg-red-600 text-white px-3 py-1 rounded-lg font-semibold">Refuser</button>
                   <button type="button" onClick={async () => { if (confirm("Supprimer ?")) { await fetch(`/api/demandes-services/${d.id}`, { method: "DELETE" }); charger(); } }} className="text-red-600 ml-auto">🗑️</button>
                 </div>

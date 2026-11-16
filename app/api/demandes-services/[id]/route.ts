@@ -49,11 +49,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     where: { id },
     data: { statut, reponse: typeof reponse === "string" && reponse.trim() ? reponse.trim().slice(0, 3000) : undefined, traiteeAt: statut === "TRAITEE" || statut === "REFUSEE" ? new Date() : null },
   });
-  // Option Projets acceptée : le module est activé tout de suite (facturé 29 € HT/mois)
-  if (d.type === "OPTION_PROJETS" && statut === "TRAITEE") {
+  // Option acceptée : activée tout de suite (facturée selon la formule, voir lib/facturation.ts)
+  if ((d.type === "OPTION_PROJETS" || d.type === "OPTION_DOCUMENTS") && statut === "TRAITEE") {
     const e = await prisma.entreprise.findUnique({ where: { id: d.entrepriseId }, select: { permissions: true } });
-    if (e && !e.permissions.includes("projets")) {
-      await prisma.entreprise.update({ where: { id: d.entrepriseId }, data: { permissions: [...e.permissions, "projets"] } });
+    const perm = d.type === "OPTION_PROJETS" ? "projets" : "option-documents";
+    if (e && !e.permissions.includes(perm)) {
+      // Documents : on rend aussi les contrats et courriers s'ils avaient été retirés
+      const perms = d.type === "OPTION_DOCUMENTS" ? e.permissions.filter((p) => p !== "-rh.contrats" && p !== "-rh.courriers") : e.permissions;
+      await prisma.entreprise.update({ where: { id: d.entrepriseId }, data: { permissions: [...perms, perm] } });
       oublierSessions();
     }
   }

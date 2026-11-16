@@ -22,14 +22,14 @@ export async function GET() {
       select: { id: true, prenom: true, nom: true, poste: true, typeContrat: true, dateDebut: true, dateFin: true, dateNaissance: true, rue: true, codePostal: true, ville: true, heuresHebdomadaires: true, matricule: true, email: true, statut: true },
       orderBy: [{ nom: "asc" }, { prenom: "asc" }],
     }),
-    prisma.entreprise.findUnique({ where: { id: a.entrepriseId }, select: { nom: true, rue: true, codePostal: true, ville: true, siret: true, telephone: true, email: true, logoClient: { select: { entrepriseId: true } } } }),
+    prisma.entreprise.findUnique({ where: { id: a.entrepriseId }, select: { nom: true, rue: true, codePostal: true, ville: true, siret: true, telephone: true, email: true, logoClient: { select: { data: true } } } }),
   ]);
   const iso = (d: Date | null) => (d ? d.toISOString() : null);
   const listeSalaries: (SalarieCourrier & { actif: boolean })[] = salaries.map((s) => ({
     id: s.id, prenom: s.prenom, nom: s.nom, poste: s.poste, typeContrat: s.typeContrat, dateDebut: iso(s.dateDebut), dateFin: iso(s.dateFin), dateNaissance: iso(s.dateNaissance),
     rue: s.rue, codePostal: s.codePostal, ville: s.ville, heuresHebdomadaires: s.heuresHebdomadaires, matricule: s.matricule, email: s.email, actif: s.statut === "Actif",
   }));
-  const entreprise: EntrepriseCourrier | null = e ? { nom: e.nom, rue: e.rue, codePostal: e.codePostal, ville: e.ville, siret: e.siret, telephone: e.telephone, email: e.email, logo: !!e.logoClient } : null;
+  const entreprise: EntrepriseCourrier | null = e ? { nom: e.nom, rue: e.rue, codePostal: e.codePostal, ville: e.ville, siret: e.siret, telephone: e.telephone, email: e.email, logo: e.logoClient?.data && /^data:image\/(png|jpeg);base64,/.test(e.logoClient.data) ? e.logoClient.data : null } : null;
   return NextResponse.json({ modeles, salaries: listeSalaries, entreprise, admin: false });
 }
 

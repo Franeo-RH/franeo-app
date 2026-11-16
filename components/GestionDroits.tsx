@@ -82,7 +82,8 @@ export default function GestionDroits({
       </div>
       <div style={{ marginBottom: "14px", padding: "10px 12px", border: "1px solid #e5e7eb", borderRadius: "12px", background: "#f9fafb" }}>
         {case_(moduleActif("espace-salaries"), () => { setEtat(""); setPerms((p) => (p.includes("espace-salaries") ? p.filter((x) => x !== "espace-salaries") : [...p, "espace-salaries"])); }, "📱 Espace salarié (inclus dans toutes les formules) — détaillez ci-dessous ce que les salariés peuvent faire")}
-        {case_(moduleActif("projets"), () => { setEtat(""); setPerms((p) => (p.includes("projets") ? p.filter((x) => x !== "projets") : [...p, "projets"])); }, "📐 Option Projets, planning & rentabilité — 29 € HT/mois, ajoutée à la facture mensuelle (🚧 en cours de développement, hors formule, conservée quand la formule change)")}
+        {case_(moduleActif("projets"), () => { setEtat(""); setPerms((p) => (p.includes("projets") ? p.filter((x) => x !== "projets") : [...p, "projets"])); }, "📐 Option Projets, planning & rentabilité — 29 € HT/mois avec Basic ou Essentiel (ajoutée à la facture), incluse dès Sérénité")}
+        {case_(perms.includes("option-documents"), () => { setEtat(""); setPerms((p) => (p.includes("option-documents") ? p.filter((x) => x !== "option-documents") : [...p.filter((x) => x !== "-rh.contrats" && x !== "-rh.courriers"), "option-documents"])); }, "📄 Option Documents & contrats (courriers types, contrats depuis modèle) — 5 € HT/mois avec Basic (ajoutée à la facture), incluse dès Essentiel")}
       </div>
       {choix !== "PERSO" && (
         <p style={{ fontSize: "13px", color: "#6b7280", margin: "0 0 10px" }}>Le détail ci-dessous est réglé par la formule. Modifier une case passe en accès personnalisé.</p>

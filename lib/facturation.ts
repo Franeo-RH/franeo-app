@@ -3,7 +3,8 @@
 // aux estimations des dashboards et à la page « Prestations supplémentaires ». Une seule règle, partout.
 
 import { prisma } from "@/lib/prisma";
-import { PRIX_OPTION_PROJETS } from "@/lib/projets-constantes";
+import { PRIX_OPTION_DOCUMENTS, PRIX_OPTION_PROJETS } from "@/lib/projets-constantes";
+import { documentsInclus, PERMISSION_DOCUMENTS, projetsInclus } from "@/lib/droits";
 import { categorieRecrutement, LANCEMENT_RECRUTEMENT } from "@/lib/recrutement";
 
 type FormuleRH = { nom: string; prixMensuel: number; salariesInclus: number; prixSalarieSupp: number; ticketsRH: number; prixTicketSupp: number } | null;
@@ -150,8 +151,13 @@ export async function lignesFacture(entrepriseId: string, mois: number, annee: n
   // Espace salarié : inclus dans toutes les formules (plus de supplément)
 
   // ── Options ──
-  if ((entreprise.permissions || []).includes("projets") && !entreprise.demo) {
+  // Projets : payante avec Basic ou Essentiel, incluse dès Sérénité
+  if ((entreprise.permissions || []).includes("projets") && !entreprise.demo && !projetsInclus(entreprise)) {
     ajouter({ categorie: "OPTION", libelle: "Option Projets, planning & rentabilité", quantite: 1, prixUnitaire: PRIX_OPTION_PROJETS });
+  }
+  // Documents & contrats : payante avec Basic, incluse dès Essentiel
+  if ((entreprise.permissions || []).includes(PERMISSION_DOCUMENTS) && !entreprise.demo && !documentsInclus(entreprise)) {
+    ajouter({ categorie: "OPTION", libelle: "Option Documents & contrats (courriers types, contrats depuis modèle)", quantite: 1, prixUnitaire: PRIX_OPTION_DOCUMENTS });
   }
 
   // ── Prestations commandées dans le mois (non annulées) ──

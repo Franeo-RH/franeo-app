@@ -382,3 +382,24 @@ html[data-theme="dark"] .fr-nav-logo-client { box-shadow: 0 0 0 1px #404040; }
 .fr-plan-jauge { flex-shrink: 0; height: 6px; background: #f3f4f6; border-radius: 999px; overflow: hidden; }
 .fr-plan-jauge span { display: block; height: 100%; border-radius: 999px; }
 .fr-plan-legende { display: inline-block; width: 22px; height: 12px; border-radius: 4px; line-height: 0; padding: 0; margin: 0; }
+
+/* =========================================================
+   Espace salarié : barre du haut, menu par démarches, raccourcis
+   ========================================================= */
+.fr-es-nav-centre { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.fr-es-nav-titre { color: #ffffff; font-weight: 800; font-size: 16px; }
+.fr-es-groupe { margin-top: 14px; }
+.fr-es-logo-mobile { height: 34px; max-width: 110px; object-fit: contain; background: #ffffff; border-radius: 8px; padding: 2px 6px; }
+.fr-es-raccourcis { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.fr-es-tuile {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; text-align: left; cursor: pointer;
+  background: #ffffff; border: 1px solid #eef0f3; border-radius: 14px; padding: 16px 14px; min-height: 104px;
+  box-shadow: inset 4px 0 0 var(--teinte, #f97316); transition: transform 0.12s, box-shadow 0.12s;
+}
+.fr-es-tuile:hover { transform: translateY(-2px); box-shadow: inset 4px 0 0 var(--teinte, #f97316), 0 8px 20px rgba(17, 24, 39, 0.08); }
+.fr-es-tuile-icone { font-size: 28px; line-height: 1; width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--teinte, #f97316) 14%, #ffffff); }
+.fr-es-tuile-texte { font-weight: 700; font-size: 14px; color: #111827; line-height: 1.25; }
+@media (max-width: 768px) {
+  .fr-es-raccourcis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .fr-es-tuile { min-height: 96px; padding: 14px 12px; }
+}

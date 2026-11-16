@@ -19,14 +19,16 @@ export const MISES_A_JOUR: MiseAJour[] = [
     date: "novembre 2026",
     titre: "Courriers types, accidents du travail et déclaration de sortie",
     clients: [
-      "✉️ Courriers & modèles (Gestion RH) : rupture et renouvellement de période d'essai, relances, attestation employeur… Les informations du salarié se remplissent toutes seules ; imprimez, enregistrez en PDF ou envoyez par e-mail. Créez aussi vos propres modèles.",
+      "✉️ Courriers & modèles (Gestion RH) : rupture et renouvellement de période d'essai, relances, attestation employeur… Les informations du salarié se remplissent toutes seules ; imprimez ou enregistrez en PDF à votre logo, ou envoyez par e-mail. Créez aussi vos propres modèles.",
+      "📄 Contrats et courriers types : inclus dès la formule Essentiel, option à 5 € HT/mois avec la formule Basic. 📐 Option Projets : 29 € HT/mois avec Basic ou Essentiel, incluse dès Sérénité.",
       "🩹 Accidents du travail (Gestion RH) : vos salariés déclarent un accident depuis leur espace. Vous êtes prévenu par e-mail et suivez le dossier : déclaration à la CPAM sous 48 heures, réserves, réponses au questionnaire de la CPAM, décision.",
       "🚪 Paie › Déclarer une sortie : motif, dates, préavis et éléments de fin de contrat, avec le solde de congés du salarié.",
       "💬 Devis et demandes : échangez avec FRANEO RH et retrouvez les documents directement sur chaque demande.",
       "🤖 Buddy sait maintenant chercher l'information dans votre espace (soldes de congés, absences, échéances, accidents…).",
     ],
     salaries: [
-      "🩹 Accident du travail ou de trajet : déclarez-le à votre employeur depuis l'onglet Absences.",
+      "🧭 Nouvel espace plus simple : toutes vos démarches dans le menu (demander un congé, déclarer un arrêt, déclarer un accident, note de frais, relevé mensuel…) et en raccourcis sur l'accueil.",
+      "🩹 Accident du travail ou de trajet : déclarez-le à votre employeur en quelques minutes.",
     ],
   },
   {

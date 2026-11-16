@@ -78,7 +78,7 @@ export default function Courriers() {
   body { font-family: Arial, Helvetica, sans-serif; color: #111827; font-size: 11.5pt; line-height: 1.5; margin: 0; }
   .entete { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
   .exp strong { font-size: 13pt; }
-  .logo { max-height: 70px; max-width: 200px; object-fit: contain; }
+  .logo { max-height: 90px; max-width: 230px; object-fit: contain; display: block; margin-bottom: 10px; }
   .dest { margin: 28px 0 0 auto; width: 46%; }
   .lieu { margin: 26px 0 0 auto; width: 46%; }
   .mention { margin-top: 22px; font-size: 10pt; font-weight: bold; text-transform: uppercase; letter-spacing: .03em; }
@@ -86,7 +86,8 @@ export default function Courriers() {
   .corps { white-space: pre-line; text-align: justify; }
   .pied { margin-top: 40px; font-size: 8.5pt; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 6px; }
 </style></head><body>
-${estMail ? "" : `<div class="entete"><div class="exp"><strong>${echapper(e?.nom ?? "")}</strong><br>${adresseEnt}${e?.siret ? `<br>SIRET ${echapper(e.siret)}` : ""}</div>${e?.logo ? `<img class="logo" src="${location.origin}/api/entreprises/logo" alt="">` : ""}</div>
+${e?.logo ? `<img class="logo" src="${e.logo}" alt="">` : ""}
+${estMail ? "" : `<div class="entete"><div class="exp"><strong>${echapper(e?.nom ?? "")}</strong><br>${adresseEnt}${e?.siret ? `<br>SIRET ${echapper(e.siret)}` : ""}</div></div>
 ${destinataire && adresseSal ? `<div class="dest">${adresseSal}</div>` : ""}
 <div class="lieu">${echapper(e?.ville ? `${e.ville}, le ${valeurs.date}` : `Le ${valeurs.date}`)}</div>
 ${mentionAR ? `<div class="mention">Lettre recommandée avec accusé de réception<br>ou remise en main propre contre décharge</div>` : ""}`}
@@ -94,8 +95,8 @@ ${mentionAR ? `<div class="mention">Lettre recommandée avec accusé de récepti
 <div class="corps">${echapper(texte)}</div>
 </body></html>`);
     w.document.close();
-    // Laisse le temps au logo de se charger avant d'ouvrir la fenêtre d'impression
-    setTimeout(() => { w.focus(); w.print(); }, 400);
+    // Le logo est intégré au document : on attend juste son affichage avant d'imprimer
+    setTimeout(() => { w.focus(); w.print(); }, 300);
   }
 
   async function copier() {
@@ -263,6 +264,10 @@ ${mentionAR ? `<div class="mention">Lettre recommandée avec accusé de récepti
                   : <span className="text-xs font-semibold rounded-full px-3 py-1" style={{ background: "#dcfce7", color: "#166534" }}>✅ Prêt</span>}
               </div>
               <div className="mx-auto w-full rounded-lg border p-6 md:p-10" style={{ maxWidth: 720, background: "#ffffff", boxShadow: "0 8px 24px rgba(17,24,39,0.08)" }}>
+                {d.entreprise?.logo
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={d.entreprise.logo} alt="Logo" style={{ maxHeight: 64, maxWidth: 200, objectFit: "contain", marginBottom: 16 }} />
+                  : !admin && <p className="text-xs text-gray-400 mb-3">Astuce : ajoutez votre logo dans Mon entreprise pour qu&apos;il apparaisse en haut de vos courriers.</p>}
                 <p className="font-bold mb-4">Objet : {objet}</p>
                 {texteRetouche === null ? (
                   <div className="text-sm leading-relaxed" style={{ whiteSpace: "pre-line" }}>
