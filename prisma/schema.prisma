@@ -38,6 +38,12 @@ model Entreprise {
   bic               String?
   banque            String?
 
+  // Prélèvement SEPA des abonnements (Stripe) : l'IBAN reste chez Stripe, seuls ses 4 derniers chiffres sont gardés
+  stripeClientId    String?            @unique
+  mandatStatut      String?            // ACTIF, EN_ATTENTE, INACTIF (null : pas encore signé)
+  mandatIbanFin     String?
+  mandatSigneAt     DateTime?
+
   abonnementId      String?
   demo              Boolean            @default(false)
   tauxCharges       Float              @default(40) // % de charges patronales (estimation)

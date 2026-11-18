@@ -15,9 +15,13 @@ import { calculerFacture } from "@/lib/facturation";
 import OptionDocuments from "@/components/OptionDocuments";
 import OptionMedical from "@/components/OptionMedical";
 import OptionProjets from "@/components/OptionProjets";
+import MandatPrelevement from "@/components/MandatPrelevement";
+import { stripeActif } from "@/lib/stripe";
+import { enregistrerMandat } from "@/lib/prelevement";
 
-export default async function EntrepriseClient() {
+export default async function EntrepriseClient({ searchParams }: { searchParams: Promise<{ mandat?: string; session?: string }> }) {
   await connection();
+  const { mandat, session: sessionStripe } = await searchParams;
 
   const session = await getSession();
   if (!session) redirect("/login");
@@ -25,6 +29,11 @@ export default async function EntrepriseClient() {
 
   if (!session.entreprise?.permissions.includes("entreprise")) {
     redirect("/client/dashboard");
+  }
+
+  // Retour de la page Stripe : le mandat est enregistré tout de suite (le webhook fait de même en arrière-plan)
+  if (mandat === "ok" && sessionStripe && stripeActif()) {
+    await enregistrerMandat(sessionStripe, session.entrepriseId!).catch((e) => console.error("Mandat Stripe :", e));
   }
 
   const entreprise = await prisma.entreprise.findUnique({
@@ -115,6 +124,15 @@ export default async function EntrepriseClient() {
                 {estimation && <Link href="/client/entreprise/supplements" className="text-gray-600 font-semibold hover:underline">Détail du mois →</Link>}
               </div>
             </div>
+
+            <MandatPrelevement
+              statut={entreprise.mandatStatut}
+              ibanFin={entreprise.mandatIbanFin}
+              signeAt={entreprise.mandatSigneAt?.toISOString() ?? null}
+              disponible={stripeActif() && !entreprise.demo}
+              peutSigner={aDroit(session.entreprise?.permissions, "entreprise.modifier")}
+              retour={mandat === "ok" || mandat === "annule" ? mandat : null}
+            />
               </>
             )}
 

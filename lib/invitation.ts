@@ -21,7 +21,7 @@ export const motDePasseProvisoire = () => bcrypt.hash(crypto.randomBytes(24).toS
  * Crée un lien d'activation et l'envoie par e-mail.
  * Renvoie `lien` uniquement si l'e-mail n'a pas pu partir (pour le transmettre autrement).
  */
-export async function envoyerActivation(request: NextRequest | null, o: { email: string; prenom?: string | null; entreprise?: string | null; relance?: boolean; salarie?: boolean }) {
+export async function envoyerActivation(request: NextRequest | null, o: { email: string; prenom?: string | null; entreprise?: string | null; relance?: boolean; salarie?: boolean; premierCompte?: boolean }) {
   const jeton = await creerJetonLien(o.email, DUREE_LIEN_JOURS * 24 * 3600 * 1000);
   const base = (process.env.NEXT_PUBLIC_URL || process.env.APP_URL || request?.nextUrl.origin || "https://franeo-app.vercel.app").replace(/\/$/, "");
   const lien = `${base}/reinitialiser-mot-de-passe?token=${jeton}&activation=1`;
@@ -37,6 +37,7 @@ export async function envoyerActivation(request: NextRequest | null, o: { email:
         : o.entreprise ? `Votre espace client « ${o.entreprise} » est prêt.` : "Votre espace client FRANEO RH est prêt.",
       "Cliquez sur le bouton ci-dessous pour choisir votre mot de passe et activer votre compte.",
       `Votre identifiant de connexion : ${o.email}`,
+      ...(!o.premierCompte ? [] : ["Une fois connecté, signez votre mandat de prélèvement SEPA dans « Mon entreprise » : vos abonnements sont réglés par prélèvement mensuel."]),
       `Ce lien est valable ${DUREE_LIEN_JOURS} jours et ne fonctionne qu'une fois. Passé ce délai, demandez-en un nouveau via « Mot de passe oublié ».`,
     ],
     lien,

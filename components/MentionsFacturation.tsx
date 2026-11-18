@@ -5,7 +5,8 @@ export default function MentionsFacturation({ logiciel = false }: { logiciel?: b
   return (
     <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "12px", padding: "14px 18px", marginTop: "20px", fontSize: "14px", color: "#4b5563", display: "flex", flexDirection: "column", gap: "6px" }}>
       <p style={{ margin: 0 }}>
-        🧾 <strong>Facturation mensuelle via Abby</strong>, paiement par <strong>virement bancaire</strong>.
+        🧾 <strong>Facturation mensuelle</strong>, paiement par <strong>prélèvement SEPA mensuel</strong> : la facture est envoyée par e-mail, puis prélevée au plus tôt 2 jours après. Mandat à signer dans{" "}
+        <a href="/client/entreprise#prelevement" style={{ color: "#f97316", fontWeight: 600 }}>Mon entreprise</a>.
       </p>
       {logiciel && (
         <p style={{ margin: 0 }}>

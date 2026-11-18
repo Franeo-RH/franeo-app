@@ -15,6 +15,7 @@ import AvantagesEntreprise from "@/components/AvantagesEntreprise";
 import LogoEntreprise from "@/components/LogoEntreprise";
 import AccesEtablissements from "@/components/AccesEtablissements";
 import RepriseConges from "@/components/RepriseConges";
+import { STATUTS_MANDAT } from "@/lib/prelevement-textes";
 
 export const dynamic = "force-dynamic";
 
@@ -164,6 +165,19 @@ export default async function FicheEntrepriseAdmin({
                 <Info label="Banque" value={entreprise.banque} />
                 <Info label="IBAN" value={entreprise.iban} />
                 <Info label="BIC" value={entreprise.bic} />
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-2 text-sm">
+                <p className="font-semibold">💶 Prélèvement des abonnements</p>
+                <p>
+                  {entreprise.mandatStatut ? STATUTS_MANDAT[entreprise.mandatStatut]?.label ?? entreprise.mandatStatut : "⚠️ Mandat pas encore signé"}
+                  {entreprise.mandatIbanFin ? ` · IBAN •••• ${entreprise.mandatIbanFin}` : ""}
+                  {entreprise.mandatSigneAt ? ` · signé le ${entreprise.mandatSigneAt.toLocaleDateString("fr-FR")}` : ""}
+                </p>
+                {entreprise.stripeClientId && (
+                  <a href={`https://dashboard.stripe.com/customers/${entreprise.stripeClientId}`} target="_blank" rel="noopener noreferrer" className="text-orange-500 font-semibold hover:underline">
+                    Ouvrir le client dans Stripe (lancer un prélèvement) ↗
+                  </a>
+                )}
               </div>
             </div>
 

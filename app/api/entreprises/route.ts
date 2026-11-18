@@ -70,6 +70,6 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  const activation = await envoyerActivation(request, { email: emailClient, prenom: data.prenomClient, entreprise: entreprise.nom });
+  const activation = await envoyerActivation(request, { email: emailClient, prenom: data.prenomClient, entreprise: entreprise.nom, premierCompte: true });
   return NextResponse.json({ succes: true, entreprise, email: emailClient, ...activation });
 }

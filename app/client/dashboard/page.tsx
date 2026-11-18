@@ -15,6 +15,7 @@ import { calculerMasseSalariale } from "@/lib/masse-salariale";
 import { calculerFacture, PRIX_TICKET_SANS_ABONNEMENT, quotaTickets, ticketsDuMois } from "@/lib/facturation";
 import { aAccesPaie, aDroit } from "@/lib/droits";
 import { filtreSalaries, filtreViaSalarie } from "@/lib/perimetre";
+import { stripeActif } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -106,6 +107,16 @@ export default async function ClientDashboard() {
         </div>
 
         <CarteMiseAJour miseAJour={await derniereMiseAJour({ id: session.id, role: session.role, entrepriseId: session.entrepriseId })} lienHistorique="/client/actualites/mises-a-jour" />
+        {!session.etablissementId && !entreprise?.demo && stripeActif() && peut("entreprise.modifier") &&
+          (entreprise?.abonnement || entreprise?.abonnementPaie) && (!entreprise?.mandatStatut || entreprise.mandatStatut === "INACTIF") && (
+          <Link href="/client/entreprise#prelevement" className="flex items-center justify-between gap-3 flex-wrap rounded-xl px-4 py-3 text-sm" style={{ background: "#fff7ed", border: "1px solid #fed7aa", color: "#9a3412" }}>
+            <span>
+              💶 <strong>{entreprise?.mandatStatut === "INACTIF" ? "Votre mandat de prélèvement n'est plus actif." : "Signez votre mandat de prélèvement SEPA."}</strong>{" "}
+              Vos abonnements sont réglés par prélèvement mensuel : 1 minute, en ligne et sécurisé.
+            </span>
+            <span className="font-semibold">Signer →</span>
+          </Link>
+        )}
         <BandeauCommunications communications={communications} />
 
         <div className="flex gap-2 flex-wrap">

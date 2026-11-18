@@ -15,6 +15,16 @@ export type MiseAJour = {
 
 export const MISES_A_JOUR: MiseAJour[] = [
   {
+    version: "V61",
+    date: "novembre 2026",
+    titre: "Paiement des abonnements par prélèvement SEPA",
+    clients: [
+      "💶 Les abonnements FRANEO RH sont désormais réglés par prélèvement SEPA mensuel : la facture vous est envoyée par e-mail, puis prélevée au plus tôt 2 jours après.",
+      "✍️ Signez votre mandat en 1 minute dans Mon entreprise › Prélèvement des abonnements, sur la page sécurisée de Stripe. Votre IBAN n'est pas enregistré dans Franeo.",
+      "🔁 Changement de banque : « Changer d'IBAN » au même endroit.",
+    ],
+  },
+  {
     version: "V60",
     date: "novembre 2026",
     titre: "Connexion plus sûre et invitations par e-mail",

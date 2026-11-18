@@ -75,6 +75,7 @@ export const GRILLE_PAIE = [
 /** Mentions de la grille tarifaire */
 export const MENTIONS_TARIFS = [
   "Abonnements mensuels sans engagement · TVA non applicable, art. 293 B du CGI.",
+  "Paiement par prélèvement SEPA mensuel (mandat signé en ligne).",
   "Essai gratuit de l'application Franeo RH jusqu'au 31/12/2026.",
   "Un ticket RH couvre n'importe quelle prestation du catalogue à l'unité, sans supplément.",
   "Plus de 100 salariés : devis personnalisé.",

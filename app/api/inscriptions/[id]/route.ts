@@ -47,7 +47,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   });
   await prisma.demandeInscription.update({ where: { id }, data: { statut: "VALIDEE", traiteeAt: new Date(), entrepriseId: entreprise.id } });
 
-  const activation = await envoyerActivation(request, { email: d.email, prenom: d.prenom, entreprise: entreprise.nom });
+  const activation = await envoyerActivation(request, { email: d.email, prenom: d.prenom, entreprise: entreprise.nom, premierCompte: true });
   return NextResponse.json({ succes: true, entrepriseId: entreprise.id, email: d.email, ...activation });
 }
 
