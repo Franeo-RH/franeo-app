@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { ouvrirSession } from "@/lib/jeton-session";
 import { effacerEchecs, estBloque, hachageFactice, ipDe, journaliser, noterEchec } from "@/lib/securite";
+import { appareilDeConfiance, doubleFacteurActif, emailMasque, envoyerCode } from "@/lib/double-facteur";
 
 // Anti-force brute partagé entre tous les serveurs (table TentativeConnexion) :
 // 8 essais ratés par compte, 30 par adresse IP, sur 15 minutes
@@ -43,6 +44,15 @@ export async function POST(request: NextRequest) {
   }
 
   await effacerEchecs(cleCompte);
+
+  // Double authentification : un code par e-mail, sauf sur un appareil déclaré de confiance
+  if (doubleFacteurActif() && !appareilDeConfiance(request, utilisateur)) {
+    const r = await envoyerCode(utilisateur);
+    if (!r.envoye) return NextResponse.json({ erreur: "Le code de connexion n'a pas pu être envoyé. Réessayez dans un instant." }, { status: 502 });
+    await journaliser({ action: "CODE_ENVOYE", utilisateur, request });
+    return NextResponse.json({ etape: "code", jeton: r.jeton, email: emailMasque(utilisateur.email) });
+  }
+
   await journaliser({ action: "LOGIN", utilisateur, request });
 
   const response = NextResponse.json({ succes: true, role: utilisateur.role });

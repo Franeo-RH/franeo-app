@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { creerJetonLien } from "@/lib/securite";
+import { creerAccesSalarie } from "@/lib/acces-salarie";
 import { getSession } from "@/lib/session";
 import { refuserSansDroit } from "@/lib/droits-serveur";
 import { salarieVisible } from "@/lib/perimetre";
@@ -30,50 +28,17 @@ async function controler(id: string) {
   return { session, salarie };
 }
 
-// Inviter (ou générer un nouveau lien) : renvoie un lien de création du mot de passe à transmettre au salarié
+// Inviter (ou renvoyer l'invitation) : le salarié reçoit un e-mail pour choisir son mot de passe.
+// Le lien n'est renvoyé que si l'e-mail n'a pas pu partir (pour le transmettre autrement).
 export async function POST(request: NextRequest, { params }: Ctx) {
   const { id } = await params;
   const refusPOST = await refuserSansDroit("espace.gerer");
   if (refusPOST) return refusPOST;
   const r = await controler(id);
   if (r.erreur) return r.erreur;
-  const { salarie } = r;
-
-  const email = (salarie.compte?.email || salarie.email || "").trim().toLowerCase();
-  if (!email) {
-    return NextResponse.json({ erreur: "Renseignez d'abord l'email du salarié dans sa fiche." }, { status: 400 });
-  }
-  if (salarie.dateFin && new Date(salarie.dateFin) < new Date()) {
-    return NextResponse.json({ erreur: "Ce salarié a quitté l'entreprise." }, { status: 400 });
-  }
-
-  if (salarie.compte) {
-    await prisma.utilisateur.update({ where: { id: salarie.compte.id }, data: { actif: true } });
-  } else {
-    const existant = await prisma.utilisateur.findUnique({ where: { email } });
-    if (existant) {
-      return NextResponse.json({ erreur: "Cet email est déjà utilisé par un autre compte Franeo." }, { status: 409 });
-    }
-    await prisma.utilisateur.create({
-      data: {
-        email,
-        prenom: salarie.prenom,
-        role: "SALARIE",
-        entrepriseId: salarie.entrepriseId,
-        salarieId: salarie.id,
-        // mot de passe aléatoire inutilisable : le salarié choisit le sien via le lien
-        motDePasse: await bcrypt.hash(crypto.randomBytes(24).toString("hex"), 10),
-      },
-    });
-  }
-
-  // Lien de création du mot de passe, valable 7 jours
-  const token = await creerJetonLien(email, 7 * 24 * 3600 * 1000);
-  const base = (process.env.NEXT_PUBLIC_URL || process.env.APP_URL || request.nextUrl.origin).replace(/\/$/, "");
-  const lien = `${base}/reinitialiser-mot-de-passe?token=${token}`;
-
-  // Pas de mail : l'employeur transmet lui-même ce lien au salarié (SMS, WhatsApp, mail…)
-  return NextResponse.json({ succes: true, email, lien });
+  const res = await creerAccesSalarie(id, request, !!r.salarie.compte);
+  if (!res.ok) return NextResponse.json({ erreur: res.erreur }, { status: res.statut });
+  return NextResponse.json({ succes: true, email: res.email, mailEnvoye: res.mailEnvoye, lien: res.lien });
 }
 
 // Couper l'accès (le compte est gardé, l'historique aussi)

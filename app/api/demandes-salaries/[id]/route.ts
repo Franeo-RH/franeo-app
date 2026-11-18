@@ -19,7 +19,7 @@ export async function POST(
   if (action === "valider") {
     const r = await appliquerDemande(id);
     if (r.erreur) return NextResponse.json({ erreur: r.erreur }, { status: 400 });
-    return NextResponse.json({ succes: true });
+    return NextResponse.json({ succes: true, avertissement: r.avertissement ?? null });
   }
 
   if (action === "refuser") {

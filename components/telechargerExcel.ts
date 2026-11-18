@@ -17,7 +17,12 @@ export async function telechargerExcel(nom: string, entetes: string[], lignes: (
     if (!res.ok) throw new Error();
     sauver(await res.blob(), `${nom}.xlsx`);
   } catch {
-    const cellule = (v: string | number | null | undefined) => { const t = typeof v === "number" ? String(v).replace(".", ",") : String(v ?? ""); return /[;"\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    // Texte commençant par = + - @ : préfixé d'une apostrophe pour qu'Excel ne l'exécute jamais comme une formule
+    const cellule = (v: string | number | null | undefined) => {
+      let t = typeof v === "number" ? String(v).replace(".", ",") : String(v ?? "");
+      if (typeof v !== "number" && /^[=+\-@\t\r]/.test(t) && !/^-?\d+([.,]\d+)?$/.test(t)) t = `'${t}`;
+      return /[;"\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+    };
     sauver(new Blob(["﻿" + [entetes, ...lignes].map((l) => l.map(cellule).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" }), `${nom}.csv`);
   }
 }

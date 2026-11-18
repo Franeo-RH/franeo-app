@@ -28,6 +28,8 @@ export default function BoutonsDemandeSalarie({ id }: { id: string }) {
       alert(data.erreur || "Erreur");
       return;
     }
+    const data = await res.json().catch(() => ({}));
+    if (data.avertissement) alert(data.avertissement);
     router.refresh();
   }
 

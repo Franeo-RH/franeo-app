@@ -6,8 +6,10 @@ import { contexteHierarchie } from "@/lib/hierarchie";
 import { LIBELLES_ABSENCE } from "@/lib/espace-salarie";
 import { NOMS_MOIS } from "@/lib/heures";
 
+// Texte commençant par = + - @ : préfixé d'une apostrophe pour qu'Excel ne l'exécute jamais comme une formule
+const neutre = (c: unknown) => { const t = String(c ?? ""); return typeof c !== "number" && /^[=+\-@\t\r]/.test(t) && !/^-?\d+([.,]\d+)?$/.test(t) ? `'${t}` : t; };
 const csv = (lignes: (string | number | null | undefined)[][]) =>
-  "﻿" + lignes.map((l) => l.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(";")).join("\n");
+  "﻿" + lignes.map((l) => l.map((c) => `"${neutre(c).replace(/"/g, '""')}"`).join(";")).join("\n");
 const fr = (d: Date) => new Date(d).toLocaleDateString("fr-FR");
 
 /** GET ?type=absences|releves|frais|equipe : extraction de l'équipe d'un manager ou dirigeant (fichier CSV lisible par Excel) */

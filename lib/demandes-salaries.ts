@@ -8,6 +8,7 @@ import { matriculeDejaPris, nettoyerMatricule } from "@/lib/matricule";
 import { notifierAdmin } from "@/lib/notifications";
 import { supprimerSalarieComplet } from "@/lib/rgpd";
 import { libelleMotif, PREAVIS } from "@/lib/sorties";
+import { creerAccesSalarie } from "@/lib/acces-salarie";
 
 export type TypeDemande = "AJOUT" | "MODIFICATION" | "SUPPRESSION" | "SORTIE";
 
@@ -65,7 +66,7 @@ const fr = (d: unknown) => (d ? new Date(String(d)).toLocaleDateString("fr-FR") 
 async function resumer(type: TypeDemande, donnees: Record<string, unknown>, salarieId?: string | null) {
   if (type === "AJOUT") {
     const s = champsSalarie(donnees);
-    return `${s.prenom} ${s.nom} — ${s.poste}${s.typeContrat ? `, ${s.typeContrat}` : ""}${s.dateDebut ? `, entrée le ${fr(s.dateDebut)}` : ""}${s.salaireMensuel ? `, ${s.salaireMensuel} € brut/mois` : ""}`;
+    return `${s.prenom} ${s.nom} — ${s.poste}${s.typeContrat ? `, ${s.typeContrat}` : ""}${s.dateDebut ? `, entrée le ${fr(s.dateDebut)}` : ""}${s.salaireMensuel ? `, ${s.salaireMensuel} € brut/mois` : ""}${donnees.creerAcces === true ? " · accès à l'espace salarié envoyé par e-mail à la validation" : ""}`;
   }
   const avant = salarieId ? await prisma.salarie.findUnique({ where: { id: salarieId } }) : null;
   const nom = avant ? `${avant.prenom} ${avant.nom}` : "salarié";
@@ -142,7 +143,7 @@ export async function creerDemande(options: {
 }
 
 /** Applique une demande validée. Renvoie un message d'erreur si impossible. */
-export async function appliquerDemande(demandeId: string): Promise<{ erreur?: string }> {
+export async function appliquerDemande(demandeId: string): Promise<{ erreur?: string; avertissement?: string }> {
   const d = await prisma.demandeSalarie.findUnique({ where: { id: demandeId } });
   if (!d) return { erreur: "Demande introuvable." };
   if (d.statut !== "EN_ATTENTE") return { erreur: "Cette demande a déjà été traitée." };
@@ -166,6 +167,17 @@ export async function appliquerDemande(demandeId: string): Promise<{ erreur?: st
       data: { ...champs, matricule, entrepriseId: d.entrepriseId, statut: "Actif", rappels: rappels.length ? { create: rappels } : undefined },
     });
     await prisma.demandeSalarie.update({ where: { id: d.id }, data: { statut: "VALIDEE", traiteAt: new Date(), salarieId: cree.id } });
+    // Le client avait coché « Créer un accès » : le salarié reçoit son invitation dès la validation
+    if (donnees.creerAcces === true) {
+      try {
+        const r = await creerAccesSalarie(cree.id, null);
+        if (!r.ok) return { avertissement: `Salarié créé, mais l'accès n'a pas pu être ouvert : ${r.erreur}` };
+        if (!r.mailEnvoye) return { avertissement: "Salarié créé, mais l'e-mail d'invitation n'a pas pu partir : renvoyez-le depuis sa fiche." };
+      } catch (e) {
+        console.error("Accès salarié :", e);
+        return { avertissement: "Salarié créé, mais l'accès n'a pas pu être ouvert : réessayez depuis sa fiche." };
+      }
+    }
     return {};
   }
 

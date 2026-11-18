@@ -19,6 +19,8 @@ const ACTIONS: Record<string, { label: string; couleur: string }> = {
   LOGIN: { label: "Connexion", couleur: "#15803d" },
   LOGIN_ECHEC: { label: "Mot de passe erroné", couleur: "#c2410c" },
   LOGIN_BLOQUE: { label: "Connexion bloquée", couleur: "#b91c1c" },
+  CODE_ENVOYE: { label: "Code de connexion envoyé", couleur: "#2563eb" },
+  CODE_ECHEC: { label: "Code de connexion erroné", couleur: "#b91c1c" },
   LOGOUT: { label: "Déconnexion", couleur: "#6b7280" },
   MDP_CHANGE: { label: "Mot de passe modifié", couleur: "#2563eb" },
   MDP_RESET: { label: "Mot de passe réinitialisé", couleur: "#2563eb" },

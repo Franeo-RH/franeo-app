@@ -79,17 +79,18 @@ export async function creerJetonLien(email: string, dureeMs: number): Promise<st
   return jeton;
 }
 
-/** Retrouve un lien valide (accepte aussi les anciens liens enregistrés en clair, envoyés avant la mise à jour) */
+/** Retrouve un lien valide. Seule l'empreinte est comparée : une empreinte lue en base ne vaut pas lien. */
 export async function lireJetonLien(jeton: string) {
-  if (!jeton || typeof jeton !== "string" || jeton.length > 200) return null;
-  return prisma.tokenReset.findFirst({ where: { token: { in: [empreinteJeton(jeton), jeton] } } });
+  if (!jeton || typeof jeton !== "string" || !/^[0-9a-f]{64}$/.test(jeton)) return null;
+  return prisma.tokenReset.findFirst({ where: { token: empreinteJeton(jeton) } });
 }
 
 /* ───────── Journal d'audit ───────── */
 
 export type ActionAudit =
   | "LOGIN" | "LOGIN_ECHEC" | "LOGIN_BLOQUE" | "LOGOUT" | "MDP_CHANGE" | "MDP_RESET" | "MDP_OUBLIE"
-  | "EXPORT" | "DROITS" | "SALARIE_SUPPR" | "COMPTE_SUPPR" | "RGPD_EXPORT" | "RGPD_ANONYMISATION" | "LOGO";
+  | "EXPORT" | "DROITS" | "SALARIE_SUPPR" | "COMPTE_SUPPR" | "RGPD_EXPORT" | "RGPD_ANONYMISATION" | "LOGO"
+  | "CODE_ENVOYE" | "CODE_ECHEC";
 
 export async function journaliser(e: {
   action: ActionAudit; utilisateur?: { id: string; email?: string | null; role?: string | null; entrepriseId?: string | null } | null;

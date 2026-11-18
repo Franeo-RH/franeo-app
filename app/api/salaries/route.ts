@@ -7,6 +7,7 @@ import { estSessionDemo, LIMITE_SALARIES_DEMO, NOM_FAMILLE_DEMO } from "@/lib/de
 import { evaluerSurcout, STATUT_ACCORD_REQUIS } from "@/lib/surcout";
 import { aDroit, ajoutParValidation } from "@/lib/droits";
 import { creerDemande } from "@/lib/demandes-salaries";
+import { creerAccesSalarie } from "@/lib/acces-salarie";
 import { etablissementDe, filtreSalaries } from "@/lib/perimetre";
 
 export async function GET() {
@@ -142,11 +143,19 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Case « Créer un accès à l'espace salarié » : seulement si l'entreprise a l'espace salarié et le droit de le gérer
+  const creerAcces =
+    brut?.creerAcces === true && !demo &&
+    (session.role === "ADMIN" || aDroit(session.entreprise?.permissions, "espace.gerer"));
+  if (brut && typeof brut === "object") brut.creerAcces = creerAcces;
+
   // Client : l'ajout devient une demande, validée par le gestionnaire
   if (session.role === "CLIENT" && ajoutParValidation(session.entreprise)) {
     await creerDemande({ entrepriseId, type: "AJOUT", donnees: brut, auteur: `${session.prenom} (${session.email})` });
     return NextResponse.json(
-      { demande: true, message: "Votre demande d'ajout a été envoyée. Le salarié apparaîtra dès sa validation par votre gestionnaire." },
+      { demande: true, message: creerAcces
+        ? "Votre demande d'ajout a été envoyée. Dès sa validation, le salarié recevra un e-mail pour créer son accès."
+        : "Votre demande d'ajout a été envoyée. Le salarié apparaîtra dès sa validation par votre gestionnaire." },
       { status: 202 }
     );
   }
@@ -285,9 +294,24 @@ export async function POST(request: NextRequest) {
     });
 
 
+    // Accès à l'espace salarié demandé à la création : e-mail d'invitation (un échec n'annule pas la création)
+    let acces: { envoye: boolean; message: string } | null = null;
+    if (creerAcces) {
+      try {
+        const r = await creerAccesSalarie(salarie.id, request);
+        acces = r.ok
+          ? { envoye: r.mailEnvoye, message: r.mailEnvoye ? `Invitation envoyée à ${r.email}.` : "L'e-mail d'invitation n'a pas pu partir : renvoyez-le depuis la fiche du salarié." }
+          : { envoye: false, message: r.erreur };
+      } catch (e) {
+        console.error("Accès salarié :", e);
+        acces = { envoye: false, message: "L'accès n'a pas pu être créé : réessayez depuis la fiche du salarié." };
+      }
+    }
+
     return NextResponse.json({
       succes: true,
       salarie,
+      acces,
     });
 
 

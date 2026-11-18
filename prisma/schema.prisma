@@ -1334,3 +1334,16 @@ model AccidentTravail {
   @@index([entrepriseId, statut])
   @@index([salarieId])
 }
+
+
+// Double authentification : code à 6 chiffres envoyé par e-mail à la connexion (seule son empreinte est gardée)
+model CodeConnexion {
+  id            String   @id @default(cuid())
+  utilisateurId String
+  empreinte     String
+  expiresAt     DateTime
+  essais        Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([utilisateurId])
+}

@@ -30,19 +30,32 @@ export function empreinte(motDePasseHache: string): string {
   return crypto.createHash("sha256").update(motDePasseHache).digest("base64url").slice(0, 16);
 }
 
-export function creerJeton(userId: string, motDePasseHache: string, dureeSecondes: number): string {
+/**
+ * demo : session « Tester la démo ». La marque fait partie de la signature : impossible de la retirer
+ * (effacer le cookie franeo_demo ne suffit plus à sortir de la consultation seule).
+ */
+export function creerJeton(userId: string, motDePasseHache: string, dureeSecondes: number, demo = false): string {
   const exp = Math.floor(Date.now() / 1000) + dureeSecondes;
   const contenu = `${b64(userId)}.${exp}.${empreinte(motDePasseHache)}`;
-  return `${contenu}.${signer(contenu)}`;
+  return `${contenu}.${signer(demo ? `demo:${contenu}` : contenu)}`;
 }
 
-/** Vérifie le jeton : signature, expiration. Renvoie l'identifiant et l'empreinte, ou null. */
-export function lireJeton(jeton: string | undefined | null): { userId: string; empreinte: string } | null {
-  if (!jeton) return null;
+/**
+ * Jetons à usage particulier (étape « code » de la double authentification, appareil de confiance).
+ * La signature inclut l'usage : un tel jeton ne peut jamais servir de cookie de session.
+ */
+export function creerJetonUsage(usage: string, userId: string, motDePasseHache: string, dureeSecondes: number): string {
+  const exp = Math.floor(Date.now() / 1000) + dureeSecondes;
+  const contenu = `${b64(userId)}.${exp}.${empreinte(motDePasseHache)}`;
+  return `${contenu}.${signer(`${usage}:${contenu}`)}`;
+}
+
+export function lireJetonUsage(usage: string, jeton: string | undefined | null): { userId: string; empreinte: string } | null {
+  if (!jeton || jeton.length > 400) return null;
   const morceaux = jeton.split(".");
   if (morceaux.length !== 4) return null;
   const [id64, exp, emp, sig] = morceaux;
-  const attendu = signer(`${id64}.${exp}.${emp}`);
+  const attendu = signer(`${usage}:${id64}.${exp}.${emp}`);
   const a = Buffer.from(sig);
   const b = Buffer.from(attendu);
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
@@ -50,9 +63,27 @@ export function lireJeton(jeton: string | undefined | null): { userId: string; e
   return { userId: deB64(id64), empreinte: emp };
 }
 
+const egal = (x: string, y: string) => {
+  const a = Buffer.from(x), b = Buffer.from(y);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+};
+
+/** Vérifie le jeton : signature, expiration. Renvoie l'identifiant, l'empreinte et la marque démo, ou null. */
+export function lireJeton(jeton: string | undefined | null): { userId: string; empreinte: string; demo: boolean } | null {
+  if (!jeton || jeton.length > 400) return null;
+  const morceaux = jeton.split(".");
+  if (morceaux.length !== 4) return null;
+  const [id64, exp, emp, sig] = morceaux;
+  const contenu = `${id64}.${exp}.${emp}`;
+  const demo = !egal(sig, signer(contenu));
+  if (demo && !egal(sig, signer(`demo:${contenu}`))) return null;
+  if (!/^\d+$/.test(exp) || Number(exp) * 1000 < Date.now()) return null;
+  return { userId: deB64(id64), empreinte: emp, demo };
+}
+
 /** Pose le cookie de session signé sur la réponse (demo : session « Tester la démo », en consultation seule) */
 export function ouvrirSession(res: NextResponse, utilisateur: { id: string; motDePasse: string }, dureeSecondes: number, options: { demo?: boolean } = {}) {
-  res.cookies.set(NOM_COOKIE, creerJeton(utilisateur.id, utilisateur.motDePasse, dureeSecondes), {
+  res.cookies.set(NOM_COOKIE, creerJeton(utilisateur.id, utilisateur.motDePasse, dureeSecondes, !!options.demo), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

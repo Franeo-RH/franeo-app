@@ -17,6 +17,42 @@ export default function LoginPage() {
   const [chargement, setChargement] = useState(false);
   const [chargementDemo, setChargementDemo] = useState(false);
   const [profilDemo, setProfilDemo] = useState<"client" | "salarie" | "manager">("client");
+  // Double authentification : 2e étape, code reçu par e-mail
+  const [etapeCode, setEtapeCode] = useState<{ jeton: string; email: string } | null>(null);
+  const [code, setCode] = useState("");
+  const [confiance, setConfiance] = useState(true);
+  const [info, setInfo] = useState("");
+
+  async function entrer(role: string) {
+    await viderCacheHorsLigne(); oublierDroits(); // nouvelle session : on repart d'un cache vide
+    router.push(role === "SALARIE" ? "/salarie" : role === "ADMIN" ? "/admin/dashboard" : "/client/dashboard");
+  }
+
+  async function validerCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!etapeCode) return;
+    setChargement(true); setErreur(""); setInfo("");
+    const res = await fetch("/api/auth/code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jeton: etapeCode.jeton, code, confiance }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setErreur(data.erreur || "Code incorrect");
+      if (data.recommencer) { setEtapeCode(null); setCode(""); }
+      setChargement(false);
+      return;
+    }
+    await entrer(data.role);
+  }
+
+  async function renvoyerCode() {
+    if (!etapeCode) return;
+    setErreur(""); setInfo("");
+    const res = await fetch("/api/auth/code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jeton: etapeCode.jeton, renvoyer: true }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { setErreur(data.erreur || "Envoi impossible"); if (data.recommencer) setEtapeCode(null); return; }
+    setEtapeCode({ ...etapeCode, jeton: data.jeton });
+    setCode("");
+    setInfo("📧 Nouveau code envoyé.");
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,16 +73,13 @@ export default function LoginPage() {
       return;
     }
 
-    if (data.role === "SALARIE") {
-      await viderCacheHorsLigne(); oublierDroits();
-      router.push("/salarie");
-    } else if (data.role === "ADMIN") {
-      await viderCacheHorsLigne(); oublierDroits(); // nouvelle session : on repart d'un cache vide
-      router.push("/admin/dashboard");
-    } else {
-      await viderCacheHorsLigne(); oublierDroits(); // nouvelle session : on repart d'un cache vide
-      router.push("/client/dashboard");
+    if (data.etape === "code") {
+      setEtapeCode({ jeton: data.jeton, email: data.email });
+      setCode("");
+      setChargement(false);
+      return;
     }
+    await entrer(data.role);
   }
 
   async function testerLaDemo() {
@@ -77,6 +110,37 @@ export default function LoginPage() {
 
         <p className="text-gray-500 text-center mb-8">Gérez vos ressources humaines simplement et efficacement.</p>
 
+        {etapeCode ? (
+          <form onSubmit={validerCode} className="flex flex-col gap-4">
+            <div className="text-center">
+              <p className="text-lg font-bold">🔐 Vérification en deux étapes</p>
+              <p className="text-sm text-gray-500 mt-1">Nous avons envoyé un code à 6 chiffres à <strong>{etapeCode.email}</strong>. Il est valable 10 minutes.</p>
+            </div>
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              inputMode="numeric" autoComplete="one-time-code" autoFocus
+              aria-label="Code reçu par e-mail" placeholder="••••••"
+              className="w-full border-2 rounded-lg px-4 py-3 text-black text-center text-2xl font-bold"
+              style={{ letterSpacing: "0.5em" }}
+              required
+            />
+            <label className="flex items-center gap-2 text-sm text-gray-600">
+              <input type="checkbox" checked={confiance} onChange={(e) => setConfiance(e.target.checked)} />
+              Faire confiance à cet appareil pendant 30 jours (pas sur un ordinateur partagé)
+            </label>
+            {erreur && <p className="text-red-500 text-sm">{erreur}</p>}
+            {info && <p className="text-green-700 text-sm">{info}</p>}
+            <button type="submit" disabled={chargement || code.length !== 6} className="bg-orange-500 text-white rounded-lg py-3 font-semibold hover:bg-orange-600 transition disabled:opacity-50">
+              {chargement ? "Vérification..." : "Valider le code"}
+            </button>
+            <div className="flex justify-between text-sm">
+              <button type="button" onClick={renvoyerCode} className="text-orange-500 hover:underline">Renvoyer un code</button>
+              <button type="button" onClick={() => { setEtapeCode(null); setErreur(""); setInfo(""); }} className="text-gray-500 hover:underline">← Retour</button>
+            </div>
+            <p className="text-xs text-gray-400 text-center">Pas reçu ? Regardez dans vos courriers indésirables.</p>
+          </form>
+        ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
             <label className="block text-sm font-semibold mb-1">Email</label>
@@ -118,6 +182,7 @@ export default function LoginPage() {
             {chargement ? "Connexion..." : "Se connecter"}
           </button>
         </form>
+        )}
 
         <div className="flex items-center gap-3 my-6">
           <div className="flex-1 border-t" />

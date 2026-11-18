@@ -3,18 +3,18 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { notifierAdmin } from "@/lib/notifications";
 import { BESOINS } from "@/lib/inscriptions";
+import { estBloque, ipDe, noterEchec } from "@/lib/securite";
 
-// Limite simple : 5 demandes par adresse IP et par heure
-const envois = new Map<string, number[]>();
+// Limite : 5 demandes par adresse IP et par heure, comptées en base (valable sur tous les serveurs Vercel)
+const MAX_ENVOIS = 5;
+const FENETRE_MS = 3600_000;
 
 // POST (public) : demande d'inscription ou de contact depuis la démo ou la page de connexion
 export async function POST(request: NextRequest) {
   const b = await request.json().catch(() => ({}));
   if (b.siteWeb) return NextResponse.json({ succes: true }); // champ piège anti-robots
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "inconnue";
-  const maintenant = Date.now();
-  const recents = (envois.get(ip) || []).filter((t) => maintenant - t < 3600_000);
-  if (recents.length >= 5) return NextResponse.json({ erreur: "Trop de demandes, réessayez plus tard." }, { status: 429 });
+  const cle = `inscription:ip:${ipDe(request)}`;
+  if (await estBloque(cle, MAX_ENVOIS, FENETRE_MS)) return NextResponse.json({ erreur: "Trop de demandes, réessayez plus tard." }, { status: 429 });
 
   const t = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : "");
   const societe = t(b.societe), prenom = t(b.prenom, 80), nom = t(b.nom, 80), email = t(b.email, 160).toLowerCase();
@@ -26,8 +26,7 @@ export async function POST(request: NextRequest) {
   const demande = await prisma.demandeInscription.create({
     data: { societe, prenom, nom, email, telephone: t(b.telephone, 30) || null, effectif: t(b.effectif, 30) || null, besoins, message: t(b.message, 2000) || null, type },
   });
-  recents.push(maintenant);
-  envois.set(ip, recents);
+  await noterEchec(cle, MAX_ENVOIS, FENETRE_MS);
 
   const session = await getSession().catch(() => null);
   await notifierAdmin({

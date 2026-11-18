@@ -8,6 +8,7 @@ import { ChampsRoleRH, ChoixOrganisation, type RoleRH } from "@/components/Champ
 import ModaleSurcout from "@/components/ModaleSurcout";
 import type { Surcout } from "@/lib/surcout";
 import { TYPES_RAPPEL, formaterDateFR } from "@/lib/rappels";
+import { aDroit } from "@/lib/droits";
 
 const ONGLETS = ["Infos personnelles", "Poste", "Salaire", "Documents & échéances"];
 
@@ -22,6 +23,7 @@ export default function NouveauSalarie() {
   const [prenom, setPrenom] = useState("");
   const [permissions, setPermissions] = useState<string[]>([]);
   const [demo, setDemo] = useState(false);
+  const [creerAcces, setCreerAcces] = useState(false);
 
   const [rh, setRh] = useState<RoleRH>({ roleRH: "SALARIE", managerId: "", voitSalairesEquipe: false, saisieVariables: false });
   const [form, setForm] = useState({
@@ -70,7 +72,7 @@ export default function NouveauSalarie() {
     const res = await fetch("/api/salaries", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, ...(demo ? {} : rh), rappels, accepteSurcout }),
+      body: JSON.stringify({ ...form, ...(demo ? {} : rh), rappels, accepteSurcout, creerAcces: creerAcces && !!form.email.trim() }),
     });
     // Supplément : on demande l'accord du client
     if (res.status === 402) {
@@ -97,8 +99,17 @@ export default function NouveauSalarie() {
       router.push("/client/salaries/demandes?envoyee=1");
       return;
     }
+    // Accès demandé mais pas parti : on ouvre la fiche pour pouvoir renvoyer l'invitation
+    if (retour.acces && !retour.acces.envoye && retour.salarie?.id) {
+      setErreur(retour.acces.message);
+      router.push(`/client/salaries/${retour.salarie.id}`);
+      return;
+    }
     router.push("/client/salaries");
   }
+
+  // Case « Créer un accès » : entreprise avec l'espace salarié et compte autorisé à gérer les accès
+  const accesPossible = !demo && aDroit(permissions, "espace.gerer");
 
   // Champ de saisie, ou bloc gris verrouillé dans la version démo
   function champ(label: string, name: keyof typeof form, type = "text", libre = false) {
@@ -152,6 +163,20 @@ export default function NouveauSalarie() {
                 {champ("Code postal", "codePostal")}
                 {champ("Ville", "ville")}
                 {champ("Pays", "pays")}
+                {accesPossible && (
+                  <label className="col-span-2 flex items-start gap-3 rounded-lg border border-orange-200 bg-orange-50 p-4 cursor-pointer">
+                    <input type="checkbox" className="mt-1 h-4 w-4 accent-orange-500" checked={creerAcces} onChange={(e) => setCreerAcces(e.target.checked)} />
+                    <span>
+                      <span className="font-semibold">Créer un accès à l&apos;espace salarié</span>
+                      <span className="block text-sm text-gray-600">
+                        Le salarié reçoit un e-mail pour choisir son mot de passe : il pourra déclarer ses absences et congés, consulter ses documents et ses relevés.
+                      </span>
+                      {creerAcces && !form.email.trim() && (
+                        <span className="block text-sm text-amber-700 mt-1">Renseignez son e-mail ci-dessus pour lui envoyer l&apos;invitation.</span>
+                      )}
+                    </span>
+                  </label>
+                )}
               </div>
             )}
 

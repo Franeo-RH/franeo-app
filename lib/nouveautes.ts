@@ -15,6 +15,19 @@ export type MiseAJour = {
 
 export const MISES_A_JOUR: MiseAJour[] = [
   {
+    version: "V60",
+    date: "novembre 2026",
+    titre: "Connexion plus sûre et invitations par e-mail",
+    clients: [
+      "🔐 Double authentification : après le mot de passe, un code à 6 chiffres est envoyé par e-mail (valable 10 minutes). Cochez « Faire confiance à cet appareil » pour ne plus le saisir pendant 30 jours.",
+      "✉️ Ajout d'un salarié : cochez « Créer un accès à l'espace salarié » et il reçoit directement un e-mail pour choisir son mot de passe.",
+      "👤 Fiche salarié : « Inviter par e-mail » et « Renvoyer l'invitation » remplacent le lien à copier.",
+    ],
+    salaries: [
+      "🔐 Connexion protégée par un code reçu par e-mail, avec l'option de faire confiance à votre appareil pendant 30 jours.",
+    ],
+  },
+  {
     version: "V59",
     date: "novembre 2026",
     titre: "Nouvelle grille tarifaire FRANEO RH",
