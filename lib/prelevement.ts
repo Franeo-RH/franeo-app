@@ -37,6 +37,8 @@ export async function urlSignatureMandat(entrepriseId: string, base: string, ema
   const session = await stripe<{ url: string }>("/checkout/sessions", {
     params: {
       mode: "setup",
+      // « Managed Payments » (activé par défaut sur les nouveaux comptes Stripe) n'accepte pas le mode setup
+      managed_payments: { enabled: false },
       currency: "eur",
       customer: client,
       payment_method_types: ["sepa_debit"],
