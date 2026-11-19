@@ -41,6 +41,11 @@ model Entreprise {
   // Prélèvement SEPA des abonnements (Stripe) : l'IBAN reste chez Stripe, seuls ses 4 derniers chiffres sont gardés
   stripeClientId    String?            @unique
 
+  // Suivi commercial (indicatif, pour les factures Abby et le suivi) : remise accordée, code de parrainage, début du contrat
+  remisePct         Float?
+  codeParrainage    String?
+  dateDebutContrat  DateTime?
+
   // Cabinet comptable qui suit ce client (accès cabinet)
   cabinetId         String?
   cabinet           Cabinet?           @relation(fields: [cabinetId], references: [id], onDelete: SetNull)
@@ -983,10 +988,11 @@ model PieceJointe {
 }
 
 // Modèle de contrat Word (.docx) déposé par le client, avec ses champs {{...}}
+// Modèle de contrat Word : celui d'un client, ou (entrepriseId vide) un modèle FRANEO RH proposé à tous les clients
 model TrameContrat {
-  id           String     @id @default(cuid())
-  entrepriseId String
-  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  id           String      @id @default(cuid())
+  entrepriseId String?
+  entreprise   Entreprise? @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
   nom          String
   champs       String[]
   fichier      Bytes?

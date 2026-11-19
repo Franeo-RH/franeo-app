@@ -5,7 +5,7 @@ import ChoixFichier from "@/components/ChoixFichier";
 import { CHAMPS_CONTRAT, champsDuTexte, formaterValeur, GROUPES_CONTRAT, libelleChamp, MODELES_INTEGRES, modeleConseille, type ChampContrat } from "@/lib/contrats";
 import { ajouterLogo, type Logo, type ZipLike } from "@/lib/docx-logo";
 
-type Trame = { id: string; nom: string; champs: string[]; taille: number; createdAt: string };
+type Trame = { id: string; nom: string; champs: string[]; taille: number; createdAt: string; franeo?: boolean };
 type Historique = { id: string; intitule: string; typeContrat: string; trameNom: string | null; auteur: string; verification: boolean; createdAt: string };
 type S = { id: string; prenom: string; nom: string };
 
@@ -211,8 +211,13 @@ export default function ContratsClient() {
                 <span className="block text-xs text-gray-500">{m.description}</span>
               </button>
             ))}
-            {trames.length > 0 && <h2 className="text-lg font-bold mt-2">Mes modèles</h2>}
-            {trames.map((t) => (
+            {trames.filter((t) => t.franeo).map((t) => (
+              <button key={t.id} type="button" disabled={occupe} onClick={() => choisirModele(t.id)} className="text-left border rounded-lg p-3 hover:bg-orange-50">
+                <strong>📘 {t.nom}</strong><span className="block text-xs text-gray-500">Modèle FRANEO RH · {t.champs.length} champ(s)</span>
+              </button>
+            ))}
+            {trames.some((t) => !t.franeo) && <h2 className="text-lg font-bold mt-2">Mes modèles</h2>}
+            {trames.filter((t) => !t.franeo).map((t) => (
               <div key={t.id} className="flex items-center gap-2">
                 <button type="button" disabled={occupe} onClick={() => choisirModele(t.id)} className="flex-1 text-left border rounded-lg p-3 hover:bg-orange-50">
                   <strong>📄 {t.nom}</strong><span className="block text-xs text-gray-500">{t.champs.length} champ(s) · ajouté le {new Date(t.createdAt).toLocaleDateString("fr-FR")}</span>

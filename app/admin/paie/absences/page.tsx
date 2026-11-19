@@ -1,6 +1,3 @@
-import { redirect } from "next/navigation";
-
-// Les absences sont maintenant dans l'onglet Salariés
-export default function AncienneAdresseAbsences() {
-  redirect("/admin/salaries/absences");
-}
+// Paie › Absences : même page que le suivi des absences, rangée dans l'onglet Paie
+export { default } from "@/app/admin/salaries/absences/page";
+export const dynamic = "force-dynamic";

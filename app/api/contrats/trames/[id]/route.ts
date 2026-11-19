@@ -4,11 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { telecharger } from "@/lib/fichiers";
 
-async function charger(id: string) {
+async function charger(id: string, ecriture = false) {
   const session = await getSession();
   if (!session) return null;
   const t = await prisma.trameContrat.findUnique({ where: { id } });
-  if (!t || (session.role === "CLIENT" && t.entrepriseId !== session.entrepriseId)) return null;
+  if (!t) return null;
+  // Client : ses modèles ; les modèles FRANEO RH (sans entreprise) en lecture seule
+  if (session.role === "CLIENT" && t.entrepriseId !== session.entrepriseId && (ecriture || t.entrepriseId !== null)) return null;
   return t;
 }
 
@@ -23,7 +25,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const t = await charger(id);
+  const t = await charger(id, true);
   if (!t) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
   await prisma.trameContrat.delete({ where: { id } });
   await supprimerFichierStocke(t.cle);

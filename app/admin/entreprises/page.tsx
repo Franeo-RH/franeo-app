@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
+import ListeEntreprisesAdmin, { type CarteEntreprise } from "@/components/ListeEntreprisesAdmin";
 import BoutonExport from "@/components/BoutonExport";
 import { BoutonExportComplet, BoutonImportAdmin } from "@/components/OutilsAdmin";
 
@@ -17,25 +18,55 @@ export default async function AdminEntreprises() {
 
 
 
+  const maintenant = new Date();
+  const annee = maintenant.getFullYear();
+  const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
   // Requêtes lancées en même temps
-  const [entreprises, demandesEnAttente] = await Promise.all([
+  const [entreprises, demandesEnAttente, factures, tickets, absences, demandesSal, evolutions, devis, services] = await Promise.all([
     prisma.entreprise.findMany({
       where: { demo: false },
       include: {
-        abonnement: true,
-        _count: {
-          select: {
-            salaries: true,
-            utilisateurs: true,
-          },
-        },
+        abonnement: { select: { nom: true } },
+        abonnementPaie: { select: { nom: true } },
+        cabinet: { select: { nom: true } },
+        _count: { select: { utilisateurs: true, salaries: { where: { statut: "Actif", OR: [{ dateFin: null }, { dateFin: { gte: maintenant } }] } } } },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { nom: "asc" },
     }),
-    prisma.demandeEvolution.count({
-      where: { statut: "En attente", entreprise: { demo: false } },
-    }),
+    prisma.demandeEvolution.count({ where: { statut: "En attente", entreprise: { demo: false } } }),
+    prisma.facturation.findMany({ where: { entreprise: { demo: false } }, select: { entrepriseId: true, mois: true, annee: true, montant: true, statut: true } }),
+    prisma.ticket.groupBy({ by: ["entrepriseId"], where: { statut: { not: "Clôturé" }, entreprise: { demo: false } }, _count: { _all: true } }),
+    prisma.absence.groupBy({ by: ["entrepriseId"], where: { statut: "En attente", entreprise: { demo: false } }, _count: { _all: true } }),
+    prisma.demandeSalarie.groupBy({ by: ["entrepriseId"], where: { statut: "EN_ATTENTE", entreprise: { demo: false } }, _count: { _all: true } }),
+    prisma.demandeEvolution.groupBy({ by: ["entrepriseId"], where: { statut: "En attente", entreprise: { demo: false } }, _count: { _all: true } }),
+    prisma.devis.groupBy({ by: ["entrepriseId"], where: { statut: "EN_ATTENTE", entreprise: { demo: false } }, _count: { _all: true } }),
+    prisma.demandeService.groupBy({ by: ["entrepriseId"], where: { statut: { in: ["EN_ATTENTE", "EN_COURS"] }, entreprise: { demo: false } }, _count: { _all: true } }),
   ]);
+  const compte = (g: { entrepriseId: string; _count: { _all: number } }[]) => new Map(g.map((x) => [x.entrepriseId, x._count._all]));
+  const [mT, mA, mD, mE, mV, mS] = [compte(tickets), compte(absences), compte(demandesSal), compte(evolutions), compte(devis), compte(services)];
+
+  const cartes: CarteEntreprise[] = entreprises.map((e) => {
+    const f = factures.filter((x) => x.entrepriseId === e.id);
+    const derniere = [...f].sort((x, y) => y.annee - x.annee || y.mois - x.mois)[0];
+    const enCours = [
+      { n: mE.get(e.id) ?? 0, label: ["changement d'abonnement", "changements d'abonnement"], href: "/admin/entreprises/demandes" },
+      { n: mV.get(e.id) ?? 0, label: ["devis à chiffrer", "devis à chiffrer"], href: "/admin/entreprises/devis" },
+      { n: mS.get(e.id) ?? 0, label: ["demande d'app ou d'option", "demandes d'apps ou d'options"], href: "/admin/entreprises/demandes-services" },
+      { n: mD.get(e.id) ?? 0, label: ["demande salarié à valider", "demandes salariés à valider"], href: "/admin/paie/demandes" },
+    ].filter((x) => x.n > 0).map((x) => ({ label: `${x.n} ${x.label[x.n > 1 ? 1 : 0]}`, href: x.href }));
+    return {
+      id: e.id, nom: e.nom, ville: e.ville, actif: e.actif,
+      formuleRH: e.abonnement?.nom ?? null, formulePaie: e.abonnementPaie?.nom ?? null, cabinet: e.cabinet?.nom ?? null,
+      remisePct: e.remisePct, codeParrainage: e.codeParrainage, debutContrat: (e.dateDebutContrat ?? e.createdAt).toISOString(),
+      salaries: e._count.salaries, comptes: e._count.utilisateurs, tickets: mT.get(e.id) ?? 0, absences: mA.get(e.id) ?? 0, demandesSalaries: mD.get(e.id) ?? 0,
+      caAnnee: f.filter((x) => x.annee === annee).reduce((t, x) => t + x.montant, 0),
+      caTotal: f.reduce((t, x) => t + x.montant, 0),
+      impaye: f.filter((x) => x.statut !== "Payé").reduce((t, x) => t + x.montant, 0),
+      dernierMois: derniere ? `${MOIS[derniere.mois - 1]} ${derniere.annee} · ${derniere.statut}` : null,
+      enCours,
+    };
+  });
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -63,53 +94,11 @@ export default async function AdminEntreprises() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow p-8">
-            {entreprises.length === 0 ? (
-              <p className="text-gray-500">Aucune entreprise pour le moment.</p>
-            ) : (
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b">
-                    <th className="pb-3">Entreprise</th>
-                    <th className="pb-3">Abonnement</th>
-                    <th className="pb-3">Salariés</th>
-                    <th className="pb-3">Utilisateurs</th>
-                    <th className="pb-3">Ville</th>
-                    <th className="pb-3">Statut</th>
-                    <th className="pb-3"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {entreprises.map((e) => (
-                    <tr key={e.id} className={`border-b hover:bg-gray-50 transition ${e.actif ? "" : "opacity-60"}`}>
-                      <td className="py-3 font-semibold">{e.nom}</td>
-                      <td className="py-3">
-                        <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-sm font-semibold">
-                          {e.abonnement?.nom || "—"}
-                        </span>
-                      </td>
-                      <td className="py-3">{e._count.salaries}</td>
-                      <td className="py-3">{e._count.utilisateurs}</td>
-                      <td className="py-3">{e.ville || "—"}</td>
-                      <td className="py-3">
-                        <span style={e.actif ? { backgroundColor: "#dcfce7", color: "#15803d" } : { backgroundColor: "#fef9c3", color: "#a16207" }} className="px-3 py-1 rounded-full text-xs font-semibold">
-                          {e.actif ? "Active" : "⏸️ Suspendue"}
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        <Link
-                          href={`/admin/entreprises/${e.id}`}
-                          className="text-orange-500 font-semibold hover:underline"
-                        >
-                          Voir →
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+          {entreprises.length === 0 ? (
+            <div className="bg-white rounded-xl shadow p-8 text-gray-500">Aucune entreprise pour le moment.</div>
+          ) : (
+            <ListeEntreprisesAdmin entreprises={cartes} annee={annee} />
+          )}
 
         </main>
       </div>

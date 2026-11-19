@@ -53,7 +53,8 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
     ? [
         { href: "/admin/dashboard", label: "Dashboard", icon: "/DASHBOARD-LOGO.png", visible: true },
         { href: "/admin/entreprises", label: "Entreprises", icon: "/ENTREPRISE-LOGO.png", visible: true, actifSur: ["/admin/abonnement-paie", "/admin/abonnements-rh"] },
-        { href: "/admin/salaries", label: "Salariés", icon: "/SALARIE-LOGO.png", visible: true },
+        // Les salariés d'un client s'ouvrent depuis sa carte (Entreprises) ; l'onglet devient l'espace Documentaire
+        { href: "/admin/documentaire", label: "Documentaire", icon: "/FAQ-LOGO.png", visible: true, actifSur: ["/admin/salaries"] },
         { href: "/admin/paie", label: "Paie", icon: "/PAIE-LOGO.png", visible: true },
         { href: "/admin/tickets", label: "Tickets RH", icon: "/TICKET-LOGO.png", visible: true, actifSur: ["/admin/recrutement", "/admin/entreprises/tickets"] },
         { href: "/admin/communication", label: "Communication", icon: "/COMMUNICATION-LOGO.png", visible: true, actifSur: ["/admin/actualites", "/admin/faq"] },

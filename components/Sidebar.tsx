@@ -41,20 +41,18 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/entreprises/demandes-services", label: "📬 Apps, options & formations", groupe: "📬 Demandes des clients" },
       ] };
     }
-    if (dans("/admin/salaries")) {
-      return { titre: "Salariés", items: [
-        { href: "/admin/salaries", label: "👥 Liste des salariés" },
-        { href: "/admin/salaries/nouveau", label: "➕ Ajouter un salarié" },
-        { href: "/admin/salaries/demandes", label: "📝 Demandes clients" },
-        { href: "/admin/salaries/mouvements", label: "🔄 Mouvements", groupe: "📂 Suivi RH" },
-        { href: "/admin/salaries/echeances", label: "⏰ Échéances", groupe: "📂 Suivi RH" },
-        { href: "/admin/salaries/contrats", label: "📝 Contrats générés", groupe: "📂 Suivi RH" },
-        { href: "/admin/salaries/accidents", label: "🩹 Accidents du travail", groupe: "📂 Suivi RH" },
-        { href: "/admin/salaries/courriers", label: "✉️ Modèles de courriers", groupe: "📂 Suivi RH" },
-        { href: "/admin/salaries/absences", label: "🏖️ Absences", groupe: "🕒 Temps & absences" },
-        { href: "/admin/salaries/pointages", label: "📍 Journal des pointages", groupe: "🕒 Temps & absences" },
-        { href: "/admin/salaries/acces", label: "📱 Gestion des accès", groupe: "🔐 Accès & sécurité" },
-        { href: "/admin/salaries/rgpd", label: "🔐 RGPD & sécurité", groupe: "🔐 Accès & sécurité" },
+    if (dans("/admin/salaries", "/admin/documentaire")) {
+      return { titre: "Documentaire", items: [
+        { href: "/admin/documentaire", label: "🗂️ Vue d'ensemble" },
+        { href: "/admin/salaries/mouvements", label: "🔄 Mouvements", groupe: "📂 Suivi général" },
+        { href: "/admin/salaries/echeances", label: "⏰ Échéances", groupe: "📂 Suivi général" },
+        { href: "/admin/salaries/accidents", label: "🩹 Accidents du travail", groupe: "📂 Suivi général" },
+        { href: "/admin/salaries/pointages", label: "📍 Journal des pointages", groupe: "📜 Journaux" },
+        { href: "/admin/salaries/rgpd", label: "🔐 Journal d'activité & RGPD", groupe: "📜 Journaux" },
+        { href: "/admin/salaries/acces", label: "📱 Accès des salariés", groupe: "🔑 Accès" },
+        { href: "/admin/documentaire/modeles", label: "📄 Modèles de contrats", groupe: "📝 Modèles" },
+        { href: "/admin/salaries/courriers", label: "✉️ Modèles de courriers", groupe: "📝 Modèles" },
+        { href: "/admin/salaries/contrats", label: "🧐 Contrats générés", groupe: "📝 Modèles" },
       ] };
     }
     if (dans("/admin/paie")) {
@@ -64,6 +62,8 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/paie/releves", label: "⏱️ Relevés d'heures" },
         { href: "/admin/paie/historique", label: "📋 Historique" },
         { href: "/admin/paie/clotures", label: "🔒 Clôtures & journal" },
+        { href: "/admin/paie/absences", label: "🏖️ Absences" },
+        { href: "/admin/paie/demandes", label: "📝 Demandes de modification" },
       ] };
     }
     if (dans("/admin/actualites", "/admin/communication", "/admin/faq")) {

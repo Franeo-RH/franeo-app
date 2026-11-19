@@ -40,12 +40,14 @@ export default function RgpdAdmin() {
   const [action, setAction] = useState("");
   const [q, setQ] = useState("");
   const [recherche, setRecherche] = useState("");
+  const [du, setDu] = useState("");
+  const [au, setAu] = useState("");
   const [purge, setPurge] = useState<string | null>(null);
 
   const charger = useCallback(() => {
-    const p = new URLSearchParams({ page: String(page), action, q: recherche });
+    const p = new URLSearchParams({ page: String(page), action, q: recherche, du, au });
     fetch(`/api/admin/rgpd?${p}`).then((r) => (r.ok ? r.json() : null)).then(setD).catch(() => setD(null));
-  }, [page, action, recherche]);
+  }, [page, action, recherche, du, au]);
   useEffect(() => { charger(); }, [charger]);
 
   async function purger() {
@@ -96,7 +98,9 @@ export default function RgpdAdmin() {
       <div className="bg-white rounded-xl shadow p-6">
         <div className="flex flex-wrap gap-3 items-end justify-between mb-4">
           <h2 className="text-lg font-bold">📜 Journal d&apos;audit</h2>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
+            <label className="text-sm flex items-center gap-1">Du <input type="date" value={du} onChange={(e) => { setDu(e.target.value); setPage(0); }} className="border rounded-lg px-2 py-2 text-sm" /></label>
+            <label className="text-sm flex items-center gap-1">au <input type="date" value={au} onChange={(e) => { setAu(e.target.value); setPage(0); }} className="border rounded-lg px-2 py-2 text-sm" /></label>
             <select value={action} onChange={(e) => { setAction(e.target.value); setPage(0); }} className="border rounded-lg px-3 py-2 text-sm" aria-label="Type d'événement">
               <option value="">Tous les événements</option>
               {Object.entries(ACTIONS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}

@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 
-const ONGLETS = ["Infos entreprise", "Coordonnées bancaires"];
+const ONGLETS = ["Infos entreprise", "Coordonnées bancaires", "Suivi commercial"];
 
 type Abonnement = { id: string; nom: string; prixMensuel: number };
 
@@ -34,6 +34,9 @@ export default function ModifierEntreprise() {
     banque: "",
     iban: "",
     bic: "",
+    remisePct: "",
+    codeParrainage: "",
+    dateDebutContrat: "",
   });
 
   useEffect(() => {
@@ -55,6 +58,9 @@ export default function ModifierEntreprise() {
         banque: entreprise.banque || "",
         iban: entreprise.iban || "",
         bic: entreprise.bic || "",
+        remisePct: entreprise.remisePct != null ? String(entreprise.remisePct) : "",
+        codeParrainage: entreprise.codeParrainage || "",
+        dateDebutContrat: entreprise.dateDebutContrat ? String(entreprise.dateDebutContrat).slice(0, 10) : "",
       });
       setAbonnements(abonnements);
       setChargementInitial(false);
@@ -152,6 +158,17 @@ export default function ModifierEntreprise() {
                 <Field label="Banque" name="banque" value={form.banque} onChange={handleChange} />
                 <Field label="IBAN" name="iban" value={form.iban} onChange={handleChange} />
                 <Field label="BIC" name="bic" value={form.bic} onChange={handleChange} />
+              </div>
+            )}
+
+            {onglet === 2 && (
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-gray-500">Informations indicatives, pour vos factures Abby et votre suivi : elles ne changent aucun calcul dans l&apos;application.</p>
+                <div className="grid grid-cols-2 gap-6">
+                  <Field label="Date de début du contrat de prestation" name="dateDebutContrat" value={form.dateDebutContrat} onChange={handleChange} type="date" />
+                  <Field label="Remise accordée (%)" name="remisePct" value={form.remisePct} onChange={handleChange} />
+                  <Field label="Code de parrainage" name="codeParrainage" value={form.codeParrainage} onChange={handleChange} />
+                </div>
               </div>
             )}
 

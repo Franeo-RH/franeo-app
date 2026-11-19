@@ -107,6 +107,9 @@ export default async function FicheEntrepriseAdmin({
                 <Info label="Téléphone" value={entreprise.telephone} />
                 <Info label="Site web" value={entreprise.siteWeb} />
                 <Info label="Ville" value={entreprise.ville} />
+                <Info label="Début du contrat" value={(entreprise.dateDebutContrat ?? entreprise.createdAt).toLocaleDateString("fr-FR")} />
+                <Info label="Remise accordée" value={entreprise.remisePct != null ? `${entreprise.remisePct} %` : null} />
+                <Info label="Code de parrainage" value={entreprise.codeParrainage} />
               </div>
             </div>
 

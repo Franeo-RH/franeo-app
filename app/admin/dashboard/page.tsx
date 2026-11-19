@@ -10,6 +10,7 @@ import RafraichirAuto from "@/components/RafraichirAuto";
 import { chargerEcheances } from "@/lib/rappels-serveur";
 import { calculerFacture } from "@/lib/facturation";
 import { BoutonExportComplet } from "@/components/OutilsAdmin";
+import GraphiqueFactures from "@/components/GraphiqueFactures";
 
 export const dynamic = "force-dynamic";
 
@@ -32,10 +33,10 @@ export default async function AdminDashboard() {
   const [
     entreprises,
     nDemSal, nInscriptions, nDemRH, nDemPaie, nDevis, nQuestions, nTickets, nHelpdesk, nPrest, nRecrut, nVariables, nAbsences, nReleves,
-    echeances, facturesMois,
+    echeances, facturesMois, nbSalariesGeres, factures12,
     actDemSal, actDevis, actQuestions, actTickets, actHelpdesk, actRecrut, actPrest, actAbs, actReleves,
   ] = await Promise.all([
-    prisma.entreprise.findMany({ where: client, select: { id: true, nom: true, permissions: true, abonnementId: true, abonnementPaieId: true } }),
+    prisma.entreprise.findMany({ where: client, select: { id: true, nom: true, permissions: true, abonnementId: true, abonnementPaieId: true, cabinetId: true } }),
     prisma.demandeSalarie.count({ where: { statut: "EN_ATTENTE", entreprise: client } }),
     prisma.demandeInscription.count({ where: { statut: "NOUVELLE" } }),
     prisma.demandeEvolution.count({ where: { statut: "En attente", entreprise: client } }),
@@ -51,6 +52,13 @@ export default async function AdminDashboard() {
     prisma.releveMois.count({ where: { statut: "Envoyé", entreprise: client } }),
     chargerEcheances({ sansDemo: true }),
     prisma.facturation.findMany({ where: { mois: moisActuel, annee: anneeActuelle, entreprise: { demo: false } }, select: { entrepriseId: true, montant: true } }),
+    // Salariés gérés par l'application : en poste chez les clients actifs
+    prisma.salarie.count({ where: { statut: "Actif", entreprise: client, OR: [{ dateFin: null }, { dateFin: { gte: maintenant } }] } }),
+    // Factures émises sur les 12 derniers mois
+    prisma.facturation.findMany({
+      where: { entreprise: { demo: false }, OR: [{ annee: anneeActuelle }, { annee: anneeActuelle - 1, mois: { gt: moisActuel } }] },
+      select: { mois: true, annee: true, montant: true },
+    }),
     // Dernières activités (14 jours)
     prisma.demandeSalarie.findMany({ where: { createdAt: recent, entreprise: client }, take: 8, orderBy: { createdAt: "desc" }, select: { createdAt: true, resume: true, entreprise: { select: { nom: true } } } }),
     prisma.devis.findMany({ where: { createdAt: recent, entreprise: client }, take: 8, orderBy: { createdAt: "desc" }, select: { createdAt: true, totalIndicatif: true, entreprise: { select: { nom: true } } } }),
@@ -69,10 +77,18 @@ export default async function AdminDashboard() {
   const nbRH = entreprises.filter((e) => e.abonnementId).length;
   const nbBase = entreprises.filter((e) => !e.abonnementId && !e.abonnementPaieId).length;
   const nbEspace = entreprises.filter((e) => e.permissions.includes("espace-salaries")).length;
+  // Clients en cours d'ajout : demandes d'inscription à traiter + entreprises créées sans formule ni cabinet
+  const nbEnCoursAjout = nInscriptions + entreprises.filter((e) => !e.abonnementId && !e.abonnementPaieId && !e.cabinetId).length;
+  const graphique = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(anneeActuelle, moisActuel - 12 + i, 1);
+    const m = d.getMonth() + 1, a = d.getFullYear();
+    const f = factures12.filter((x) => x.mois === m && x.annee === a);
+    return { label: `${MOIS[m - 1].slice(0, 3)}.${a !== anneeActuelle ? ` ${String(a).slice(2)}` : ""}`, montant: f.reduce((t, x) => t + x.montant, 0), nb: f.length, enCours: m === moisActuel && a === anneeActuelle };
+  });
 
   const aTraiter = [
     { n: nInscriptions, icone: "🆕", label: "Nouveaux clients", href: "/admin/entreprises/nouveaux-clients", visible: true },
-    { n: nDemSal, icone: "📝", label: "Demandes salariés", href: "/admin/salaries/demandes", visible: avec("salaries") },
+    { n: nDemSal, icone: "📝", label: "Demandes salariés", href: "/admin/paie/demandes", visible: avec("salaries") },
     { n: nDemRH + nDemPaie, icone: "📦", label: "Changements d'abonnement", href: "/admin/entreprises/demandes", visible: true },
     { n: nDevis, icone: "🧾", label: "Devis à chiffrer", href: "/admin/entreprises/devis", visible: true },
     { n: nQuestions, icone: "💬", label: "Questions RH en attente", href: "/admin/tickets/questions", visible: true },
@@ -81,7 +97,7 @@ export default async function AdminDashboard() {
     { n: nHelpdesk, icone: "🆘", label: "Helpdesk ouverts", href: "/admin/helpdesk", visible: true },
     { n: nPrest, icone: "🛒", label: "Prestations à traiter", href: "/admin/entreprises/prestations", visible: nbPaie > 0 },
     { n: nVariables, icone: "💰", label: `Variables ${MOIS[moisActuel - 1]} à valider`, href: "/admin/paie/variables", visible: nbPaie > 0 },
-    { n: nAbsences, icone: "🏖️", label: "Absences en attente", href: "/admin/salaries/absences", visible: avec("absences") || avec("salaries") },
+    { n: nAbsences, icone: "🏖️", label: "Absences en attente", href: "/admin/paie/absences", visible: avec("absences") || avec("salaries") },
     { n: nReleves, icone: "⏱️", label: "Relevés d'heures envoyés", href: "/admin/paie/releves", visible: nbEspace > 0 },
   ].filter((t) => t.visible);
   const totalATraiter = aTraiter.reduce((a, t) => a + t.n, 0);
@@ -134,7 +150,9 @@ export default async function AdminDashboard() {
         <div className="flex gap-2 flex-wrap text-sm">
           {[
             { t: `🏢 ${entreprises.length} client(s)`, href: "/admin/entreprises" },
-            { t: `👥 ${nbRH} pack RH`, href: "/admin/entreprises" },
+            { t: `⏳ ${nbEnCoursAjout} en cours d'ajout`, href: "/admin/entreprises/nouveaux-clients" },
+            { t: `👥 ${nbSalariesGeres.toLocaleString("fr-FR")} salarié(s) gérés`, href: "/admin/entreprises" },
+            { t: `🧩 ${nbRH} pack RH`, href: "/admin/entreprises" },
             { t: `💼 ${nbPaie} paie`, href: "/admin/abonnement-paie" },
             { t: `🆓 ${nbBase} accès de base`, href: "/admin/entreprises" },
             ...(nbEspace > 0 ? [{ t: `📱 ${nbEspace} espace salarié`, href: "/admin/salaries/acces" }] : []),
@@ -157,6 +175,8 @@ export default async function AdminDashboard() {
             ))}
           </div>
         </section>
+
+        <GraphiqueFactures mois={graphique} />
 
         <div className="fr-grille-2" style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: "1rem" }}>
           {/* Fil d'activité */}

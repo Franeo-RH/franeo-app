@@ -46,6 +46,10 @@ export async function PUT(
       iban: data.iban || null,
       bic: data.bic || null,
       abonnementId: data.abonnementId || null,
+      // Suivi commercial (indicatif)
+      ...("remisePct" in data ? { remisePct: (() => { const n = parseFloat(String(data.remisePct ?? "").replace(",", ".")); return Number.isFinite(n) && n >= 0 && n <= 100 ? n : null; })() } : {}),
+      ...("codeParrainage" in data ? { codeParrainage: typeof data.codeParrainage === "string" && data.codeParrainage.trim() ? data.codeParrainage.trim().slice(0, 50) : null } : {}),
+      ...("dateDebutContrat" in data ? { dateDebutContrat: /^\d{4}-\d{2}-\d{2}$/.test(String(data.dateDebutContrat)) ? new Date(`${data.dateDebutContrat}T12:00:00`) : null } : {}),
     },
   });
 

@@ -16,8 +16,9 @@ async function acces() {
 export async function GET() {
   const { session, refus } = await acces();
   if (!session) return refus!;
-  const l = await prisma.trameContrat.findMany({ where: { entrepriseId: session.entrepriseId! }, select: { id: true, nom: true, champs: true, taille: true, createdAt: true }, orderBy: { createdAt: "desc" } });
-  return NextResponse.json(l);
+  // Ses modèles + les modèles FRANEO RH (déposés par l'admin, communs à tous les clients)
+  const l = await prisma.trameContrat.findMany({ where: { OR: [{ entrepriseId: session.entrepriseId! }, { entrepriseId: null }] }, select: { id: true, nom: true, champs: true, taille: true, createdAt: true, entrepriseId: true }, orderBy: { createdAt: "desc" } });
+  return NextResponse.json(l.map(({ entrepriseId, ...t }) => ({ ...t, franeo: entrepriseId === null })));
 }
 
 /** POST (formulaire) : fichier .docx, nom, champs (JSON, repérés dans le navigateur) */

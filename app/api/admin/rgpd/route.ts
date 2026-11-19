@@ -17,8 +17,13 @@ export async function GET(request: NextRequest) {
   const page = Math.max(0, Number(p.get("page")) || 0);
   const action = p.get("action") || "";
   const recherche = (p.get("q") || "").trim().slice(0, 100);
+  const date = (v: string | null, fin = false) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(`${v}T${fin ? "23:59:59" : "00:00:00"}`) : null);
+  const du = date(p.get("du")), au = date(p.get("au"), true);
+  const entrepriseId = p.get("entrepriseId") || "";
   const where = {
     ...(action ? { action } : {}),
+    ...(du || au ? { createdAt: { ...(du ? { gte: du } : {}), ...(au ? { lte: au } : {}) } } : {}),
+    ...(entrepriseId ? { entrepriseId } : {}),
     ...(recherche ? { OR: [{ email: { contains: recherche, mode: "insensitive" as const } }, { cible: { contains: recherche, mode: "insensitive" as const } }, { ip: { contains: recherche } }] } : {}),
   };
   const depuis24h = new Date(Date.now() - 24 * 3600 * 1000);

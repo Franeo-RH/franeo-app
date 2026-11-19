@@ -15,7 +15,7 @@ const MOIS = [
   "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
 ];
 
-export default async function MouvementsPersonnel() {
+export default async function MouvementsPersonnel({ searchParams }: { searchParams: Promise<{ annee?: string; entreprise?: string }> }) {
   await connection();
 
   const session = await getSession();
@@ -23,12 +23,17 @@ export default async function MouvementsPersonnel() {
   if (session.role !== "ADMIN") redirect("/client/dashboard");
 
   const maintenant = new Date();
-  const anneeActuelle = maintenant.getFullYear();
+  const sp = await searchParams;
+  const anneeChoisie = Number(sp.annee);
+  const anneeActuelle = Number.isInteger(anneeChoisie) && anneeChoisie > 2000 && anneeChoisie < 2100 ? anneeChoisie : maintenant.getFullYear();
+  const filtreEntreprise = sp.entreprise || "";
+  const listeEntreprises = await prisma.entreprise.findMany({ where: { demo: false }, select: { id: true, nom: true }, orderBy: { nom: "asc" } });
   const moisActuel = maintenant.getMonth() + 1;
 
   const salaries = await prisma.salarie.findMany({
     where: {
       entreprise: { demo: false },
+      ...(filtreEntreprise ? { entrepriseId: filtreEntreprise } : {}),
       OR: [
         { dateDebut: { gte: new Date(anneeActuelle, 0, 1), lte: new Date(anneeActuelle, 11, 31) } },
         { dateFin: { gte: new Date(anneeActuelle, 0, 1), lte: new Date(anneeActuelle, 11, 31) } },
@@ -72,6 +77,16 @@ export default async function MouvementsPersonnel() {
             <div>
               <h1 className="text-3xl font-bold">🔄 Mouvements du personnel</h1>
               <p className="text-gray-500 mt-1">Entrées et sorties prévues — {anneeActuelle}</p>
+              <form className="flex gap-2 flex-wrap mt-3 text-sm" method="get">
+                <select name="annee" defaultValue={String(anneeActuelle)} className="border rounded-lg px-3 py-2" aria-label="Année">
+                  {Array.from({ length: 6 }, (_, i) => maintenant.getFullYear() + 1 - i).map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+                <select name="entreprise" defaultValue={filtreEntreprise} className="border rounded-lg px-3 py-2" aria-label="Entreprise">
+                  <option value="">Toutes les entreprises</option>
+                  {listeEntreprises.map((e) => <option key={e.id} value={e.id}>{e.nom}</option>)}
+                </select>
+                <button type="submit" className="bg-black text-white rounded-lg px-4 py-2 font-semibold">Filtrer</button>
+              </form>
             </div>
             <BoutonExport type="mouvements" label="📥 Exporter Excel" />
             <BoutonExportComplet jeu="salaries" label="📥 Salariés (complet)" />
