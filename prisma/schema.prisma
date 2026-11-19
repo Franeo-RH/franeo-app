@@ -41,10 +41,13 @@ model Entreprise {
   // Prélèvement SEPA des abonnements (Stripe) : l'IBAN reste chez Stripe, seuls ses 4 derniers chiffres sont gardés
   stripeClientId    String?            @unique
 
-  // Suivi commercial (indicatif, pour les factures Abby et le suivi) : remise accordée, code de parrainage, début du contrat
+  // Suivi commercial : remise permanente (%), appliquée aux abonnements et options sur chaque facture ;
+  // code de parrainage de l'entreprise (à partager) et entreprise marraine ; début du contrat
   remisePct         Float?
-  codeParrainage    String?
+  codeParrainage    String?            @unique
+  parrainId         String?
   dateDebutContrat  DateTime?
+  remises           Remise[]
 
   // Cabinet comptable qui suit ce client (accès cabinet)
   cabinetId         String?
@@ -798,6 +801,7 @@ model DemandeInscription {
   besoins      String[]
   message      String?
   type         String    @default("INSCRIPTION") // INSCRIPTION | CONTACT
+  codeParrainage String?  // code de parrainage saisi par le prospect (rattaché à la validation)
   statut       String    @default("NOUVELLE")
   entrepriseId String?
   createdAt    DateTime  @default(now())
@@ -1401,9 +1405,34 @@ model Cabinet {
 // Réglages de l'application (une seule ligne, id « global ») : maintenance annoncée et blocage pendant les mises à jour
 model ReglageApp {
   id                 String    @id @default("global")
+  // Parrainage : récompense appliquée automatiquement quand un filleul est rattaché (AUCUNE par défaut)
+  parrainageType     String    @default("AUCUNE") // AUCUNE, POURCENT, MONTANT
+  parrainageValeur   Float     @default(0)
+  parrainageMois     Int       @default(1)        // durée de la remise, en mois
+  parrainagePour     String    @default("PARRAIN") // PARRAIN, FILLEUL, LES_DEUX
   maintenanceActive  Boolean   @default(false)   // l'application est bloquée (sauf pour l'admin)
   maintenanceMessage String?
   maintenanceDebut   DateTime?                   // maintenance programmée : annonce avant, blocage à partir de cette date
   maintenanceFin     DateTime?                   // fin prévue (affichée)
   updatedAt          DateTime  @updatedAt
+}
+
+// Remise appliquée sur les factures d'une entreprise pendant une période (geste commercial, parrainage…).
+// La remise permanente en % reste le champ Entreprise.remisePct.
+model Remise {
+  id           String     @id @default(cuid())
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  libelle      String
+  motif        String     @default("COMMERCIALE") // COMMERCIALE, PARRAINAGE, FILLEUL
+  type         String     @default("POURCENT")    // POURCENT, MONTANT (€ par mois)
+  valeur       Float
+  portee       String     @default("ABONNEMENTS") // ABONNEMENTS (abonnements, options, salariés et bulletins) ou TOUT
+  moisDebut    Int
+  anneeDebut   Int
+  nbMois       Int?       // durée en mois ; vide = sans fin
+  creePar      String?
+  createdAt    DateTime   @default(now())
+
+  @@index([entrepriseId])
 }

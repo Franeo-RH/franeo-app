@@ -144,7 +144,8 @@ body {
    ========================================================= */
 @media (max-width: 768px) {
   .fr-buddy { bottom: calc(12px + env(safe-area-inset-bottom)) !important; right: 12px !important; }
-  .fr-buddy-bouton { width: 48px !important; height: 48px !important; border-width: 3px !important; padding: 2px !important; }
+  .fr-buddy-bouton { width: 56px !important; height: 56px !important; }
+  .buddy-bulle { bottom: 66px !important; }
   .fr-buddy-fenetre {
     left: 8px !important; right: 8px !important; bottom: calc(70px + env(safe-area-inset-bottom)) !important;
     width: auto !important; max-width: none !important; height: 70vh !important; max-height: calc(100vh - 100px) !important;
@@ -159,7 +160,9 @@ body {
   display: grid; grid-template-columns: minmax(150px, 1fr) auto minmax(150px, 1fr);
   align-items: center; gap: 16px; padding: 10px 24px;
 }
-.fr-nav-logo { flex-shrink: 0; display: flex; align-items: center; justify-self: start; }
+.fr-nav-logo { flex-shrink: 0; display: flex; align-items: center; justify-self: start; transition: transform 0.2s; }
+.fr-nav-logo:hover { transform: scale(1.03); }
+.fr-nav-logo-img { height: 60px; width: auto; object-fit: contain; }
 /* Onglets : une seule ligne, au centre */
 .fr-nav-liens { display: flex; align-items: stretch; justify-content: center; gap: 6px; flex-wrap: nowrap; }
 .fr-nav-lien {
@@ -187,6 +190,7 @@ body {
   .fr-burger { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; justify-self: end; }
   .fr-nav-barre { padding: 8px 16px; grid-template-columns: 1fr auto auto; }
   .fr-nav-logo-client { height: 52px; max-width: 170px; }
+  .fr-nav-logo-img { height: 44px; }
   .fr-menu-mobile { display: block; border-top: 1px solid #262626; padding: 12px 16px 16px; }
   .fr-menu-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .fr-menu-lien {
@@ -522,4 +526,33 @@ html[data-theme="dark"] .fr-nav-logo-client { box-shadow: 0 0 0 1px #404040; }
 @media print {
   .fr-cab-entete, .fr-cab-bandeau { display: none !important; }
   .fr-verre { box-shadow: none !important; border: 1px solid #e5e7eb; }
+}
+
+/* =========================================================
+   Buddy : visage animé (flottement, clignement, regard, antenne, réflexion, sourire au survol)
+   ========================================================= */
+.buddy-flotte { animation: buddy-flotte 3.2s ease-in-out infinite; }
+@keyframes buddy-flotte { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.buddy-lanceur svg { filter: drop-shadow(0 10px 18px rgba(234, 88, 12, .45)); transition: transform .2s; }
+.buddy-lanceur:hover svg { transform: scale(1.08); }
+.buddy-lanceur:active svg { transform: scale(.95); }
+.buddy-visage .buddy-yeux { transform-origin: 50px 42px; animation: buddy-cligne 4.6s infinite; }
+@keyframes buddy-cligne { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+.buddy-visage .buddy-pupilles { animation: buddy-regard 7s ease-in-out infinite; }
+@keyframes buddy-regard { 0%, 20%, 100% { transform: translate(0, 0); } 30%, 42% { transform: translate(-2.4px, 0); } 55%, 68% { transform: translate(2.4px, -.8px); } 80% { transform: translate(0, 1px); } }
+.buddy-visage .buddy-antenne { transform-origin: 50px 21px; animation: buddy-antenne 3.2s ease-in-out infinite; }
+@keyframes buddy-antenne { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+.buddy-visage .buddy-sourire { transition: d .2s; }
+.buddy-lanceur:hover .buddy-sourire { d: path("M33 61 Q50 79 67 61"); }
+.buddy-lanceur:hover .buddy-pupilles { animation: none; transform: translate(0, -1px); }
+.buddy-visage.buddy-reflechit .buddy-pupilles { animation: buddy-reflexion .9s ease-in-out infinite; }
+@keyframes buddy-reflexion { 0%, 100% { transform: translate(-2px, -1.5px); } 50% { transform: translate(2px, -1.5px); } }
+.buddy-visage.buddy-reflechit .buddy-antenne circle { animation: buddy-lumiere .6s ease-in-out infinite; }
+@keyframes buddy-lumiere { 0%, 100% { fill: #ffb000; } 50% { fill: #ffffff; } }
+.buddy-visage.buddy-parle .buddy-sourire { transform-origin: 50px 66px; animation: buddy-parle .35s ease-in-out infinite; }
+@keyframes buddy-parle { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.6); } }
+.buddy-bulle { animation: buddy-pop .35s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes buddy-pop { from { opacity: 0; transform: translateY(8px) scale(.9); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .buddy-flotte, .buddy-visage .buddy-yeux, .buddy-visage .buddy-pupilles, .buddy-visage .buddy-antenne, .buddy-bulle { animation: none !important; }
 }

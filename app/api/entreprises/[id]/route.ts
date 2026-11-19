@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { normaliserCode } from "@/lib/parrainage";
 
 export async function GET(
   request: NextRequest,
@@ -30,6 +31,13 @@ export async function PUT(
   const { id } = await params;
   const data = await request.json();
 
+  // Code de parrainage : unique (insensible à la casse)
+  const code = "codeParrainage" in data ? normaliserCode(typeof data.codeParrainage === "string" ? data.codeParrainage : "") : undefined;
+  if (code) {
+    const pris = await prisma.entreprise.findFirst({ where: { codeParrainage: { equals: code, mode: "insensitive" }, id: { not: id } }, select: { nom: true } });
+    if (pris) return NextResponse.json({ erreur: `Le code ${code} est déjà utilisé par ${pris.nom}.` }, { status: 409 });
+  }
+
   const entreprise = await prisma.entreprise.update({
     where: { id },
     data: {
@@ -46,9 +54,9 @@ export async function PUT(
       iban: data.iban || null,
       bic: data.bic || null,
       abonnementId: data.abonnementId || null,
-      // Suivi commercial (indicatif)
+      // Suivi commercial : remise permanente appliquée sur chaque facture (abonnements et options)
       ...("remisePct" in data ? { remisePct: (() => { const n = parseFloat(String(data.remisePct ?? "").replace(",", ".")); return Number.isFinite(n) && n >= 0 && n <= 100 ? n : null; })() } : {}),
-      ...("codeParrainage" in data ? { codeParrainage: typeof data.codeParrainage === "string" && data.codeParrainage.trim() ? data.codeParrainage.trim().slice(0, 50) : null } : {}),
+      ...(code !== undefined ? { codeParrainage: code || null } : {}),
       ...("dateDebutContrat" in data ? { dateDebutContrat: /^\d{4}-\d{2}-\d{2}$/.test(String(data.dateDebutContrat)) ? new Date(`${data.dateDebutContrat}T12:00:00`) : null } : {}),
     },
   });

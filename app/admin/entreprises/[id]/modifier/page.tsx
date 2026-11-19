@@ -166,7 +166,7 @@ export default function ModifierEntreprise() {
                 <p className="text-sm text-gray-500">Informations indicatives, pour vos factures Abby et votre suivi : elles ne changent aucun calcul dans l&apos;application.</p>
                 <div className="grid grid-cols-2 gap-6">
                   <Field label="Date de début du contrat de prestation" name="dateDebutContrat" value={form.dateDebutContrat} onChange={handleChange} type="date" />
-                  <Field label="Remise accordée (%)" name="remisePct" value={form.remisePct} onChange={handleChange} />
+                  <Field label="Remise permanente sur les abonnements (%)" name="remisePct" value={form.remisePct} onChange={handleChange} />
                   <Field label="Code de parrainage" name="codeParrainage" value={form.codeParrainage} onChange={handleChange} />
                 </div>
               </div>

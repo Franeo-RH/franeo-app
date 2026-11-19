@@ -16,7 +16,7 @@ import LogoEntreprise from "@/components/LogoEntreprise";
 import AccesEtablissements from "@/components/AccesEtablissements";
 import RepriseConges from "@/components/RepriseConges";
 import { STATUTS_MANDAT } from "@/lib/prelevement-textes";
-import { BarreOnglets, ONGLETS_FICHE, OngletDemandes, OngletFacturation, OngletJournal, OngletSalaries } from "@/components/FicheEntrepriseOnglets";
+import { BarreOnglets, ONGLETS_FICHE, OngletDemandes, OngletFacturation, OngletJournal, OngletRemises, OngletSalaries } from "@/components/FicheEntrepriseOnglets";
 
 export const dynamic = "force-dynamic";
 
@@ -106,6 +106,7 @@ export default async function FicheEntrepriseAdmin({
 
           {onglet === "salaries" && <OngletSalaries id={id} />}
           {onglet === "facturation" && <OngletFacturation id={id} />}
+          {onglet === "remises" && <OngletRemises id={id} />}
           {onglet === "demandes" && <OngletDemandes id={id} />}
           {onglet === "journal" && <OngletJournal id={id} du={sp.du} au={sp.au} />}
 

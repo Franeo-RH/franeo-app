@@ -37,6 +37,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/entreprises/demandes", label: "📦 Abonnements", badge: demandesEnAttente, aussi: ["/admin/abonnement-paie", "/admin/abonnements-rh"], groupe: "💳 Abonnements & facturation" },
         { href: "/admin/entreprises/facturation", label: "🧾 Facturation", groupe: "💳 Abonnements & facturation" },
         { href: "/admin/entreprises/prestations", label: "➕ Prestations supplémentaires", groupe: "💳 Abonnements & facturation" },
+        { href: "/admin/entreprises/remises", label: "🎁 Remises & parrainage", groupe: "💳 Abonnements & facturation" },
         { href: "/admin/entreprises/devis", label: "🧾 Demandes de devis", groupe: "📬 Demandes des clients" },
         { href: "/admin/entreprises/demandes-services", label: "📬 Apps, options & formations", groupe: "📬 Demandes des clients" },
       ] };

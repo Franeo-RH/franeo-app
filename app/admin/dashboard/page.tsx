@@ -8,7 +8,7 @@ import BlocEcheances from "@/components/BlocEcheances";
 import BoutonResetDemo from "@/components/BoutonResetDemo";
 import RafraichirAuto from "@/components/RafraichirAuto";
 import { chargerEcheances } from "@/lib/rappels-serveur";
-import { calculerFacture } from "@/lib/facturation";
+import { montantsMois } from "@/lib/facturation";
 import { BoutonExportComplet } from "@/components/OutilsAdmin";
 import GraphiqueFactures from "@/components/GraphiqueFactures";
 
@@ -116,10 +116,13 @@ export default async function AdminDashboard() {
   ].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 15);
 
   // Chiffre d'affaires du mois : facture si générée, sinon estimation (même calcul que la facturation)
-  const caMois = (await Promise.all(entreprises.map(async (e) => {
+  // (calcul groupé : quelques requêtes pour tous les clients, au lieu de 7 par client)
+  const sansFacture = entreprises.filter((e) => !facturesMois.some((x) => x.entrepriseId === e.id)).map((e) => e.id);
+  const estimations = await montantsMois(moisActuel, anneeActuelle, sansFacture);
+  const caMois = entreprises.reduce((total, e) => {
     const f = facturesMois.filter((x) => x.entrepriseId === e.id);
-    return f.length ? f.reduce((a, x) => a + x.montant, 0) : (await calculerFacture(e.id, moisActuel, anneeActuelle))?.montant ?? 0;
-  }))).reduce((a, b) => a + b, 0);
+    return total + (f.length ? f.reduce((a, x) => a + x.montant, 0) : estimations.get(e.id) ?? 0);
+  }, 0);
 
   const depuis = (d: Date) => {
     const min = Math.round((Date.now() - d.getTime()) / 60000);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useId } from "react";
 import { useRouter } from "next/navigation";
 
 type Lien = { label: string; href: string };
@@ -33,6 +33,20 @@ export default function BuddyChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const charge = useRef(false);
+  const [bulle, setBulle] = useState(false);
+
+  // Bulle d'accueil : une fois par session, quelques secondes après l'arrivée
+  useEffect(() => {
+    let vue = false;
+    try { vue = sessionStorage.getItem("buddy-bulle") === "1"; } catch {}
+    if (vue) return;
+    const t1 = setTimeout(() => {
+      setBulle(true);
+      try { sessionStorage.setItem("buddy-bulle", "1"); } catch {}
+    }, 2500);
+    const t2 = setTimeout(() => setBulle(false), 11000);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
 
   // Retrouver la conversation (même après un rechargement de page)
   useEffect(() => {
@@ -384,22 +398,30 @@ export default function BuddyChat() {
       )}
 
       {/* Bouton flottant animé */}
+      {!ouvert && bulle && (
+        <button type="button" onClick={() => { setBulle(false); setOuvert(true); }} className="buddy-bulle fr-garder-couleurs"
+          style={{ position: "absolute", bottom: "86px", right: "0", whiteSpace: "nowrap", background: "#ffffff", color: "#111827", border: "none",
+            borderRadius: "14px 14px 4px 14px", padding: "8px 12px", fontSize: "13px", fontWeight: 600, cursor: "pointer", boxShadow: "0 8px 24px rgba(0,0,0,.2)" }}>
+          Une question RH ou paie ? Je suis là 👋
+        </button>
+      )}
       <button
-        onClick={() => setOuvert(!ouvert)}
-        className="fr-buddy-bouton fr-garder-couleurs"
+        onClick={() => { setBulle(false); setOuvert(!ouvert); }}
+        className="fr-buddy-bouton buddy-lanceur fr-garder-couleurs"
         aria-label={ouvert ? "Fermer Buddy" : "Ouvrir Buddy"}
+        title={ouvert ? "Fermer" : "Discuter avec Buddy"}
         style={{
-          width: "72px", height: "72px", borderRadius: "50%",
-          border: `4px solid ${ouvert ? "#ea580c" : "#f97316"}`,
-          background: "#080808", cursor: "pointer",
-          boxShadow: `0 0 ${ouvert ? "35px" : "20px"} rgba(249,115,22,${ouvert ? "0.8" : "0.4"})`,
-          padding: "4px",
+          width: "76px", height: "76px", borderRadius: "50%", border: "none", background: "transparent",
+          cursor: "pointer", padding: 0, position: "relative",
           display: "flex", alignItems: "center", justifyContent: "center",
-          transition: "all 0.3s",
-          animation: !ouvert ? "float 3s ease-in-out infinite" : "none",
         }}
       >
-        <BuddyFace humeur={humeur} />
+        <span className={ouvert ? "" : "buddy-flotte"} style={{ display: "block", width: "100%", height: "100%" }}>
+          <BuddyFace humeur={humeur} grand />
+        </span>
+        {ouvert && (
+          <span style={{ position: "absolute", top: "-4px", right: "-4px", width: "24px", height: "24px", borderRadius: "50%", background: "#111827", color: "#fff", fontSize: "12px", display: "grid", placeItems: "center" }}>✕</span>
+        )}
       </button>
 
       <style>{`
@@ -412,49 +434,49 @@ export default function BuddyChat() {
   );
 }
 
-function BuddyFace({ humeur }: { humeur: string }) {
-  const [cligne, setCligne] = useState(false);
-
-  useEffect(() => {
-    let t1: ReturnType<typeof setTimeout>;
-    let t2: ReturnType<typeof setTimeout>;
-    let actif = true;
-    function planifierClignement() {
-      const delai = 3000 + Math.random() * 4000;
-      t1 = setTimeout(() => {
-        if (!actif) return;
-        setCligne(true);
-        t2 = setTimeout(() => {
-          if (!actif) return;
-          setCligne(false);
-          planifierClignement();
-        }, 150);
-      }, delai);
-    }
-    planifierClignement();
-    return () => {
-      actif = false;
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, []);
-
+/**
+ * Visage de Buddy (SVG) : rond sombre, anneau orange, antenne qui se balance, yeux qui clignent et regardent autour.
+ * Animations en CSS (globals.css, classes buddy-*) ; les humeurs changent les yeux et le sourire.
+ */
+function BuddyFace({ humeur, grand = false }: { humeur: string; grand?: boolean }) {
+  const id = useId().replace(/:/g, "");
   const sourire =
-    humeur === "heureux" ? "M 28 74 Q 50 88 72 74"
-    : humeur === "triste" ? "M 32 80 Q 50 68 68 80"
-    : "M 32 72 Q 50 84 68 72";
-  const hauteurOeil = cligne ? 4 : humeur === "reflechit" ? 12 : 24;
-
+    humeur === "heureux" ? "M33 61 Q50 78 67 61"
+    : humeur === "triste" ? "M36 69 Q50 59 64 69"
+    : humeur === "reflechit" ? "M40 66 Q50 66 60 66"
+    : "M35 63 Q50 74 65 63";
+  const classes = ["buddy-visage", humeur === "reflechit" ? "buddy-reflechit" : "", humeur === "parle" ? "buddy-parle" : "", grand ? "buddy-grand" : ""].join(" ");
   return (
-    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
-      <circle cx="50" cy="50" r="48" fill="#080808" stroke="#ff9900" strokeWidth="3" />
-      <rect x="22" y={cligne ? 38 : 28} width="22" height={hauteurOeil} rx="5" fill="#000" stroke="#ff9900" strokeWidth="2" style={{ transition: "all 0.1s" }} />
-      {!cligne && humeur !== "reflechit" && <><circle cx="33" cy="40" r="7" fill="#ffb000" /><circle cx="36" cy="37" r="2.5" fill="white" /></>}
-      <rect x="56" y={cligne ? 38 : 28} width="22" height={hauteurOeil} rx="5" fill="#000" stroke="#ff9900" strokeWidth="2" style={{ transition: "all 0.1s" }} />
-      {!cligne && humeur !== "reflechit" && <><circle cx="67" cy="40" r="7" fill="#ffb000" /><circle cx="70" cy="37" r="2.5" fill="white" /></>}
-      <path d={sourire} stroke="#ff9900" strokeWidth="3.5" fill="none" strokeLinecap="round" />
-      <line x1="50" y1="5" x2="50" y2="15" stroke="#ff9900" strokeWidth="3" />
-      <circle cx="50" cy="5" r="4" fill="#ff9900" />
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden className={classes} style={{ width: "100%", height: "100%", overflow: "visible" }}>
+      <defs>
+        <radialGradient id={`bg-${id}`} cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stopColor="#2a1a0c" />
+          <stop offset="100%" stopColor="#080808" />
+        </radialGradient>
+        <linearGradient id={`an-${id}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#fbbf24" />
+          <stop offset="100%" stopColor="#ea580c" />
+        </linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="46" fill={`url(#an-${id})`} />
+      <circle cx="50" cy="50" r="38.5" fill={`url(#bg-${id})`} />
+      <circle cx="50" cy="50" r="37" fill="none" stroke="#ff9900" strokeWidth="2" />
+      <g className="buddy-antenne">
+        <line x1="50" y1="13" x2="50" y2="21" stroke="#ff9900" strokeWidth="2.6" strokeLinecap="round" />
+        <circle cx="50" cy="12.5" r="2.6" fill="#ffb000" />
+      </g>
+      <g className="buddy-yeux">
+        {[36, 64].map((x) => (
+          <g key={x}>
+            <rect x={x - 8.5} y="34" width="17" height="17" rx="5" fill="#000" stroke="#ff9900" strokeWidth="2.6" />
+            <g className="buddy-pupilles">
+              <circle cx={x} cy="42.5" r="4.8" fill="#ffb000" />
+              <circle cx={x + 1.6} cy="41" r="1.4" fill="#fff" />
+            </g>
+          </g>
+        ))}
+      </g>
+      <path className="buddy-sourire" d={sourire} fill="none" stroke="#ff9900" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
 }

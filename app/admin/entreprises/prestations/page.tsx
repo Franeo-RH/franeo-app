@@ -8,7 +8,7 @@ import BoutonsPrestation from "@/components/BoutonsPrestation";
 import ExportCSV from "@/components/ExportCSV";
 import RafraichirAuto from "@/components/RafraichirAuto";
 import { STATUTS_PRESTATION } from "@/lib/prestations";
-import { LIBELLES_CATEGORIE, lignesFacture, type CategorieLigne } from "@/lib/facturation";
+import { LIBELLES_CATEGORIE, lignesFacturesMois, type CategorieLigne } from "@/lib/facturation";
 import { moisDepuisParam, NOMS_MOIS_FR } from "@/lib/mois";
 import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
@@ -29,10 +29,11 @@ export default async function AdminSupplements({ searchParams }: { searchParams:
 
   const entreprises = await prisma.entreprise.findMany({ where: { demo: false }, select: { id: true, nom: true, actif: true }, orderBy: { nom: "asc" } });
   const cibles = entreprises.filter((e) => e.actif !== false && (!filtreEnt || e.id === filtreEnt));
-  const parEntreprise = await Promise.all(cibles.map(async (e) => ({ e, lignes: (await lignesFacture(e.id, mois, annee)) ?? [] })));
+  const lignesParId = await lignesFacturesMois(mois, annee, cibles.map((e) => e.id));
+  const parEntreprise = cibles.map((e) => ({ e, lignes: lignesParId.get(e.id) ?? [] }));
 
   const supplements = parEntreprise.flatMap(({ e, lignes }) =>
-    lignes.filter((l) => l.categorie !== "ABONNEMENT" && (!filtreCat || l.categorie === filtreCat)).map((l) => ({ ...l, entreprise: e.nom }))
+    lignes.filter((l) => l.categorie !== "ABONNEMENT" && l.categorie !== "REMISE" && (!filtreCat || l.categorie === filtreCat)).map((l) => ({ ...l, entreprise: e.nom }))
   );
   const total = supplements.reduce((a, l) => a + l.total, 0);
   const parCategorie = new Map<CategorieLigne, number>();
@@ -44,7 +45,7 @@ export default async function AdminSupplements({ searchParams }: { searchParams:
     orderBy: { createdAt: "asc" },
   });
 
-  const categories = (Object.keys(LIBELLES_CATEGORIE) as CategorieLigne[]).filter((c) => c !== "ABONNEMENT");
+  const categories = (Object.keys(LIBELLES_CATEGORIE) as CategorieLigne[]).filter((c) => c !== "ABONNEMENT" && c !== "REMISE");
 
   return (
     <div className="min-h-screen bg-gray-100">

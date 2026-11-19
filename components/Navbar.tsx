@@ -99,7 +99,7 @@ export default function Navbar({ role, prenom, permissions = [] }: NavbarProps) 
       <EtiquettesTableaux />
       <div className="fr-nav-barre">
         <Link href={role === "ADMIN" ? "/admin/dashboard" : "/client/dashboard"} className="fr-nav-logo" aria-label="Accueil Franeo">
-          <Image src="/FRANEO-Logo-Orange.png" alt="Franeo RH" width={41} height={50} style={{ objectFit: "contain" }} priority />
+          <Image src="/FRANEO-Logo-Orange-H.png" alt="Franeo RH" width={900} height={335} className="fr-nav-logo-img" priority unoptimized />
         </Link>
 
         {/* Ordinateur : onglets centrés */}

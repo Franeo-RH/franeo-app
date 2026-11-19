@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   const besoins = Array.isArray(b.besoins) ? b.besoins.filter((x: unknown) => (BESOINS as readonly string[]).includes(String(x))) : [];
   const type = b.type === "CONTACT" ? "CONTACT" : "INSCRIPTION";
   const demande = await prisma.demandeInscription.create({
-    data: { societe, prenom, nom, email, telephone: t(b.telephone, 30) || null, effectif: t(b.effectif, 30) || null, besoins, message: t(b.message, 2000) || null, type },
+    data: { societe, prenom, nom, email, telephone: t(b.telephone, 30) || null, effectif: t(b.effectif, 30) || null, besoins, message: t(b.message, 2000) || null, type, codeParrainage: t(b.codeParrainage, 30).toUpperCase() || null },
   });
   await noterEchec(cle, MAX_ENVOIS, FENETRE_MS);
 
@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
       `Société : ${societe}${demande.effectif ? ` (${demande.effectif} salariés)` : ""}`,
       ...(besoins.length ? [`Besoins : ${besoins.join(", ")}`] : []),
       ...(demande.message ? [`Message : ${demande.message}`] : []),
+      ...(demande.codeParrainage ? [`Code de parrainage : ${demande.codeParrainage}`] : []),
       ...(session?.entreprise?.demo ? ["Envoyée depuis la démo"] : []),
     ],
     lien: "/admin/entreprises/nouveaux-clients",

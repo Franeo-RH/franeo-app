@@ -22,9 +22,11 @@ export default async function MesSupplements({ searchParams }: { searchParams: P
   const { mois, annee, valeur } = moisDepuisParam((await searchParams).mois);
   const lignes = (await lignesFacture(session.entrepriseId!, mois, annee)) ?? [];
   const abonnements = lignes.filter((l) => l.categorie === "ABONNEMENT");
-  const supplements = lignes.filter((l) => l.categorie !== "ABONNEMENT");
+  const supplements = lignes.filter((l) => l.categorie !== "ABONNEMENT" && l.categorie !== "REMISE");
+  const remises = lignes.filter((l) => l.categorie === "REMISE");
   const totalSupp = supplements.reduce((a, l) => a + l.total, 0);
   const totalAbo = abonnements.reduce((a, l) => a + l.total, 0);
+  const totalRemises = remises.reduce((a, l) => a + l.total, 0);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -47,7 +49,7 @@ export default async function MesSupplements({ searchParams }: { searchParams: P
           <div className="grid gap-3 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
             <div className="bg-white rounded-xl shadow p-5"><p className="text-xs font-bold text-gray-500 uppercase">Abonnements</p><p className="text-2xl font-bold">{eur(totalAbo)}</p></div>
             <div className="bg-white rounded-xl shadow p-5" style={{ borderTop: "4px solid #f97316" }}><p className="text-xs font-bold text-gray-500 uppercase">Suppléments</p><p className="text-2xl font-bold">{eur(totalSupp)}</p></div>
-            <div className="bg-white rounded-xl shadow p-5"><p className="text-xs font-bold text-gray-500 uppercase">Total estimé du mois</p><p className="text-2xl font-bold">{eur(totalAbo + totalSupp)}</p></div>
+            <div className="bg-white rounded-xl shadow p-5"><p className="text-xs font-bold text-gray-500 uppercase">Total estimé du mois</p><p className="text-2xl font-bold">{eur(totalAbo + totalSupp + totalRemises)}</p>{remises.length > 0 && <p className="text-xs text-green-700 mt-1">{remises.map((r) => `${r.libelle} : ${eur(r.total)}`).join(" · ")}</p>}</div>
           </div>
 
           <div className="bg-white rounded-xl shadow p-6 mb-6">

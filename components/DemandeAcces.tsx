@@ -1,16 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BESOINS, EFFECTIFS } from "@/lib/inscriptions";
 
 /** Bouton + formulaire « Demander mon accès / Nous contacter » (démo et page de connexion) */
 export default function DemandeAcces({ variante = "bandeau" }: { variante?: "bandeau" | "lien" }) {
   const [ouvert, setOuvert] = useState(false);
   const [type, setType] = useState<"INSCRIPTION" | "CONTACT">("INSCRIPTION");
-  const [f, setF] = useState({ societe: "", prenom: "", nom: "", email: "", telephone: "", effectif: "", message: "", siteWeb: "" });
+  const [f, setF] = useState({ societe: "", prenom: "", nom: "", email: "", telephone: "", effectif: "", message: "", codeParrainage: "", siteWeb: "" });
   const [besoins, setBesoins] = useState<string[]>([]);
   const [envoi, setEnvoi] = useState(false);
   const [etat, setEtat] = useState<{ ok: boolean; texte: string } | null>(null);
+
+  // Lien de parrainage (…?parrain=FRH-XXXXX) : le code est pré-rempli et le formulaire s'ouvre
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("parrain");
+    if (code) {
+      setF((x) => ({ ...x, codeParrainage: code.toUpperCase().slice(0, 30) }));
+      setOuvert(true);
+    }
+  }, []);
 
   async function envoyer(e: React.FormEvent) {
     e.preventDefault();
@@ -89,6 +98,7 @@ export default function DemandeAcces({ variante = "bandeau" }: { variante?: "ban
                   </div>
                 </fieldset>
                 <textarea rows={3} placeholder="Message (facultatif)" value={f.message} onChange={(e) => setF({ ...f, message: e.target.value })} style={{ ...champ, resize: "vertical" }} aria-label="Message" />
+                <input placeholder="Code de parrainage (facultatif)" value={f.codeParrainage} onChange={(e) => setF({ ...f, codeParrainage: e.target.value.toUpperCase() })} style={champ} aria-label="Code de parrainage" maxLength={30} />
                 <input tabIndex={-1} autoComplete="off" value={f.siteWeb} onChange={(e) => setF({ ...f, siteWeb: e.target.value })} style={{ position: "absolute", left: "-9999px" }} aria-hidden="true" />
                 {etat && !etat.ok && <p style={{ margin: 0, color: "#b91c1c", fontWeight: 600, fontSize: "14px" }}>{etat.texte}</p>}
                 <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>

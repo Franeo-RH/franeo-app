@@ -12,6 +12,8 @@ import LogoEntreprise from "@/components/LogoEntreprise";
 import { aDroit } from "@/lib/droits";
 import { etatOptions } from "@/lib/options-serveur";
 import { calculerFacture } from "@/lib/facturation";
+import { assurerCode, reglageParrainage, texteRecompense } from "@/lib/parrainage";
+import CarteParrainage from "@/components/CarteParrainage";
 import OptionDocuments from "@/components/OptionDocuments";
 import OptionMedical from "@/components/OptionMedical";
 import OptionProjets from "@/components/OptionProjets";
@@ -51,6 +53,13 @@ export default async function EntrepriseClient({ searchParams }: { searchParams:
   const [options, estimation] = dirigeant
     ? await Promise.all([etatOptions(session), aDroit(session.entreprise?.permissions, "entreprise.supplements") ? calculerFacture(entreprise.id, maintenant.getMonth() + 1, maintenant.getFullYear()) : Promise.resolve(null)])
     : [null, null];
+
+  // Parrainage : code de l'entreprise (créé à la première visite), filleules et remises du mois
+  const parrainage = dirigeant && !entreprise.demo && !entreprise.cabinetId && !session.modeCabinet
+    ? await Promise.all([assurerCode(entreprise.id), prisma.entreprise.count({ where: { parrainId: entreprise.id } }), reglageParrainage()])
+    : null;
+  const lienBase = (process.env.NEXT_PUBLIC_URL || process.env.APP_URL || "https://app.franeo-rh.com").replace(/\/$/, "");
+  const remisesMois = (estimation?.details ?? []).filter((d) => d.includes(": -"));
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -148,6 +157,15 @@ export default async function EntrepriseClient({ searchParams }: { searchParams:
               peutSigner={aDroit(session.entreprise?.permissions, "entreprise.modifier") && !session.modeCabinet}
               retour={mandat === "ok" || mandat === "annule" ? mandat : null}
             />
+            {parrainage?.[0] && (
+              <CarteParrainage
+                code={parrainage[0]}
+                lien={`${lienBase}/login?parrain=${encodeURIComponent(parrainage[0])}`}
+                filleuls={parrainage[1]}
+                recompense={parrainage[2].type !== "AUCUNE" && parrainage[2].valeur > 0 ? `Votre récompense : ${texteRecompense(parrainage[2])}.` : null}
+                remises={remisesMois}
+              />
+            )}
               </>
             )}
 

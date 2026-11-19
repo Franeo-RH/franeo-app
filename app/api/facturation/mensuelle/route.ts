@@ -1,66 +1,51 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { lignesFacturesMois, texteLigne, totalLignes } from "@/lib/facturation";
 
-export async function POST() {
-  // Sécurité : route réservée à l'administrateur (elle n'était pas protégée)
+/**
+ * Génère d'un coup les factures du mois pour tous les clients actifs (hors démo) qui n'en ont pas encore.
+ * Même calcul que la facture d'un client (lib/facturation : abonnements, suppléments, remises), en quelques requêtes.
+ * Corps facultatif : { mois, annee } (par défaut le mois en cours).
+ */
+export async function POST(req: Request) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") {
     return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   }
+  const corps = await req.json().catch(() => ({}));
   const maintenant = new Date();
-  const moisSuivant = maintenant.getMonth() + 2 > 12 ? 1 : maintenant.getMonth() + 2;
-  const anneeSuivante = maintenant.getMonth() + 2 > 12 ? maintenant.getFullYear() + 1 : maintenant.getFullYear();
-
-  const entreprises = await prisma.entreprise.findMany({
-    where: { abonnementId: { not: null }, demo: false },
-    include: {
-      abonnement: true,
-      _count: { select: { salaries: { where: { statut: "Actif" } } } },
-    },
-  });
-
-  const resultats = [];
-
-  for (const entreprise of entreprises) {
-    if (!entreprise.abonnement) continue;
-
-    const existante = await prisma.facturation.findFirst({
-      where: { entrepriseId: entreprise.id, mois: moisSuivant, annee: anneeSuivante },
-    });
-    if (existante) continue;
-
-    const abonnement = entreprise.abonnement;
-    let montant = abonnement.prixMensuel;
-    const details: string[] = [`${abonnement.nom} : ${abonnement.prixMensuel} €`];
-
-    const salariesSupp = Math.max(entreprise._count.salaries - abonnement.salariesInclus, 0);
-    if (salariesSupp > 0 && abonnement.prixSalarieSupp > 0) {
-      const cout = salariesSupp * abonnement.prixSalarieSupp;
-      montant += cout;
-      details.push(`${salariesSupp} salarié(s) supp. : ${cout} €`);
-    }
-
-    const ticketsSupp = Math.max(entreprise.ticketsUtilises - abonnement.ticketsRH, 0);
-    if (ticketsSupp > 0 && abonnement.prixTicketSupp > 0) {
-      const cout = ticketsSupp * abonnement.prixTicketSupp;
-      montant += cout;
-      details.push(`${ticketsSupp} ticket(s) supp. : ${cout} €`);
-    }
-
-    const facturation = await prisma.facturation.create({
-      data: {
-        entrepriseId: entreprise.id,
-        mois: moisSuivant,
-        annee: anneeSuivante,
-        montant: Math.round(montant * 100) / 100,
-        dateLimitePaie: new Date(anneeSuivante, moisSuivant, 0),
-        commentaire: details.join(" | "),
-      },
-    });
-
-    resultats.push({ entreprise: entreprise.nom, montant: facturation.montant });
+  const mois = Number(corps?.mois) || maintenant.getMonth() + 1;
+  const annee = Number(corps?.annee) || maintenant.getFullYear();
+  if (mois < 1 || mois > 12 || annee < 2020 || annee > 2100) {
+    return NextResponse.json({ erreur: "Mois invalide" }, { status: 400 });
   }
 
-  return NextResponse.json({ succes: true, facturations: resultats });
+  const [entreprises, existantes] = await Promise.all([
+    prisma.entreprise.findMany({ where: { demo: false, actif: true }, select: { id: true, nom: true } }),
+    prisma.facturation.findMany({ where: { mois, annee }, select: { entrepriseId: true } }),
+  ]);
+  const dejaFacturees = new Set(existantes.map((f) => f.entrepriseId));
+  const cibles = entreprises.filter((e) => !dejaFacturees.has(e.id));
+  const lignesParId = await lignesFacturesMois(mois, annee, cibles.map((e) => e.id));
+
+  const resultats: { entreprise: string; montant: number }[] = [];
+  for (const e of cibles) {
+    const lignes = lignesParId.get(e.id) ?? [];
+    const montant = totalLignes(lignes);
+    if (montant <= 0) continue;
+    await prisma.facturation.create({
+      data: {
+        entrepriseId: e.id,
+        mois,
+        annee,
+        montant,
+        dateLimitePaie: new Date(annee, mois, 0),
+        commentaire: lignes.map(texteLigne).join(" | "),
+      },
+    });
+    resultats.push({ entreprise: e.nom, montant });
+  }
+
+  return NextResponse.json({ succes: true, mois, annee, facturations: resultats, ignorees: dejaFacturees.size });
 }

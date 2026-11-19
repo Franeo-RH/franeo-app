@@ -367,7 +367,7 @@ export default function EspaceSalarieRH({
       <nav className="fr-nav fr-es-bureau">
         <div className="fr-nav-barre">
           <button type="button" onClick={() => choisir("accueil")} className="fr-nav-logo" aria-label="Accueil" style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-            <Image src="/FRANEO-Logo-Orange.png" alt="Franeo RH" width={41} height={50} style={{ objectFit: "contain" }} priority />
+            <Image src="/FRANEO-Logo-Orange-H.png" alt="Franeo RH" width={900} height={335} className="fr-nav-logo-img" priority unoptimized />
           </button>
           <div className="fr-es-nav-centre">
             <span className="fr-es-nav-titre">Espace {role === "Espace salarié" ? "salarié" : role.toLowerCase()}</span>

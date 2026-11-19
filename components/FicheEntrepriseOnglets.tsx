@@ -1,7 +1,9 @@
 // Onglets de la fiche entreprise (admin) : Salariés, Facturation, Demandes, Journal — rendus côté serveur
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { calculerFacture } from "@/lib/facturation";
+import { calculerFacture, rangRemise } from "@/lib/facturation";
+import { reglageParrainage, texteRecompense } from "@/lib/parrainage";
+import GestionRemises from "@/components/GestionRemises";
 
 const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 const eur = (n: number) => n.toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
@@ -13,6 +15,7 @@ export const ONGLETS_FICHE = [
   { id: "infos", label: "📋 Infos" },
   { id: "salaries", label: "👥 Salariés" },
   { id: "facturation", label: "🧾 Facturation" },
+  { id: "remises", label: "🎁 Remises & parrainage" },
   { id: "demandes", label: "📬 Demandes" },
   { id: "journal", label: "📜 Journal" },
 ] as const;
@@ -211,6 +214,63 @@ export async function OngletJournal({ id, du, au }: { id: string; du?: string; a
         </ul>
       )}
       <p className="text-xs text-gray-400 mt-3">🔐 Connexions, exports, droits, suppressions · 💰 Saisies et modifications de paie.</p>
+    </div>
+  );
+}
+
+/** Période lisible d'une remise datée et son état ce mois-ci */
+function periodeRemise(r: { moisDebut: number; anneeDebut: number; nbMois: number | null }, mois: number, annee: number) {
+  const debut = `${MOIS[r.moisDebut - 1]} ${r.anneeDebut}`;
+  let periode = `dès ${debut}, sans fin`;
+  if (r.nbMois != null) {
+    const finIdx = r.anneeDebut * 12 + (r.moisDebut - 1) + r.nbMois - 1;
+    periode = r.nbMois === 1 ? debut : `${debut} → ${MOIS[finIdx % 12]} ${Math.floor(finIdx / 12)} (${r.nbMois} mois)`;
+  }
+  const etat: "EN_COURS" | "A_VENIR" | "TERMINEE" = rangRemise(r, mois, annee) != null
+    ? "EN_COURS"
+    : annee * 12 + mois < r.anneeDebut * 12 + r.moisDebut ? "A_VENIR" : "TERMINEE";
+  return { periode, etat };
+}
+
+export async function OngletRemises({ id }: { id: string }) {
+  const maintenant = new Date();
+  const mois = maintenant.getMonth() + 1, annee = maintenant.getFullYear();
+  const [entreprise, filleuls, reglage] = await Promise.all([
+    prisma.entreprise.findUnique({
+      where: { id },
+      select: { remisePct: true, codeParrainage: true, parrainId: true, remises: { orderBy: [{ anneeDebut: "desc" }, { moisDebut: "desc" }] } },
+    }),
+    prisma.entreprise.findMany({ where: { parrainId: id }, select: { id: true, nom: true, actif: true, createdAt: true }, orderBy: { createdAt: "desc" } }),
+    reglageParrainage(),
+  ]);
+  if (!entreprise) return null;
+  const parrain = entreprise.parrainId ? await prisma.entreprise.findUnique({ where: { id: entreprise.parrainId }, select: { id: true, nom: true } }) : null;
+  const base = (process.env.NEXT_PUBLIC_URL || process.env.APP_URL || "https://app.franeo-rh.com").replace(/\/$/, "");
+  const remises = entreprise.remises.map((r) => ({ id: r.id, libelle: r.libelle, motif: r.motif, type: r.type, valeur: r.valeur, portee: r.portee, ...periodeRemise(r, mois, annee) }));
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+        <div className="bg-white rounded-xl shadow p-4"><p className="text-xs font-semibold text-gray-500">Remise permanente</p><p className="text-2xl font-bold">{entreprise.remisePct ? `${entreprise.remisePct} %` : "—"}</p></div>
+        <div className="bg-white rounded-xl shadow p-4"><p className="text-xs font-semibold text-gray-500">Remises en cours</p><p className="text-2xl font-bold">{remises.filter((r) => r.etat === "EN_COURS").length}</p></div>
+        <div className="bg-white rounded-xl shadow p-4"><p className="text-xs font-semibold text-gray-500">Filleules</p><p className="text-2xl font-bold">{filleuls.length}</p></div>
+        <div className="bg-white rounded-xl shadow p-4"><p className="text-xs font-semibold text-gray-500">Récompense de parrainage</p><p className="text-sm font-semibold mt-1">{texteRecompense(reglage)}</p><Link href="/admin/entreprises/remises" className="text-xs text-orange-600 hover:underline">Régler</Link></div>
+      </div>
+      <GestionRemises
+        entrepriseId={id}
+        code={entreprise.codeParrainage}
+        lienParrainage={entreprise.codeParrainage ? `${base}/login?parrain=${encodeURIComponent(entreprise.codeParrainage)}` : null}
+        parrain={parrain}
+        remises={remises}
+        moisCourant={`${annee}-${String(mois).padStart(2, "0")}`}
+      />
+      {filleuls.length > 0 && (
+        <div className={carte}>
+          <h2 className="text-lg font-bold mb-3">🌱 Entreprises parrainées ({filleuls.length})</h2>
+          <ul className="text-sm flex flex-col gap-1">
+            {filleuls.map((f) => <li key={f.id}>• <Link href={`/admin/entreprises/${f.id}`} className="font-semibold hover:text-orange-600">{f.nom}</Link> — depuis le {date(f.createdAt)}{f.actif === false ? " (suspendue)" : ""}</li>)}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
