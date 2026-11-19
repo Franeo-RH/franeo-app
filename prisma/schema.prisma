@@ -1377,10 +1377,9 @@ model Cabinet {
   ville          String?
   actif          Boolean       @default(true)
   demo           Boolean       @default(false)
-  // Tarif sur mesure (€/mois) : forfait + prix par dossier client, remise sur les abonnements des clients
+  // Tarif sur mesure (€/mois) : forfait + prix par dossier client (les clients du cabinet n'ont pas de formule)
   tarifForfait   Float?
   tarifParClient Float?
-  tarifRemise    Float?        // % de remise accordée sur les abonnements des clients du cabinet
   tarifNote      String?
   createdAt      DateTime      @default(now())
 

@@ -153,7 +153,9 @@ export function ajoutParValidation(entreprise: { demo?: boolean; abonnementPaieI
 }
 
 /** Niveau de la formule RH : 0 aucune, 1 Basic, 2 Essentiel, 3 Sérénité, 4 Premium */
-export function niveauRH(entreprise: { abonnement?: { nom: string } | null } | null | undefined): number {
+export function niveauRH(entreprise: { abonnement?: { nom: string } | null; cabinetId?: string | null } | null | undefined): number {
+  // Client suivi par un cabinet comptable : pas de formule, accès RH & paie au niveau Basic
+  if (entreprise?.cabinetId) return 1;
   const n = (entreprise?.abonnement?.nom || "").toLowerCase();
   if (n.includes("premium")) return 4;
   if (n.includes("sérénité") || n.includes("serenite")) return 3;
@@ -174,10 +176,18 @@ export function aAccesContrats(entreprise: EntrepriseOptions): boolean {
 
 /* ───────── Options payantes selon la formule (RH ou paie) ───────── */
 
-type EntrepriseOptions = { permissions?: string[] | null; abonnement?: { nom: string } | null; abonnementPaie?: { nom: string } | null } | null | undefined;
+type EntrepriseOptions = { permissions?: string[] | null; abonnement?: { nom: string } | null; abonnementPaie?: { nom: string } | null; cabinetId?: string | null } | null | undefined;
+
+/**
+ * Client suivi par un cabinet comptable : pas de formule. Accès RH & paie au niveau Basic, pas de tickets RH,
+ * conseil RH ponctuel (5 demandes / mois, inclus) ; les options s'activent sur demande du cabinet (tarif à définir).
+ */
+export const QUOTA_CONSEIL_CABINET = 5;
+export const DROITS_RETIRES_CLIENT_CABINET = ["tickets.creer", "tickets.recrutement"] as const;
 
 /** Niveau de la formule paie : 0 aucune, 2 Essentielle, 3 Sérénité, 4 Premium (même échelle que les formules RH) */
 export function niveauPaie(entreprise: EntrepriseOptions): number {
+  if (entreprise?.cabinetId) return 0; // client d'un cabinet : pas de formule paie (l'accès Paie vient de l'onglet « paie »)
   const n = (entreprise?.abonnementPaie?.nom || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   if (!n) return 0;
   if (n.includes("premium")) return 4;
@@ -207,6 +217,7 @@ export const aAccesMedical = (e: EntrepriseOptions) => !!e && (medicalInclus(e) 
 
 /** Conseil RH ponctuel selon le pack RH (le sien ou celui inclus dans la paie) : 5 / mois en Basic, 10 en Essentiel, illimité dès Sérénité */
 export function quotaConseil(e: EntrepriseOptions): number | null {
+  if (e?.cabinetId) return QUOTA_CONSEIL_CABINET;
   const n = niveauFormule(e);
   return n >= 3 ? null : n === 2 ? 10 : 5;
 }

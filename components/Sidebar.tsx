@@ -169,7 +169,10 @@ export default function Sidebar({ role, demandesEnAttente = 0, ticketsOuverts = 
   if (!brut) return null;
   // Client : on cache les liens dont le droit a été retiré par l'admin
   const r = role === "CLIENT" && moi
-    ? { ...brut, items: brut.items.filter((it) => { const d = droitPourChemin(it.href); return !d || aDroit(moi.permissions, d); }) }
+    ? { ...brut, items: brut.items.filter((it) => {
+        if (moi.sansTickets && it.href === "/client/tickets") return false; // client d'un cabinet : pas de tickets RH
+        const d = droitPourChemin(it.href); return !d || aDroit(moi.permissions, d);
+      }) }
     : brut;
 
   // Lien actif : le plus long chemin qui correspond (ex. /admin/paie/variables plutôt que /admin/paie)

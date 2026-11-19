@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { LigneClient } from "@/lib/cabinet";
+import { QUOTA_CONSEIL_CABINET } from "@/lib/droits";
 
 const TEINTES = ["#f97316", "#ef4444", "#8b5cf6", "#0ea5e9", "#10b981", "#eab308", "#ec4899", "#14b8a6"];
 const teinte = (nom: string) => TEINTES[[...nom].reduce((t, c) => t + c.charCodeAt(0), 0) % TEINTES.length];
@@ -55,7 +56,7 @@ export default function PortefeuilleCabinet({ clients }: { clients: LigneClient[
               { n: c.variables, l: "variables en attente", alerte: c.variables > 0 },
               { n: c.demandes, l: "demandes à valider", alerte: c.demandes > 0 },
               { n: c.echeances, l: "échéances (30 j)", alerte: c.echeances > 0 },
-              { n: c.tickets, l: "tickets ouverts", alerte: false },
+              { n: `${c.conseil}/${QUOTA_CONSEIL_CABINET}`, l: "conseil RH ce mois", alerte: c.conseil >= QUOTA_CONSEIL_CABINET },
             ];
             return (
               <article key={c.id} className={`fr-verre fr-cab-carte${c.actif ? "" : " fr-cab-suspendu"}`} style={{ "--teinte": couleur } as React.CSSProperties}>

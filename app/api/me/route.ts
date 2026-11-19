@@ -16,6 +16,8 @@ export async function GET() {
     permissions: session.entreprise?.permissions || [],
     aPaie: aAccesPaie(session.entreprise),
     demo: !!session.entreprise?.demo,
+    // Client suivi par un cabinet comptable : pas de tickets RH (seulement le conseil RH ponctuel)
+    sansTickets: !!session.entreprise?.cabinetId,
     // Dirigeant d'établissement : nom de son établissement (affiché dans la barre du haut)
     etablissement: session.etablissementId ? session.etablissement?.nom ?? null : null,
   });

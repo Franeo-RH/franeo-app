@@ -20,6 +20,8 @@ const OPTIONS = {
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session || session.role !== "CLIENT" || !session.entrepriseId) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
+  // Client suivi par un cabinet comptable : les options se demandent par le cabinet (tarif à définir)
+  if (session.entreprise?.cabinetId) return demandeCabinet(request, session);
   if (session.etablissementId || !aDroit(session.entreprise?.permissions, "entreprise.abonnements")) {
     return NextResponse.json({ erreur: "Réservé au dirigeant de l'entreprise." }, { status: 403 });
   }
@@ -53,4 +55,44 @@ export async function POST(request: NextRequest) {
   });
   await notifierAdmin({ sujet: `${texte} — ${e.nom}`, titre: b.action === "activer" ? "🧩 Option activée par un client" : "🧩 Option arrêtée par un client", lignes: [`${e.nom} (${session.prenom})`, texte], lien: "/admin/entreprises/demandes-services", entrepriseId: session.entrepriseId });
   return NextResponse.json({ succes: true });
+}
+
+/**
+ * Client d'un cabinet : le cabinet demande l'option (FRANEO RH l'active depuis Demandes des clients et fixe le tarif),
+ * ou l'arrête. Le client lui-même ne peut pas la demander.
+ */
+async function demandeCabinet(request: NextRequest, session: NonNullable<Awaited<ReturnType<typeof getSession>>>) {
+  if (!session.modeCabinet) return NextResponse.json({ erreur: "Les options se demandent par votre cabinet comptable." }, { status: 403 });
+  if (estSessionDemo(session)) return NextResponse.json({ erreur: "Non disponible dans la démo." }, { status: 403 });
+  const b = await request.json().catch(() => ({}));
+  const o = OPTIONS[b.option as keyof typeof OPTIONS];
+  if (!o || (b.action !== "activer" && b.action !== "arreter")) return NextResponse.json({ erreur: "Demande invalide" }, { status: 400 });
+  const entrepriseId = session.entrepriseId!;
+  const e = await prisma.entreprise.findUnique({ where: { id: entrepriseId }, select: { nom: true, permissions: true } });
+  if (!e) return NextResponse.json({ erreur: "Entreprise introuvable" }, { status: 404 });
+  const cabinet = session.modeCabinet.nom;
+
+  if (b.action === "arreter") {
+    if (e.permissions.includes(o.permission)) {
+      await prisma.entreprise.update({ where: { id: entrepriseId }, data: { permissions: e.permissions.filter((p) => p !== o.permission) } });
+      oublierSessions();
+      await notifierAdmin({ sujet: `${o.nom} arrêtée — ${e.nom}`, titre: "🧩 Option arrêtée par un cabinet", lignes: [`${e.nom} : ${o.nom} arrêtée par ${cabinet} (${session.prenom}).`], lien: "/admin/entreprises/demandes-services", entrepriseId });
+    }
+    return NextResponse.json({ succes: true });
+  }
+  if (e.permissions.includes(o.permission)) return NextResponse.json({ succes: true });
+  const enCours = await prisma.demandeService.findFirst({ where: { entrepriseId, type: o.type, statut: { in: ["EN_ATTENTE", "EN_COURS"] } }, select: { id: true } });
+  if (!enCours) {
+    await prisma.demandeService.create({
+      data: { entrepriseId, type: o.type, options: [`${o.nom} — tarif à définir`], message: `Demandée par le cabinet ${cabinet}.`, auteur: `${session.prenom} (${cabinet})` },
+    });
+    await notifierAdmin({
+      sujet: `Demande d'option — ${e.nom} (${cabinet})`,
+      titre: "🧩 Option demandée par un cabinet",
+      lignes: [`${cabinet} demande « ${o.nom} » pour son client ${e.nom}.`, "Tarif à définir : validez la demande pour activer l'option."],
+      lien: "/admin/entreprises/demandes-services",
+      entrepriseId,
+    });
+  }
+  return NextResponse.json({ succes: true, demande: true });
 }

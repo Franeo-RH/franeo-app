@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getSessionCabinet, portefeuille, tarifCabinet, euros } from "@/lib/cabinet";
+import { getSessionCabinet, portefeuille, tarifCabinet, euros, TEXTE_CONSEIL_CABINET } from "@/lib/cabinet";
 import PortefeuilleCabinet from "@/components/cabinet/PortefeuilleCabinet";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ export default async function PagePortefeuille() {
   const mode = session.modeCabinet;
   const [clients, cabinet] = await Promise.all([
     portefeuille(mode),
-    prisma.cabinet.findUnique({ where: { id: mode.cabinetId }, select: { tarifForfait: true, tarifParClient: true, tarifRemise: true, tarifNote: true, _count: { select: { entreprises: { where: { actif: true } } } } } }),
+    prisma.cabinet.findUnique({ where: { id: mode.cabinetId }, select: { tarifForfait: true, tarifParClient: true, tarifNote: true, _count: { select: { entreprises: { where: { actif: true } } } } } }),
   ]);
   const somme = (k: "salaries" | "absences" | "variables" | "echeances" | "demandes") => clients.reduce((t, c) => t + c[k], 0);
   const chiffres = [
@@ -48,6 +48,8 @@ export default async function PagePortefeuille() {
 
       <PortefeuilleCabinet clients={clients} />
 
+      <p className="text-sm text-gray-500 px-1">💬 {TEXTE_CONSEIL_CABINET} Ouvrez le dossier du client, puis Tickets › Conseil RH ponctuel.</p>
+
       {mode.gerant && tarif?.defini && (
         <div className="fr-verre p-6 flex flex-col gap-2">
           <h2 className="text-lg font-bold">💶 Votre tarif cabinet</h2>
@@ -55,7 +57,6 @@ export default async function PagePortefeuille() {
             {tarif.forfait > 0 && <span>Forfait : <strong>{euros(tarif.forfait)}</strong> / mois</span>}
             {tarif.parClient > 0 && <span>Par dossier client : <strong>{euros(tarif.parClient)}</strong> / mois</span>}
             {(tarif.forfait > 0 || tarif.parClient > 0) && <span>Ce mois-ci : <strong>{euros(tarif.total)}</strong> ({cabinet!._count.entreprises} dossier{cabinet!._count.entreprises > 1 ? "s" : ""})</span>}
-            {tarif.remise > 0 && <span>Remise sur les abonnements de vos clients : <strong>{tarif.remise} %</strong></span>}
           </div>
           {cabinet?.tarifNote && <p className="text-sm text-gray-600" style={{ whiteSpace: "pre-line" }}>{cabinet.tarifNote}</p>}
           <p className="text-xs text-gray-400">Tarif sur mesure défini avec FRANEO RH · TVA non applicable, art. 293 B du CGI.</p>

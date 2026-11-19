@@ -44,7 +44,7 @@ export default async function AdminCabinets() {
                   </div>
                   <p className="text-sm text-gray-500">{c.ville || "—"}</p>
                   <p className="text-sm">🗂️ {c._count.entreprises} client{c._count.entreprises > 1 ? "s" : ""} · 👥 {c._count.utilisateurs} accès</p>
-                  <p className="text-sm font-semibold text-orange-600">{t.defini ? `${euros(t.total)} / mois${t.remise ? ` · remise ${t.remise} %` : ""}` : "Tarif à définir"}</p>
+                  <p className="text-sm font-semibold text-orange-600">{t.defini ? `${euros(t.total)} / mois` : "Tarif à définir"}</p>
                 </Link>
               );
             })}

@@ -4,7 +4,7 @@
 import { prisma } from "@/lib/prisma";
 import { quotaConseil } from "@/lib/droits";
 
-type Entreprise = { id: string; permissions?: string[] | null; abonnement?: { nom: string } | null; abonnementPaie?: { nom: string } | null };
+type Entreprise = { id: string; permissions?: string[] | null; abonnement?: { nom: string } | null; abonnementPaie?: { nom: string } | null; cabinetId?: string | null };
 
 export async function usageConseil(e: Entreprise, maintenant = new Date()) {
   const debut = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1);

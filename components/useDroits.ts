@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type Moi = { role: string; permissions: string[]; aPaie: boolean; prenom: string; logoVersion: number | null; etablissement: string | null };
+type Moi = { role: string; permissions: string[]; aPaie: boolean; prenom: string; logoVersion: number | null; etablissement: string | null; sansTickets: boolean };
 let cache: Moi | null = null;
 let enCours: Promise<Moi | null> | null = null;
 
@@ -14,7 +14,7 @@ export function useDroits(): Moi | null {
     if (!enCours) {
       enCours = fetch("/api/me")
         .then((r) => (r.ok ? r.json() : null))
-        .then((d) => (d ? { role: d.role, permissions: d.permissions || [], aPaie: !!d.aPaie, prenom: d.prenom || "", logoVersion: d.logoVersion ?? null, etablissement: d.etablissement ?? null } : null))
+        .then((d) => (d ? { role: d.role, permissions: d.permissions || [], aPaie: !!d.aPaie, prenom: d.prenom || "", logoVersion: d.logoVersion ?? null, etablissement: d.etablissement ?? null, sansTickets: !!d.sansTickets } : null))
         .catch(() => null);
     }
     enCours.then((d) => {

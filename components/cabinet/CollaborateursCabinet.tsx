@@ -137,7 +137,7 @@ function EditionCollaborateur({ c, clients, soiMeme, onValider }: { c: Collabora
   const [choisis, setChoisis] = useState(c.clients.filter((x) => x !== "aucun"));
   const [gerant, setGerant] = useState(c.gerant);
   return (
-    <div className="mt-3 pt-3 border-t border-white/60 flex flex-col gap-3">
+    <div className="mt-3 pt-3 border-t border-gray-200 flex flex-col gap-3">
       <select className="fr-champ" value={profil} onChange={(e) => setProfil(e.target.value)} aria-label="Profil de droits">
         {PROFILS_DROITS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
       </select>

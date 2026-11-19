@@ -38,7 +38,8 @@ export default async function ClientLayout({ children }: { children: React.React
   }
 
   // L'application n'est pas accessible sans formule (RH ou paie)
-  if (session && session.role === "CLIENT" && session.entreprise && !session.entreprise.demo && !session.entreprise.abonnementId && !session.entreprise.abonnementPaieId) {
+  // (un client suivi par un cabinet comptable n'a pas de formule : il garde l'accès RH & paie)
+  if (session && session.role === "CLIENT" && session.entreprise && !session.entreprise.demo && !session.entreprise.cabinetId && !session.entreprise.abonnementId && !session.entreprise.abonnementPaieId) {
     const [formules, demande] = await Promise.all([
       prisma.abonnement.findMany({ orderBy: { prixMensuel: "asc" } }),
       prisma.demandeEvolution.findFirst({ where: { entrepriseId: session.entreprise.id, statut: "En attente" } }),

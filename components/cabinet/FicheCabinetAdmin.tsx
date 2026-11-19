@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 type Cabinet = {
   id: string; nom: string; siret: string | null; email: string | null; telephone: string | null; ville: string | null; actif: boolean; demo: boolean;
-  tarifForfait: number | null; tarifParClient: number | null; tarifRemise: number | null; tarifNote: string | null;
+  tarifForfait: number | null; tarifParClient: number | null; tarifNote: string | null;
 };
 type Entreprise = { id: string; nom: string; cabinetId: string | null; autreCabinet: string | null };
 
@@ -15,7 +15,7 @@ const enTexte = (n: number | null) => (n == null ? "" : String(n).replace(".", "
 export default function FicheCabinetAdmin({ cabinet, entreprises }: { cabinet: Cabinet; entreprises: Entreprise[] }) {
   const router = useRouter();
   const [infos, setInfos] = useState({ nom: cabinet.nom, siret: cabinet.siret ?? "", ville: cabinet.ville ?? "", email: cabinet.email ?? "", telephone: cabinet.telephone ?? "" });
-  const [tarif, setTarif] = useState({ tarifForfait: enTexte(cabinet.tarifForfait), tarifParClient: enTexte(cabinet.tarifParClient), tarifRemise: enTexte(cabinet.tarifRemise), tarifNote: cabinet.tarifNote ?? "" });
+  const [tarif, setTarif] = useState({ tarifForfait: enTexte(cabinet.tarifForfait), tarifParClient: enTexte(cabinet.tarifParClient), tarifNote: cabinet.tarifNote ?? "" });
   const [choisis, setChoisis] = useState(entreprises.filter((e) => e.cabinetId === cabinet.id).map((e) => e.id));
   const [recherche, setRecherche] = useState("");
   const [message, setMessage] = useState<{ bloc: string; texte: string } | null>(null);
@@ -66,11 +66,11 @@ export default function FicheCabinetAdmin({ cabinet, entreprises }: { cabinet: C
 
       <section className="fr-verre p-6 flex flex-col gap-3">
         <h2 className="text-lg font-bold">💶 Tarif sur mesure</h2>
-        <p className="text-sm text-gray-500">Laissez vide ce qui ne s&apos;applique pas. La remise s&apos;ajoute automatiquement à la facture mensuelle de chaque client du cabinet.</p>
+        <p className="text-sm text-gray-500">Laissez vide ce qui ne s&apos;applique pas. Les clients du cabinet n&apos;ont pas de formule et ne sont pas facturés : c&apos;est le cabinet qui paie ce tarif.</p>
+        <p className="text-sm text-gray-500">🧾 Clients du cabinet : accès RH &amp; paie (niveau Basic), aucun ticket RH, conseil RH ponctuel 5 demandes / mois répondues par vous et incluses. Options (Documents, Suivi médical, Projets) sur demande du cabinet, tarif à définir.</p>
         <div className="grid grid-cols-2 gap-3">
           {champ(tarif.tarifForfait, (v) => setTarif({ ...tarif, tarifForfait: v }), "Forfait (€ / mois)", { inputMode: "decimal", placeholder: "ex. 49" })}
           {champ(tarif.tarifParClient, (v) => setTarif({ ...tarif, tarifParClient: v }), "Par dossier client (€ / mois)", { inputMode: "decimal", placeholder: "ex. 9" })}
-          {champ(tarif.tarifRemise, (v) => setTarif({ ...tarif, tarifRemise: v }), "Remise sur les abonnements des clients (%)", { inputMode: "decimal", placeholder: "ex. 10" })}
         </div>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-semibold text-gray-600">Conditions particulières (visibles par le gérant)</span>

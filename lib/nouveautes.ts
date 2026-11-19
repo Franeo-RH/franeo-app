@@ -17,12 +17,10 @@ export const MISES_A_JOUR: MiseAJour[] = [
   {
     version: "V64",
     date: "novembre 2026",
-    titre: "Un nouveau look et l'accès pour votre cabinet comptable",
+    titre: "L'accès pour votre cabinet comptable",
     clients: [
-      "✨ Nouveau design « verre dépoli » : fond lumineux, cartes translucides, menus plus légers.",
       "🏛️ Accès cabinet : votre expert-comptable peut suivre votre dossier depuis son propre accès (variables de paie, absences, documents). Le cabinet qui a accès à votre dossier est indiqué dans Mon entreprise.",
     ],
-    salaries: ["✨ Nouveau design « verre dépoli » de votre espace."],
   },
   {
     version: "V61",

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 import { COOKIE_CLIENT_CABINET, empreinte, lireJeton, NOM_COOKIE } from "./jeton-session";
 import { RETIRES_ETABLISSEMENT } from "./perimetre";
+import { DROITS_RETIRES_CLIENT_CABINET } from "./droits";
 
 /**
  * Utilisateur connecté, quel que soit son rôle et même si son entreprise est suspendue.
@@ -30,7 +31,7 @@ function lireUtilisateur(id: string) {
 
 
 /** Droits jamais accordés à un cabinet dans le dossier d'un client : abonnements, options et mandat restent au dirigeant */
-const RETIRES_CABINET = ["entreprise.abonnements"];
+const RETIRES_CABINET = ["entreprise.abonnements", ...DROITS_RETIRES_CLIENT_CABINET];
 
 export type ModeCabinet = { cabinetId: string; nom: string; gerant: boolean; demo: boolean; clients: string[] };
 type SessionUtilisateur = UtilisateurSession & { modeCabinet?: ModeCabinet };
@@ -66,6 +67,11 @@ async function sessionCabinet(u: UtilisateurSession, choix: string | undefined):
  * (infos de l'entreprise, abonnements, factures, clôture, imports…) ni les droits retirés à ce compte.
  */
 function appliquerPerimetre(u: UtilisateurSession): UtilisateurSession | null {
+  // Entreprise suivie par un cabinet comptable : pas de tickets RH (le conseil RH ponctuel reste)
+  if (u.role === "CLIENT" && u.entreprise?.cabinetId) {
+    const sans = DROITS_RETIRES_CLIENT_CABINET.map((p) => `-${p}`);
+    u = { ...u, entreprise: { ...u.entreprise, permissions: [...new Set([...u.entreprise.permissions, ...sans])] } };
+  }
   if (u.role !== "CLIENT" || !u.etablissementId) return u;
   if (!u.etablissement || !u.entreprise) return null; // établissement introuvable : aucun accès
   const retires = [...RETIRES_ETABLISSEMENT, ...(u.permissionsRetirees || [])].map((p) => `-${p}`);

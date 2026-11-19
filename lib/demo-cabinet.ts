@@ -5,6 +5,7 @@
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { preparerDemo, EMAIL_DEMO_CABINET } from "@/lib/demo";
+import { permissionsFormule } from "@/lib/droits";
 
 const NOM_CABINET = "Cabinet Démo Expertise";
 const EMAIL_COLLAB = "demo-cabinet-collab@franeo-rh.com";
@@ -12,6 +13,16 @@ const jour = (n: number) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.s
 
 type Fiche = { prenom: string; nom: string; poste: string; contrat: string; anciennete: number; salaire: number };
 const CLIENTS: { nom: string; ville: string; salaries: Fiche[]; absences: number; variables: number; echeanceEnRetard: boolean; cloture: string | null }[] = [
+  {
+    nom: "Pharmacie Démo", ville: "Toul", absences: 2, variables: 1, echeanceEnRetard: true, cloture: null,
+    salaries: [
+      { prenom: "Élise", nom: "Démo", poste: "Pharmacienne adjointe", contrat: "CDI", anciennete: 1600, salaire: 3600 },
+      { prenom: "Rayan", nom: "Démo", poste: "Préparateur", contrat: "CDI", anciennete: 700, salaire: 2100 },
+      { prenom: "Manon", nom: "Démo", poste: "Préparatrice", contrat: "CDI", anciennete: 350, salaire: 2050 },
+      { prenom: "Tom", nom: "Démo", poste: "Apprenti préparateur", contrat: "Alternance", anciennete: 90, salaire: 1100 },
+      { prenom: "Sarah", nom: "Démo", poste: "Rayonniste", contrat: "CDD", anciennete: 45, salaire: 1820 },
+    ],
+  },
   {
     nom: "Boulangerie Démo", ville: "Nancy", absences: 1, variables: 2, echeanceEnRetard: false, cloture: null,
     salaries: [
@@ -40,22 +51,25 @@ const CLIENTS: { nom: string; ville: string; salaries: Fiche[]; absences: number
   },
 ];
 
-/** Crée la démo cabinet si besoin et renvoie l'id du compte du gérant fictif */
+/**
+ * Crée la démo cabinet si besoin et renvoie l'id du compte du gérant fictif.
+ * L'entreprise démo principale n'en fait pas partie : un client suivi par un cabinet n'a pas de tickets RH,
+ * alors que la démo dirigeant les présente.
+ */
 export async function preparerDemoCabinet(): Promise<string> {
   const { entrepriseId: principale } = await preparerDemo();
 
   let cabinet = await prisma.cabinet.findFirst({ where: { demo: true } });
   if (!cabinet) cabinet = await prisma.cabinet.create({ data: { nom: NOM_CABINET, demo: true, ville: "Nancy", email: EMAIL_DEMO_CABINET } });
 
-  const abonnement = await prisma.abonnement.findFirst({ orderBy: { prixMensuel: "asc" } });
   const mois = new Date().getMonth() + 1, annee = new Date().getFullYear();
-  const ids = [principale];
+  const ids: string[] = [];
 
   for (const c of CLIENTS) {
     let e = await prisma.entreprise.findFirst({ where: { demo: true, nom: c.nom, cabinetId: cabinet.id } });
     if (!e) {
       e = await prisma.entreprise.create({
-        data: { nom: c.nom, demo: true, ville: c.ville, pays: "France", cabinetId: cabinet.id, abonnementId: abonnement?.id ?? null, permissions: ["salaries", "paie", "tickets", "absences", "entreprise", "helpdesk", "espace-salaries"] },
+        data: { nom: c.nom, demo: true, ville: c.ville, pays: "France", cabinetId: cabinet.id, permissions: [...permissionsFormule("BASIC", [], true), ...(c.nom.startsWith("Agence") ? ["projets"] : [])] },
       });
       const salaries = [];
       for (const s of c.salaries) {
@@ -74,7 +88,7 @@ export async function preparerDemoCabinet(): Promise<string> {
     }
     ids.push(e.id);
   }
-  await prisma.entreprise.update({ where: { id: principale }, data: { cabinetId: cabinet.id } });
+  await prisma.entreprise.updateMany({ where: { id: principale, cabinetId: { not: null } }, data: { cabinetId: null } });
 
   // Gérant fictif (on entre par le bouton « Tester la démo cabinet ») et un collaborateur limité à deux clients
   const mdp = () => `!${randomBytes(24).toString("hex")}`;
@@ -84,7 +98,7 @@ export async function preparerDemoCabinet(): Promise<string> {
   }
   if (!(await prisma.utilisateur.findUnique({ where: { email: EMAIL_COLLAB }, select: { id: true } }))) {
     await prisma.utilisateur.create({
-      data: { email: EMAIL_COLLAB, prenom: "Hugo (collaborateur)", role: "CABINET", cabinetId: cabinet.id, profilCabinet: "comptable", permissionsRetirees: ["salaries.creer", "salaries.supprimer", "salaries.importer", "tickets.recrutement", "espace.gerer"], clientsCabinet: ids.slice(1, 3), motDePasse: mdp() },
+      data: { email: EMAIL_COLLAB, prenom: "Hugo (collaborateur)", role: "CABINET", cabinetId: cabinet.id, profilCabinet: "comptable", permissionsRetirees: ["salaries.creer", "salaries.supprimer", "salaries.importer", "tickets.recrutement", "espace.gerer"], clientsCabinet: ids.slice(0, 2), motDePasse: mdp() },
     });
   }
   return gerant.id;

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession, oublierSessions } from "@/lib/session";
 import { creerCollaborateur, droitsCollaborateur } from "@/lib/cabinet";
 import { envoyerActivation } from "@/lib/invitation";
+import { permissionsFormule } from "@/lib/droits";
 
 type Ctx = { params: Promise<{ id: string }> };
 const texte = (v: unknown, max = 200) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
@@ -15,7 +16,7 @@ const nombre = (v: unknown) => {
 /**
  * PATCH (admin), selon `action` :
  *  - "infos"         : nom, coordonnées, actif
- *  - "tarif"         : tarif sur mesure (forfait, prix par client, remise %, note)
+ *  - "tarif"         : tarif sur mesure (forfait, prix par client, note)
  *  - "clients"       : entreprises suivies par le cabinet (liste complète)
  *  - "collaborateur" : inviter (sans id) ou modifier un collaborateur (id), renvoyer l'invitation (relancer)
  */
@@ -39,20 +40,20 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
   }
 
   if (b.action === "tarif") {
-    const remise = nombre(b.tarifRemise);
-    if (remise !== null && remise > 100) return NextResponse.json({ erreur: "La remise ne peut pas dépasser 100 %." }, { status: 400 });
     await prisma.cabinet.update({
       where: { id },
-      data: { tarifForfait: nombre(b.tarifForfait), tarifParClient: nombre(b.tarifParClient), tarifRemise: remise, tarifNote: texte(b.tarifNote, 1000) },
+      data: { tarifForfait: nombre(b.tarifForfait), tarifParClient: nombre(b.tarifParClient), tarifNote: texte(b.tarifNote, 1000) },
     });
     return NextResponse.json({ succes: true });
   }
 
   if (b.action === "clients") {
     const ids = Array.isArray(b.entreprises) ? b.entreprises.filter((x: unknown): x is string => typeof x === "string") : [];
+    // Nouveaux clients du cabinet : pas de formule, accès RH & paie au niveau Basic (les options déjà actives sont gardées)
+    const nouveaux = await prisma.entreprise.findMany({ where: { id: { in: ids }, demo: false, NOT: { cabinetId: id } }, select: { id: true, permissions: true } });
     await prisma.$transaction([
       prisma.entreprise.updateMany({ where: { cabinetId: id, id: { notIn: ids } }, data: { cabinetId: null } }),
-      prisma.entreprise.updateMany({ where: { id: { in: ids }, demo: false }, data: { cabinetId: id } }),
+      ...nouveaux.map((e) => prisma.entreprise.update({ where: { id: e.id }, data: { cabinetId: id, permissions: permissionsFormule("BASIC", e.permissions, true) } })),
     ]);
     oublierSessions();
     return NextResponse.json({ succes: true });

@@ -14,6 +14,8 @@ export default async function ClientTickets() {
   const session = await getSession();
   if (!session) redirect("/login");
   if (session.role !== "CLIENT") redirect("/admin/dashboard");
+  // Client suivi par un cabinet comptable : pas de tickets RH, seulement le conseil RH ponctuel
+  if (session.entreprise?.cabinetId) redirect("/client/tickets/questions");
 
   if (!session.entreprise?.permissions.includes("tickets")) {
     redirect("/client/dashboard");

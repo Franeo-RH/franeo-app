@@ -46,6 +46,8 @@ export default async function EntrepriseClient({ searchParams }: { searchParams:
   // Options (prenables à tout moment) et estimation de la facture du mois, options comprises
   const maintenant = new Date();
   const dirigeant = !session.etablissementId;
+  // Client suivi par un cabinet : pas de formule, options sur demande du cabinet
+  const viaCabinet = entreprise.cabinetId ? (session.modeCabinet ? "cabinet" as const : "client" as const) : null;
   const [options, estimation] = dirigeant
     ? await Promise.all([etatOptions(session), aDroit(session.entreprise?.permissions, "entreprise.supplements") ? calculerFacture(entreprise.id, maintenant.getMonth() + 1, maintenant.getFullYear()) : Promise.resolve(null)])
     : [null, null];
@@ -62,7 +64,7 @@ export default async function EntrepriseClient({ searchParams }: { searchParams:
               <h1 className="text-3xl font-bold">🏢 {entreprise.nom}</h1>
               <p className="text-gray-500 mt-1">Informations de votre entreprise</p>
               {entreprise.cabinet?.actif && (
-                <p className="text-sm mt-2 inline-flex items-center gap-2 rounded-full px-3 py-1" style={{ background: "rgba(255, 237, 213, 0.8)", color: "#9a3412" }}>
+                <p className="text-sm mt-2 inline-flex items-center gap-2 rounded-full px-3 py-1" style={{ background: "#fff7ed", color: "#9a3412" }}>
                   🏛️ Votre cabinet <strong>{entreprise.cabinet.nom}</strong> a accès à votre dossier
                 </p>
               )}
@@ -113,6 +115,12 @@ export default async function EntrepriseClient({ searchParams }: { searchParams:
 
             <div className="bg-white rounded-xl shadow p-6">
               <h2 className="text-lg font-bold mb-4">💳 Abonnements Franeo</h2>
+              {entreprise.cabinet ? (
+                <p className="text-sm text-gray-600">
+                  Accès <strong>RH &amp; paie</strong> par votre cabinet <strong>{entreprise.cabinet.nom}</strong>, sans formule : conseil RH ponctuel inclus (5 demandes par mois, répondues par FRANEO RH). Les options se demandent par le cabinet.
+                </p>
+              ) : (
+              <>
               <div className="flex flex-col gap-3">
                 <Info label="Formule RH" value={entreprise.abonnement ? `${entreprise.abonnement.nom} — ${entreprise.abonnement.prixMensuel} €/mois` : "Aucune formule RH"} />
                 <Info label="Tickets RH inclus / mois" value={entreprise.abonnement?.ticketsRH.toString()} />
@@ -128,6 +136,8 @@ export default async function EntrepriseClient({ searchParams }: { searchParams:
                 <Link href="/client/entreprise/abonnement" className="text-orange-500 font-semibold hover:underline">Gérer mes abonnements →</Link>
                 {estimation && <Link href="/client/entreprise/supplements" className="text-gray-600 font-semibold hover:underline">Détail du mois →</Link>}
               </div>
+              </>
+              )}
             </div>
 
             <MandatPrelevement
@@ -147,9 +157,9 @@ export default async function EntrepriseClient({ searchParams }: { searchParams:
                   <h2 className="text-xl font-bold">🧩 Options</h2>
                   <p className="text-sm text-gray-500">Activez ou arrêtez une option à tout moment : elle est ajoutée tout de suite au calcul de votre facture du mois (sauf si votre formule l&apos;inclut).</p>
                 </div>
-                <OptionDocuments etat={options.documents} inclus={options.documentsInclus} peutDemander={dirigeant} />
-                <OptionMedical etat={options.medical} inclus={options.medicalInclus} peutDemander={dirigeant} />
-                <OptionProjets etat={options.projets} inclus={options.projetsInclus} peutDemander={dirigeant} />
+                <OptionDocuments etat={options.documents} inclus={options.documentsInclus} peutDemander={dirigeant} viaCabinet={viaCabinet} />
+                <OptionMedical etat={options.medical} inclus={options.medicalInclus} peutDemander={dirigeant} viaCabinet={viaCabinet} />
+                <OptionProjets etat={options.projets} inclus={options.projetsInclus} peutDemander={dirigeant} viaCabinet={viaCabinet} />
               </div>
             )}
 
