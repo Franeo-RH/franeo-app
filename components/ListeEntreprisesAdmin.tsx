@@ -96,7 +96,7 @@ export default function ListeEntreprisesAdmin({ entreprises, annee }: { entrepri
 
               <div className="grid grid-cols-2 gap-2 mt-auto text-sm font-semibold">
                 <Link href={`/admin/entreprises/${e.id}`} className="bg-black text-white text-center rounded-lg py-2 hover:bg-gray-800">Ouvrir la fiche</Link>
-                <Link href={`/admin/salaries?entreprise=${e.id}`} className="bg-orange-500 text-white text-center rounded-lg py-2 hover:bg-orange-600">👥 Salariés</Link>
+                <Link href={`/admin/entreprises/${e.id}?onglet=salaries`} className="bg-orange-500 text-white text-center rounded-lg py-2 hover:bg-orange-600">👥 Salariés</Link>
                 <Link href={`/admin/entreprises/${e.id}/modifier`} className="border border-gray-300 text-center rounded-lg py-2 hover:bg-gray-50">✏️ Modifier</Link>
                 <Link href={`/admin/entreprises/${e.id}/permissions`} className="border border-gray-300 text-center rounded-lg py-2 hover:bg-gray-50">🔐 Accès & droits</Link>
               </div>

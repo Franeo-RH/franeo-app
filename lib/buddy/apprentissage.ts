@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { plain } from "@/lib/buddy/outils";
+import { racine } from "@/lib/buddy/catalogue";
 
 // Mots trop courants pour servir de mots-clés
 const VIDES = new Set("a au aux avec ce ces c ca cela comment combien d de des du elle en est et etre faire fait il ils je j l la le les leur lui ma mais me mes mon ne ni nous on ou par pas pour qu que quel quelle quelles quels qui sa sans se ses si son sont sur ta te tes toi ton tu un une vos votre vous y est-ce quoi dois peux puis faut bonjour merci svp stp".split(" "));
@@ -13,24 +14,33 @@ export function motsClesDe(texte: string): string[] {
   return [...new Set(normaliser(texte).split(" ").filter((m) => m.length > 2 && !VIDES.has(m)))].slice(0, 12);
 }
 
-export type ReponseApprise = { reponse: string | null; source: string | null };
+export type ReponseApprise = { reponse: string | null; source: string | null; action: string | null };
+
+// Réponses apprises gardées 30 s en mémoire (elles changent rarement, Buddy les consulte souvent)
+let memoire: { expire: number; liste: { motsCles: string[]; reponse: string | null; source: string | null; action: string | null }[] } | null = null;
+export function oublierReponsesApprises() { memoire = null; }
 
 /**
- * Réponse apprise : la question doit contenir au moins 60 % des mots-clés d'une réponse rédigée par l'admin.
- * `source` : l'admin a demandé à Buddy d'aller chercher l'information dans l'application (lib/buddy/sources.ts).
+ * Réponse apprise : la question doit contenir au moins 60 % des mots-clés d'une réponse rédigée par l'admin
+ * (comparaison sur les racines : « absences » = « absence »). À score égal, la réponse la plus précise gagne.
+ * `source` : chercher l'information dans l'app (lib/buddy/sources.ts) ; `action` : exécuter une action de Buddy.
  */
 export async function reponseApprise(texte: string): Promise<ReponseApprise | null> {
-  const mots = new Set(normaliser(texte).split(" "));
-  const appris = await prisma.buddyQuestion.findMany({
-    where: { statut: "REPONDUE", OR: [{ reponse: { not: null } }, { source: { not: null } }] },
-    select: { motsCles: true, reponse: true, source: true },
-  });
-  let meilleure: { score: number; r: ReponseApprise } | null = null;
-  for (const a of appris) {
-    if (a.motsCles.length === 0 || (!a.reponse?.trim() && !a.source)) continue;
-    const trouves = a.motsCles.filter((m) => mots.has(m)).length;
+  const mots = new Set(normaliser(texte).split(" ").map(racine));
+  if (!memoire || memoire.expire < Date.now()) {
+    const liste = await prisma.buddyQuestion.findMany({
+      where: { statut: "REPONDUE", OR: [{ reponse: { not: null } }, { source: { not: null } }, { action: { not: null } }] },
+      select: { motsCles: true, reponse: true, source: true, action: true },
+    });
+    memoire = { expire: Date.now() + 30_000, liste };
+  }
+  let meilleure: { score: number; n: number; r: ReponseApprise } | null = null;
+  for (const a of memoire.liste) {
+    if (a.motsCles.length === 0 || (!a.reponse?.trim() && !a.source && !a.action)) continue;
+    const trouves = a.motsCles.filter((m) => mots.has(racine(m))).length;
     const score = trouves / a.motsCles.length;
-    if (trouves >= 1 && score >= 0.6 && (!meilleure || score > meilleure.score)) meilleure = { score, r: { reponse: a.reponse?.trim() || null, source: a.source } };
+    const mieux = !meilleure || score > meilleure.score || (score === meilleure.score && trouves > meilleure.n);
+    if (trouves >= 1 && score >= 0.6 && mieux) meilleure = { score, n: trouves, r: { reponse: a.reponse?.trim() || null, source: a.source, action: a.action } };
   }
   return meilleure?.r ?? null;
 }

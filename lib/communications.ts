@@ -53,6 +53,12 @@ export async function misesAJour(role: string) {
   });
 }
 
+/** Communications en ligne : date de publication atteinte, pas encore expirées */
+const enLigne = () => {
+  const maintenant = new Date();
+  return [{ OR: [{ publieLe: null }, { publieLe: { lte: maintenant } }] }, { OR: [{ expireLe: null }, { expireLe: { gt: maintenant } }] }];
+};
+
 /** Communications pas encore validées (« J'ai lu ») par cet utilisateur */
 export async function communicationsNonLues(u: { id: string; role: string; entrepriseId: string | null }) {
   if (!u.entrepriseId || (u.role !== "CLIENT" && u.role !== "SALARIE")) return [];
@@ -62,7 +68,7 @@ export async function communicationsNonLues(u: { id: string; role: string; entre
     where: {
       cible: { in: cibles },
       type: { not: "MISE_A_JOUR" }, // la dernière mise à jour a sa propre carte
-      OR: [{ entrepriseId: null }, { entrepriseId: u.entrepriseId }],
+      AND: [{ OR: [{ entrepriseId: null }, { entrepriseId: u.entrepriseId }] }, ...enLigne()],
       lectures: { none: { utilisateurId: u.id } },
     },
     orderBy: [{ importante: "desc" }, { createdAt: "desc" }],
@@ -76,7 +82,7 @@ export async function communicationsRecues(u: { id: string; role: string; entrep
   if (!u.entrepriseId || (u.role !== "CLIENT" && u.role !== "SALARIE")) return [];
   const cibles = u.role === "CLIENT" ? ["CLIENTS", "TOUS"] : ["SALARIES", "TOUS"];
   const coms = await prisma.communication.findMany({
-    where: { cible: { in: cibles }, type: { not: "MISE_A_JOUR" }, OR: [{ entrepriseId: null }, { entrepriseId: u.entrepriseId }] },
+    where: { cible: { in: cibles }, type: { not: "MISE_A_JOUR" }, AND: [{ OR: [{ entrepriseId: null }, { entrepriseId: u.entrepriseId }] }, ...enLigne()] },
     orderBy: { createdAt: "desc" },
     take: 30,
     select: { id: true, titre: true, contenu: true, importante: true, createdAt: true, lectures: { where: { utilisateurId: u.id }, select: { luAt: true } } },

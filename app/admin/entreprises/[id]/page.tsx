@@ -16,17 +16,22 @@ import LogoEntreprise from "@/components/LogoEntreprise";
 import AccesEtablissements from "@/components/AccesEtablissements";
 import RepriseConges from "@/components/RepriseConges";
 import { STATUTS_MANDAT } from "@/lib/prelevement-textes";
+import { BarreOnglets, ONGLETS_FICHE, OngletDemandes, OngletFacturation, OngletJournal, OngletSalaries } from "@/components/FicheEntrepriseOnglets";
 
 export const dynamic = "force-dynamic";
 
 export default async function FicheEntrepriseAdmin({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ onglet?: string; du?: string; au?: string }>;
 }) {
   await connection();
 
   const { id } = await params;
+  const sp = await searchParams;
+  const onglet = ONGLETS_FICHE.some((o) => o.id === sp.onglet) ? sp.onglet! : "infos";
 
   const session = await getSession();
   if (!session) redirect("/login");
@@ -84,7 +89,7 @@ export default async function FicheEntrepriseAdmin({
               <Link href={`/admin/entreprises/${id}/acces`} className="bg-gray-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-gray-700 transition">
                 👤 Accès
               </Link>
-              <a href="#acces-droits" className="bg-black text-white px-5 py-2 rounded-lg font-semibold hover:bg-gray-800 transition">
+              <a href={`/admin/entreprises/${id}#acces-droits`} className="bg-black text-white px-5 py-2 rounded-lg font-semibold hover:bg-gray-800 transition">
                 🔐 Accès & droits
               </a>
               <Link href={`/admin/entreprises/${id}/modifier`} className="bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-600 transition">
@@ -97,6 +102,15 @@ export default async function FicheEntrepriseAdmin({
             </div>
           </div>
 
+          <BarreOnglets id={id} actif={onglet} compteurs={{ salaries: entreprise._count.salaries }} />
+
+          {onglet === "salaries" && <OngletSalaries id={id} />}
+          {onglet === "facturation" && <OngletFacturation id={id} />}
+          {onglet === "demandes" && <OngletDemandes id={id} />}
+          {onglet === "journal" && <OngletJournal id={id} du={sp.du} au={sp.au} />}
+
+          {onglet === "infos" && (
+          <>
           <div className="grid grid-cols-2 gap-6">
 
             <div className="bg-white rounded-xl shadow p-6">
@@ -248,6 +262,9 @@ export default async function FicheEntrepriseAdmin({
                 ))}
               </div>
             </div>
+          )}
+
+          </>
           )}
 
         </main>

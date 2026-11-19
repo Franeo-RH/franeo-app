@@ -21,7 +21,10 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
-  const { titre, contenu, cible, entrepriseId, importante } = await request.json();
+  const { titre, contenu, cible, entrepriseId, importante, publieLe, expireLe } = await request.json();
+  const dateOuNull = (v: unknown) => { if (typeof v !== "string" || !v) return null; const d = new Date(v); return Number.isNaN(d.getTime()) ? null : d; };
+  const debut = dateOuNull(publieLe), fin = dateOuNull(expireLe);
+  if (debut && fin && fin <= debut) return NextResponse.json({ erreur: "La date de retrait doit être après la date de publication." }, { status: 400 });
   if (!titre?.trim() || !contenu?.trim()) return NextResponse.json({ erreur: "Titre et message sont obligatoires" }, { status: 400 });
   if (!CIBLES.some((c) => c.value === cible)) return NextResponse.json({ erreur: "Destinataires invalides" }, { status: 400 });
   if (entrepriseId) {
@@ -29,7 +32,7 @@ export async function POST(request: NextRequest) {
     if (!ent) return NextResponse.json({ erreur: "Entreprise introuvable" }, { status: 404 });
   }
   const com = await prisma.communication.create({
-    data: { titre: titre.trim(), contenu: contenu.trim(), cible, entrepriseId: entrepriseId || null, importante: !!importante },
+    data: { titre: titre.trim(), contenu: contenu.trim(), cible, entrepriseId: entrepriseId || null, importante: !!importante, publieLe: debut, expireLe: fin },
   });
   return NextResponse.json({ succes: true, communication: com });
 }

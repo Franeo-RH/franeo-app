@@ -632,6 +632,9 @@ model Communication {
   importante   Boolean     @default(false)
   // INFO (communication classique) ou MISE_A_JOUR (résumé d'une mise à jour de l'application)
   type         String      @default("INFO")
+  // Programmation : visible à partir de publieLe (vide = tout de suite), retirée après expireLe (vide = jamais)
+  publieLe     DateTime?
+  expireLe     DateTime?
   createdAt    DateTime    @default(now())
   lectures     LectureCommunication[]
 
@@ -1055,6 +1058,8 @@ model BuddyQuestion {
   reponse      String?
   // Réponse « chercher dans l'app » : Buddy va lire l'information demandée (absences, congés, échéances…)
   source       String?
+  // Question reliée à une action que Buddy sait déjà faire (lib/buddy/catalogue.ts) : il l'exécute avec la phrase posée
+  action       String?
   statut       String   @default("A_TRAITER")
   occurrences  Int      @default(1)
   entreprises  String[]
@@ -1391,4 +1396,14 @@ model Cabinet {
 
   entreprises    Entreprise[]
   utilisateurs   Utilisateur[]
+}
+
+// Réglages de l'application (une seule ligne, id « global ») : maintenance annoncée et blocage pendant les mises à jour
+model ReglageApp {
+  id                 String    @id @default("global")
+  maintenanceActive  Boolean   @default(false)   // l'application est bloquée (sauf pour l'admin)
+  maintenanceMessage String?
+  maintenanceDebut   DateTime?                   // maintenance programmée : annonce avant, blocage à partir de cette date
+  maintenanceFin     DateTime?                   // fin prévue (affichée)
+  updatedAt          DateTime  @updatedAt
 }

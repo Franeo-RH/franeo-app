@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { motsClesDe, normaliser } from "@/lib/buddy/apprentissage";
+import { motsClesDe, normaliser, oublierReponsesApprises } from "@/lib/buddy/apprentissage";
+import { capacite } from "@/lib/buddy/catalogue";
 import { SOURCES_BUDDY } from "@/lib/buddy/sources-liste";
 
 /** GET ?statut= (admin) : questions posées à Buddy restées sans réponse, ou réponses déjà rédigées */
@@ -23,13 +24,15 @@ export async function POST(request: NextRequest) {
   const question = String(b.question || "").trim().slice(0, 500);
   const reponse = String(b.reponse || "").trim().slice(0, 3000);
   const source = SOURCES_BUDDY.some((s) => s.code === b.source) ? String(b.source) : null;
-  if (!question || (!reponse && !source)) return NextResponse.json({ erreur: "Écrivez la question et une réponse, ou choisissez où Buddy doit chercher." }, { status: 400 });
+  const action = capacite(b.action) ? String(b.action) : null;
+  if (!question || (!reponse && !source && !action)) return NextResponse.json({ erreur: "Écrivez la question et une réponse, reliez-la à une action, ou choisissez où Buddy doit chercher." }, { status: 400 });
   const motsCles = Array.isArray(b.motsCles) && b.motsCles.length ? (b.motsCles as unknown[]).map((m) => normaliser(String(m))).filter(Boolean).slice(0, 12) : motsClesDe(question);
   const normalisee = normaliser(question).slice(0, 300);
   await prisma.buddyQuestion.upsert({
     where: { normalisee },
-    create: { question, normalisee, motsCles, reponse: reponse || null, source, statut: "REPONDUE", entreprises: [] },
-    update: { reponse: reponse || null, source, motsCles, statut: "REPONDUE" },
+    create: { question, normalisee, motsCles, reponse: reponse || null, source, action, statut: "REPONDUE", entreprises: [] },
+    update: { reponse: reponse || null, source, action, motsCles, statut: "REPONDUE" },
   });
+  oublierReponsesApprises();
   return NextResponse.json({ succes: true });
 }

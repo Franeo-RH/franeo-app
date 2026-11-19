@@ -8,6 +8,8 @@ import { prisma } from "@/lib/prisma";
 import BoutonDemandeEvolution from "@/components/BoutonDemandeEvolution";
 import BandeauCabinet from "@/components/cabinet/BandeauCabinet";
 import { filtreClients } from "@/lib/cabinet";
+import { etatMaintenance } from "@/lib/maintenance";
+import PageMaintenance, { BandeauMaintenance } from "@/components/PageMaintenance";
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
   const session = await getSessionBrute();
@@ -15,6 +17,10 @@ export default async function ClientLayout({ children }: { children: React.React
   // Un compte salarié a son propre espace ; un cabinet sans dossier ouvert retourne à son portefeuille
   if (session?.role === "SALARIE") redirect("/salarie");
   if (session?.role === "CABINET") redirect("/cabinet");
+
+  // Maintenance : l'application est bloquée le temps de la mise à jour
+  const maintenance = await etatMaintenance();
+  if (maintenance.bloque) return <PageMaintenance etat={maintenance} />;
 
   // Entreprise suspendue : aucun contenu, seulement un message
   if (session && session.role === "CLIENT" && session.entreprise && session.entreprise.actif === false) {
@@ -73,6 +79,7 @@ export default async function ClientLayout({ children }: { children: React.React
 
   return (
     <>
+      <BandeauMaintenance etat={maintenance} />
       {estSessionDemo(session) && <BandeauDemo />}
       {clientsCabinet && session?.modeCabinet && <BandeauCabinet cabinet={session.modeCabinet.nom} clientId={session.entrepriseId!} clients={clientsCabinet} />}
       <GardeDroits>{children}</GardeDroits>

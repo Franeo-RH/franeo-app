@@ -8,7 +8,7 @@ import { BoutonExportComplet } from "@/components/OutilsAdmin";
 
 type Lecture = { luAt: string; utilisateur: { prenom: string; email: string; role: string; entreprise: { nom: string } | null } };
 type Com = {
-  id: string; titre: string; contenu: string; cible: string; importante: boolean; createdAt: string;
+  id: string; titre: string; contenu: string; cible: string; importante: boolean; createdAt: string; publieLe: string | null; expireLe: string | null;
   entreprise: { nom: string } | null; lectures: Lecture[];
 };
 type Entreprise = { id: string; nom: string };
@@ -18,7 +18,7 @@ const LIB_CIBLE: Record<string, string> = Object.fromEntries(CIBLES.map((c) => [
 export default function AdminCommunication() {
   const [coms, setComs] = useState<Com[]>([]);
   const [entreprises, setEntreprises] = useState<Entreprise[]>([]);
-  const [form, setForm] = useState({ titre: "", contenu: "", cible: "CLIENTS", entrepriseId: "", importante: false });
+  const [form, setForm] = useState({ titre: "", contenu: "", cible: "CLIENTS", entrepriseId: "", importante: false, publieLe: "", expireLe: "" });
   const [envoi, setEnvoi] = useState(false);
   const [message, setMessage] = useState("");
   const [ouverte, setOuverte] = useState<string | null>(null);
@@ -33,12 +33,14 @@ export default function AdminCommunication() {
     e.preventDefault();
     setEnvoi(true);
     setMessage("");
-    const res = await fetch("/api/communications", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    // Les dates saisies sont à l'heure de Paris (heure du navigateur) : on les envoie en ISO
+    const iso = (v: string) => (v ? new Date(v).toISOString() : "");
+    const res = await fetch("/api/communications", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, publieLe: iso(form.publieLe), expireLe: iso(form.expireLe) }) });
     const d = await res.json().catch(() => ({}));
     setEnvoi(false);
     if (!res.ok) { setMessage(`❌ ${d.erreur || "Erreur"}`); return; }
-    setMessage("✅ Communication publiée : elle s'affiche sur les tableaux de bord concernés.");
-    setForm({ titre: "", contenu: "", cible: "CLIENTS", entrepriseId: "", importante: false });
+    setMessage(form.publieLe && new Date(form.publieLe) > new Date() ? `🗓️ Communication programmée pour le ${new Date(form.publieLe).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}.` : "✅ Communication publiée : elle s'affiche sur les tableaux de bord concernés.");
+    setForm({ titre: "", contenu: "", cible: "CLIENTS", entrepriseId: "", importante: false, publieLe: "", expireLe: "" });
     charger();
   }
 
@@ -110,6 +112,16 @@ export default function AdminCommunication() {
               <textarea className={`${champ} h-32 resize-y`} value={form.contenu} onChange={(e) => setForm({ ...form, contenu: e.target.value })} placeholder="Votre message…" required maxLength={3000} />
               <span className="block text-xs text-gray-400 font-normal text-right">{form.contenu.length} / 3000</span>
             </label>
+            <div className="grid gap-3 grid-cols-2">
+              <label className="text-sm font-semibold">
+                Publier le <span className="font-normal text-gray-400">(vide : tout de suite)</span>
+                <input type="datetime-local" className={champ} value={form.publieLe} onChange={(e) => setForm({ ...form, publieLe: e.target.value })} />
+              </label>
+              <label className="text-sm font-semibold">
+                Retirer le <span className="font-normal text-gray-400">(vide : jamais)</span>
+                <input type="datetime-local" className={champ} value={form.expireLe} onChange={(e) => setForm({ ...form, expireLe: e.target.value })} />
+              </label>
+            </div>
             <label className="flex items-center gap-2 text-sm font-semibold">
               <input type="checkbox" checked={form.importante} onChange={(e) => setForm({ ...form, importante: e.target.checked })} />
               Importante (affichée en rouge, en premier)
@@ -117,7 +129,7 @@ export default function AdminCommunication() {
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <p className="text-sm font-semibold">{message}</p>
               <button type="submit" disabled={envoi} className="bg-orange-500 text-white rounded-lg px-5 py-3 font-bold hover:bg-orange-600 disabled:opacity-60">
-                {envoi ? "Publication…" : "📢 Publier"}
+                {envoi ? "Publication…" : form.publieLe && new Date(form.publieLe) > new Date() ? "🗓️ Programmer" : "📢 Publier"}
               </button>
             </div>
           </form>
@@ -154,7 +166,13 @@ export default function AdminCommunication() {
                     <button type="button" aria-label="Retirer" onClick={() => supprimer(c.id)} className="text-red-600 shrink-0">🗑️</button>
                   </div>
                   <div className="flex gap-2 flex-wrap text-xs font-semibold">
-                    <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">{new Date(c.createdAt).toLocaleDateString("fr-FR")}</span>
+                    <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">{new Date(c.publieLe ?? c.createdAt).toLocaleDateString("fr-FR")}</span>
+                    {(() => {
+                      const m = Date.now();
+                      if (c.publieLe && new Date(c.publieLe).getTime() > m) return <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">🗓️ Programmée {new Date(c.publieLe).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}</span>;
+                      if (c.expireLe && new Date(c.expireLe).getTime() <= m) return <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">⌛ Retirée</span>;
+                      return <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full">🟢 En ligne{c.expireLe ? ` jusqu'au ${new Date(c.expireLe).toLocaleDateString("fr-FR")}` : ""}</span>;
+                    })()}
                     <span className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full">{LIB_CIBLE[c.cible] || c.cible}</span>
                     <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{c.entreprise?.nom || "Toutes les entreprises"}</span>
                   </div>

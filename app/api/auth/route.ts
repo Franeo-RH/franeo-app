@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { ouvrirSession } from "@/lib/jeton-session";
 import { effacerEchecs, estBloque, hachageFactice, ipDe, journaliser, noterEchec } from "@/lib/securite";
 import { appareilDeConfiance, doubleFacteurActif, emailMasque, envoyerCode } from "@/lib/double-facteur";
+import { etatMaintenance } from "@/lib/maintenance";
 
 // Anti-force brute partagé entre tous les serveurs (table TentativeConnexion) :
 // 8 essais ratés par compte, 30 par adresse IP, sur 15 minutes
@@ -44,6 +45,11 @@ export async function POST(request: NextRequest) {
   }
 
   await effacerEchecs(cleCompte);
+
+  // Maintenance en cours : seul l'admin peut se connecter
+  if (utilisateur.role !== "ADMIN" && (await etatMaintenance()).bloque) {
+    return NextResponse.json({ erreur: "Franeo est en cours de mise à jour. Réessayez dans quelques instants." }, { status: 503 });
+  }
 
   // Double authentification : un code par e-mail, sauf sur un appareil déclaré de confiance
   if (doubleFacteurActif() && !appareilDeConfiance(request, utilisateur)) {

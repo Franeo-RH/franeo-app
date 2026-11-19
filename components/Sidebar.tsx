@@ -71,7 +71,8 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/communication", label: "📢 Communications" },
         { href: "/admin/actualites", label: "📰 Actualité RH" },
         { href: "/admin/faq", label: "❓ FAQ" },
-        { href: "/admin/communication/buddy", label: "🤖 Questions Buddy" },
+        { href: "/admin/communication/buddy", label: "🤖 Buddy (questions et réponses)" },
+        { href: "/admin/communication/maintenance", label: "🛠️ Maintenance & mises à jour" },
       ] };
     }
     if (dans("/admin/helpdesk")) {

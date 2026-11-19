@@ -10,7 +10,8 @@ import { noterQuestion, reponseApprise } from "@/lib/buddy/apprentissage";
 import { executerSource } from "@/lib/buddy/sources";
 import { chargerCtx, sauverCtx, viderFlux } from "@/lib/buddy/contexte";
 import { continuerFlux, demarrerFlux, rep } from "@/lib/buddy/moteur";
-import { detecter, moduleDe, type Intention } from "@/lib/buddy/intentions";
+import { detecter, moduleDe, type Intention, type IntentionId } from "@/lib/buddy/intentions";
+import { capacite } from "@/lib/buddy/catalogue";
 import { echeanceAjout, echeanceModif, echeanceSuppr, echeanceTraiter, lireEcheances } from "@/lib/buddy/flux-echeances";
 import { absenceAjout, absenceModif, absenceSuppr, salarieAjout, salarieModif, salarieSuppr, variableAjout, variableModif, variableSuppr } from "@/lib/buddy/flux-rh";
 import {
@@ -199,9 +200,9 @@ async function suivreListe(m: Msg, env: Env, ctx: Ctx): Promise<ReponseBuddy | n
    Traitement d'un message
    ════════════════════════════════════════════════════════════════ */
 
-async function traiter(m: Msg, env: Env, ctx: Ctx): Promise<ReponseBuddy> {
+async function traiter(m: Msg, env: Env, ctx: Ctx, forcer?: IntentionId): Promise<ReponseBuddy> {
   /* 1) Une conversation guidée est en cours */
-  if (ctx.flow) {
+  if (ctx.flow && !forcer) {
     const flow = FLUX[ctx.flow];
     if (!flow) {
       viderFlux(ctx);
@@ -213,14 +214,14 @@ async function traiter(m: Msg, env: Env, ctx: Ctx): Promise<ReponseBuddy> {
   }
 
   /* 2) Suite d'une liste (« détail du 2 », « résume la 3 ») */
-  const suite = await suivreListe(m, env, ctx);
+  const suite = forcer ? null : await suivreListe(m, env, ctx);
   if (suite) return suite;
 
-  /* 3) Nouvelle demande */
-  const i = detecter(m, env, ctx);
+  /* 3) Nouvelle demande (ou action imposée par une question reliée dans Admin › Questions Buddy) */
+  const i: Intention = forcer ? { id: forcer, canal: null } : detecter(m, env, ctx);
 
   // « Comment déclarer un arrêt maladie ? » : c'est une question de procédure → la FAQ d'abord
-  if (estQuestionProcedure(m)) {
+  if (!forcer && estQuestionProcedure(m)) {
     const faq = await lireFaq(m, env.entreprise.id);
     if (faq) return faq;
     const exemple = EXEMPLES[i.id];
@@ -376,7 +377,12 @@ async function traiter(m: Msg, env: Env, ctx: Ctx): Promise<ReponseBuddy> {
   }
 
   /* 4) Rien de reconnu : d'abord les réponses paramétrées par FRANEO RH (Admin › Questions Buddy), puis la FAQ */
-  const reponseAdmin = await reponseApprise(m.brut);
+  const reponseAdmin = forcer ? null : await reponseApprise(m.brut);
+  if (reponseAdmin?.action && capacite(reponseAdmin.action)) {
+    // Question reliée à une action que Buddy sait faire : il l'exécute avec la phrase d'origine (salarié, dates…)
+    const r = await traiter(m, env, ctx, reponseAdmin.action as IntentionId);
+    return reponseAdmin.reponse ? { ...r, reponse: `${reponseAdmin.reponse}\n\n${r.reponse}` } : r;
+  }
   if (reponseAdmin?.source) {
     // Réponse « chercher dans l'app » : Buddy lit l'information, avec le texte de l'admin en introduction
     const trouve = await executerSource(reponseAdmin.source, m, env, ctx);
