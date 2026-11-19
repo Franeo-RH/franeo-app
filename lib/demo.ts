@@ -8,6 +8,7 @@ import { assurerProjetsDemo, semerProjetsDemo } from "@/lib/demo-projets";
 export const EMAIL_DEMO = "demo@franeo-rh.com";
 export const EMAIL_DEMO_SALARIE = "demo-salarie@franeo-rh.com";
 export const EMAIL_DEMO_MANAGER = "demo-manager@franeo-rh.com";
+export const EMAIL_DEMO_CABINET = "demo-cabinet@franeo-rh.com";
 export const NOM_DEMO = "Entreprise Démo";
 export const LIMITE_SALARIES_DEMO = 30;
 export const NOM_FAMILLE_DEMO = "Démo";
@@ -31,7 +32,8 @@ function jour(n: number): Date {
 
 /** Crée l'entreprise et l'utilisateur démo s'ils n'existent pas. Ne touche pas aux données. */
 async function assurerEntrepriseEtUtilisateur() {
-  let entreprise = await prisma.entreprise.findFirst({ where: { demo: true } });
+  // Entreprise démo principale : la plus ancienne (les clients de la démo cabinet sont créés après elle)
+  let entreprise = await prisma.entreprise.findFirst({ where: { demo: true }, orderBy: { createdAt: "asc" } });
 
   const abonnement = await prisma.abonnement.findFirst({ orderBy: { prixMensuel: "asc" } });
   const paie =
@@ -375,7 +377,7 @@ export async function preparerDemoSalarie(): Promise<string> {
 
 /** Prépare la démo pour un visiteur : crée tout si c'est la toute première fois. */
 export async function preparerDemo(): Promise<{ entrepriseId: string; userId: string }> {
-  const entreprise = await prisma.entreprise.findFirst({ where: { demo: true }, select: { id: true } });
+  const entreprise = await prisma.entreprise.findFirst({ where: { demo: true }, orderBy: { createdAt: "asc" }, select: { id: true } });
   const utilisateur = await prisma.utilisateur.findUnique({ where: { email: EMAIL_DEMO }, select: { id: true } });
   if (!entreprise || !utilisateur) return reinitialiserDemo();
   await assurerProjetsDemo(entreprise.id); // démo créée avant l'option Projets : on la complète

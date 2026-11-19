@@ -6,12 +6,15 @@ import { redirect } from "next/navigation";
 import { estSessionDemo } from "@/lib/demo";
 import { prisma } from "@/lib/prisma";
 import BoutonDemandeEvolution from "@/components/BoutonDemandeEvolution";
+import BandeauCabinet from "@/components/cabinet/BandeauCabinet";
+import { filtreClients } from "@/lib/cabinet";
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
   const session = await getSessionBrute();
 
-  // Un compte salarié a son propre espace
+  // Un compte salarié a son propre espace ; un cabinet sans dossier ouvert retourne à son portefeuille
   if (session?.role === "SALARIE") redirect("/salarie");
+  if (session?.role === "CABINET") redirect("/cabinet");
 
   // Entreprise suspendue : aucun contenu, seulement un message
   if (session && session.role === "CLIENT" && session.entreprise && session.entreprise.actif === false) {
@@ -62,9 +65,15 @@ export default async function ClientLayout({ children }: { children: React.React
     );
   }
 
+  // Cabinet dans le dossier d'un client : bandeau pour changer de dossier
+  const clientsCabinet = session?.modeCabinet && session.entrepriseId
+    ? await prisma.entreprise.findMany({ where: { ...filtreClients(session.modeCabinet), actif: true }, select: { id: true, nom: true }, orderBy: { nom: "asc" } })
+    : null;
+
   return (
     <>
       {estSessionDemo(session) && <BandeauDemo />}
+      {clientsCabinet && session?.modeCabinet && <BandeauCabinet cabinet={session.modeCabinet.nom} clientId={session.entrepriseId!} clients={clientsCabinet} />}
       <GardeDroits>{children}</GardeDroits>
       <BuddyChat />
     </>

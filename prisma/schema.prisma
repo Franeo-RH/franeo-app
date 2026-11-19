@@ -40,6 +40,10 @@ model Entreprise {
 
   // Prélèvement SEPA des abonnements (Stripe) : l'IBAN reste chez Stripe, seuls ses 4 derniers chiffres sont gardés
   stripeClientId    String?            @unique
+
+  // Cabinet comptable qui suit ce client (accès cabinet)
+  cabinetId         String?
+  cabinet           Cabinet?           @relation(fields: [cabinetId], references: [id], onDelete: SetNull)
   mandatStatut      String?            // ACTIF, EN_ATTENTE, INACTIF (null : pas encore signé)
   mandatIbanFin     String?
   mandatSigneAt     DateTime?
@@ -190,6 +194,13 @@ model Utilisateur {
   etablissement        Etablissement? @relation(fields: [etablissementId], references: [id], onDelete: Restrict)
   // Droits retirés à ce compte en plus de ceux de l'entreprise (ex. « salaries.salaires »)
   permissionsRetirees  String[]       @default([])
+
+  // Compte CABINET (expert-comptable) : un accès pour plusieurs entreprises clientes
+  cabinetId            String?
+  cabinet              Cabinet?       @relation(fields: [cabinetId], references: [id], onDelete: Cascade)
+  cabinetGerant        Boolean        @default(false) // gère les collaborateurs du cabinet
+  clientsCabinet       String[]       @default([])    // entreprises autorisées (vide = tous les clients du cabinet)
+  profilCabinet        String?                        // profil de droits choisi (PROFILS_DROITS)
 
   // index ajouté pour accélérer les recherches
   @@index([entrepriseId])
@@ -466,6 +477,7 @@ enum Role {
   ADMIN
   CLIENT
   SALARIE
+  CABINET
 }
 
 model AbonnementPaie {
@@ -1352,4 +1364,26 @@ model CodeConnexion {
   createdAt     DateTime @default(now())
 
   @@index([utilisateurId])
+}
+
+// Cabinet comptable partenaire : un seul accès pour tous ses clients, avec ses collaborateurs.
+// Tarif sur mesure, paramétré par FRANEO RH.
+model Cabinet {
+  id             String        @id @default(cuid())
+  nom            String
+  siret          String?
+  email          String?
+  telephone      String?
+  ville          String?
+  actif          Boolean       @default(true)
+  demo           Boolean       @default(false)
+  // Tarif sur mesure (€/mois) : forfait + prix par dossier client, remise sur les abonnements des clients
+  tarifForfait   Float?
+  tarifParClient Float?
+  tarifRemise    Float?        // % de remise accordée sur les abonnements des clients du cabinet
+  tarifNote      String?
+  createdAt      DateTime      @default(now())
+
+  entreprises    Entreprise[]
+  utilisateurs   Utilisateur[]
 }

@@ -21,7 +21,7 @@ export const motDePasseProvisoire = () => bcrypt.hash(crypto.randomBytes(24).toS
  * Crée un lien d'activation et l'envoie par e-mail.
  * Renvoie `lien` uniquement si l'e-mail n'a pas pu partir (pour le transmettre autrement).
  */
-export async function envoyerActivation(request: NextRequest | null, o: { email: string; prenom?: string | null; entreprise?: string | null; relance?: boolean; salarie?: boolean; premierCompte?: boolean }) {
+export async function envoyerActivation(request: NextRequest | null, o: { email: string; prenom?: string | null; entreprise?: string | null; relance?: boolean; salarie?: boolean; premierCompte?: boolean; cabinet?: string | null }) {
   const jeton = await creerJetonLien(o.email, DUREE_LIEN_JOURS * 24 * 3600 * 1000);
   const base = (process.env.NEXT_PUBLIC_URL || process.env.APP_URL || request?.nextUrl.origin || "https://franeo-app.vercel.app").replace(/\/$/, "");
   const lien = `${base}/reinitialiser-mot-de-passe?token=${jeton}&activation=1`;
@@ -32,7 +32,9 @@ export async function envoyerActivation(request: NextRequest | null, o: { email:
     titre: o.relance ? "Votre nouveau lien d'activation" : "Bienvenue sur FRANEO RH 👋",
     lignes: [
       `Bonjour${prenom},`,
-      o.salarie
+      o.cabinet
+        ? `Votre accès cabinet « ${o.cabinet} » à FRANEO RH est prêt : un seul accès pour suivre tous les dossiers clients qui vous sont confiés.`
+        : o.salarie
         ? `${o.entreprise ? `${o.entreprise} vous` : "Votre employeur vous"} ouvre un accès à votre espace salarié FRANEO RH : vos absences, congés, relevés d'heures, notes de frais et documents, depuis votre téléphone ou votre ordinateur.`
         : o.entreprise ? `Votre espace client « ${o.entreprise} » est prêt.` : "Votre espace client FRANEO RH est prêt.",
       "Cliquez sur le bouton ci-dessous pour choisir votre mot de passe et activer votre compte.",

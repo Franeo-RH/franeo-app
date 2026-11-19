@@ -8,7 +8,7 @@ import { urlSignatureMandat } from "@/lib/prelevement";
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session || session.role !== "CLIENT" || !session.entrepriseId) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
-  if (session.etablissementId) return NextResponse.json({ erreur: "Le mandat est signé par le dirigeant de l'entreprise." }, { status: 403 });
+  if (session.etablissementId || session.modeCabinet) return NextResponse.json({ erreur: "Le mandat est signé par le dirigeant de l'entreprise." }, { status: 403 });
   if (session.entreprise?.demo) return NextResponse.json({ erreur: "Indisponible dans la démo." }, { status: 403 });
   const refus = await refuserSansDroit("entreprise.modifier");
   if (refus) return refus;

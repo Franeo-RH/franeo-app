@@ -38,7 +38,7 @@ export default async function EntrepriseClient({ searchParams }: { searchParams:
 
   const entreprise = await prisma.entreprise.findUnique({
     where: { id: session.entrepriseId! },
-    include: { abonnement: true, abonnementPaie: true },
+    include: { abonnement: true, abonnementPaie: true, cabinet: { select: { nom: true, actif: true } } },
   });
 
   if (!entreprise) redirect("/login");
@@ -61,6 +61,11 @@ export default async function EntrepriseClient({ searchParams }: { searchParams:
             <div>
               <h1 className="text-3xl font-bold">🏢 {entreprise.nom}</h1>
               <p className="text-gray-500 mt-1">Informations de votre entreprise</p>
+              {entreprise.cabinet?.actif && (
+                <p className="text-sm mt-2 inline-flex items-center gap-2 rounded-full px-3 py-1" style={{ background: "rgba(255, 237, 213, 0.8)", color: "#9a3412" }}>
+                  🏛️ Votre cabinet <strong>{entreprise.cabinet.nom}</strong> a accès à votre dossier
+                </p>
+              )}
             </div>
             <div className="flex gap-2 flex-wrap">
               <Link href="/client/entreprise/devis?type=AUDIT" className="bg-white border-2 border-black px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition">🔍 Demander un audit RH</Link>
@@ -130,7 +135,7 @@ export default async function EntrepriseClient({ searchParams }: { searchParams:
               ibanFin={entreprise.mandatIbanFin}
               signeAt={entreprise.mandatSigneAt?.toISOString() ?? null}
               disponible={stripeActif() && !entreprise.demo}
-              peutSigner={aDroit(session.entreprise?.permissions, "entreprise.modifier")}
+              peutSigner={aDroit(session.entreprise?.permissions, "entreprise.modifier") && !session.modeCabinet}
               retour={mandat === "ok" || mandat === "annule" ? mandat : null}
             />
               </>

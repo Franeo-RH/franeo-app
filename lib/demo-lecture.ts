@@ -6,7 +6,7 @@ export const COOKIE_DEMO = "franeo_demo";
 export const MESSAGE_DEMO = "Démo en consultation : vous pouvez tout visiter, mais les modifications et les téléchargements sont désactivés. Demandez votre accès pour utiliser l'application.";
 
 /** Actions toujours permises dans la démo (connexion, déconnexion, Buddy, « J'ai lu », demande d'accès) */
-const AUTORISES = [/^\/api\/logout/, /^\/api\/demo/, /^\/api\/auth(\/|$)/, /^\/api\/buddy(\/|$)/, /^\/api\/inscriptions(\/|$)/, /^\/api\/communications\/[^/]+\/lu$/, /^\/api\/suspendu\//];
+const AUTORISES = [/^\/api\/logout/, /^\/api\/demo/, /^\/api\/auth(\/|$)/, /^\/api\/buddy(\/|$)/, /^\/api\/inscriptions(\/|$)/, /^\/api\/communications\/[^/]+\/lu$/, /^\/api\/suspendu\//, /^\/api\/cabinet\/client$/];
 
 /** Téléchargements (fichiers Excel, CSV, PDF, Word, pièces jointes, exports) */
 const TELECHARGEMENTS = [

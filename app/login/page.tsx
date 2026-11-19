@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,7 +16,12 @@ export default function LoginPage() {
   const [erreur, setErreur] = useState("");
   const [chargement, setChargement] = useState(false);
   const [chargementDemo, setChargementDemo] = useState(false);
-  const [profilDemo, setProfilDemo] = useState<"client" | "salarie" | "manager">("client");
+  const [profilDemo, setProfilDemo] = useState<"client" | "salarie" | "manager" | "cabinet">("client");
+  // Lien depuis le site (ex. /login?demo=cabinet) : la bonne démo est présélectionnée
+  useEffect(() => {
+    const d = new URLSearchParams(window.location.search).get("demo");
+    if (d === "cabinet" || d === "salarie" || d === "manager" || d === "client") setProfilDemo(d);
+  }, []);
   // Double authentification : 2e étape, code reçu par e-mail
   const [etapeCode, setEtapeCode] = useState<{ jeton: string; email: string } | null>(null);
   const [code, setCode] = useState("");
@@ -25,7 +30,7 @@ export default function LoginPage() {
 
   async function entrer(role: string) {
     await viderCacheHorsLigne(); oublierDroits(); // nouvelle session : on repart d'un cache vide
-    router.push(role === "SALARIE" ? "/salarie" : role === "ADMIN" ? "/admin/dashboard" : "/client/dashboard");
+    router.push(role === "SALARIE" ? "/salarie" : role === "ADMIN" ? "/admin/dashboard" : role === "CABINET" ? "/cabinet" : "/client/dashboard");
   }
 
   async function validerCode(e: React.FormEvent) {
@@ -94,7 +99,7 @@ export default function LoginPage() {
         return;
       }
       await viderCacheHorsLigne(); oublierDroits(); // nouvelle session : on repart d'un cache vide
-      router.push(profilDemo === "client" ? "/client/dashboard" : "/salarie");
+      router.push(profilDemo === "client" ? "/client/dashboard" : profilDemo === "cabinet" ? "/cabinet" : "/salarie");
     } catch {
       setErreur("Problème de connexion, réessayez.");
       setChargementDemo(false);
@@ -190,8 +195,8 @@ export default function LoginPage() {
           <div className="flex-1 border-t" />
         </div>
 
-        <div role="tablist" aria-label="Type de démo" style={{ display: "flex", background: "#f3f4f6", borderRadius: "10px", padding: "4px", marginBottom: "10px" }}>
-          {([["client", "🏢 Dirigeant"], ["salarie", "📱 Salarié"], ["manager", "🧑‍💼 Manager"]] as const).map(([val, lib]) => (
+        <div role="tablist" aria-label="Type de démo" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))", gap: "2px", background: "#f3f4f6", borderRadius: "10px", padding: "4px", marginBottom: "10px" }}>
+          {([["client", "🏢 Dirigeant"], ["salarie", "📱 Salarié"], ["manager", "🧑‍💼 Manager"], ["cabinet", "🏛️ Cabinet"]] as const).map(([val, lib]) => (
             <button
               key={val}
               type="button"
@@ -211,9 +216,9 @@ export default function LoginPage() {
           disabled={chargementDemo}
           className="w-full border-2 border-orange-500 text-orange-600 rounded-lg py-3 font-semibold hover:bg-orange-50 transition disabled:opacity-60"
         >
-          {chargementDemo ? "Ouverture de la démo..." : profilDemo === "salarie" ? "🧪 Tester l'espace salarié" : profilDemo === "manager" ? "🧪 Tester l'espace manager" : "🧪 Tester la démo"}
+          {chargementDemo ? "Ouverture de la démo..." : profilDemo === "salarie" ? "🧪 Tester l'espace salarié" : profilDemo === "manager" ? "🧪 Tester l'espace manager" : profilDemo === "cabinet" ? "🧪 Tester l'accès cabinet" : "🧪 Tester la démo"}
         </button>
-        <p className="text-xs text-gray-400 text-center mt-2">{profilDemo === "salarie" ? "Vous êtes Sophie, salariée de l'entreprise démo : relevé, absences, frais et questions à votre manager." : profilDemo === "manager" ? "Vous êtes Karim, manager de 4 salariés : validez relevés, absences et frais, répondez aux questions de l'équipe." : "Sans inscription, avec des données fictives."}</p>
+        <p className="text-xs text-gray-400 text-center mt-2">{profilDemo === "salarie" ? "Vous êtes Sophie, salariée de l'entreprise démo : relevé, absences, frais et questions à votre manager." : profilDemo === "manager" ? "Vous êtes Karim, manager de 4 salariés : validez relevés, absences et frais, répondez aux questions de l'équipe." : profilDemo === "cabinet" ? "Vous êtes Claire, expert-comptable : 4 dossiers clients dans un seul accès, avec vos collaborateurs." : "Sans inscription, avec des données fictives."}</p>
 
         <div style={{ textAlign: "center", marginTop: "12px" }}>
           <DemandeAcces variante="lien" />

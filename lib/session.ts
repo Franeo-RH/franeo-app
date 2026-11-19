@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
-import { empreinte, lireJeton, NOM_COOKIE } from "./jeton-session";
+import { COOKIE_CLIENT_CABINET, empreinte, lireJeton, NOM_COOKIE } from "./jeton-session";
 import { RETIRES_ETABLISSEMENT } from "./perimetre";
 
 /**
@@ -23,8 +23,42 @@ function lireUtilisateur(id: string) {
         include: { abonnement: true, abonnementPaie: true },
       },
       etablissement: { select: { id: true, nom: true } },
+      cabinet: { select: { id: true, nom: true, actif: true, demo: true } },
     },
   });
+}
+
+
+/** Droits jamais accordés à un cabinet dans le dossier d'un client : abonnements, options et mandat restent au dirigeant */
+const RETIRES_CABINET = ["entreprise.abonnements"];
+
+export type ModeCabinet = { cabinetId: string; nom: string; gerant: boolean; demo: boolean; clients: string[] };
+type SessionUtilisateur = UtilisateurSession & { modeCabinet?: ModeCabinet };
+
+/**
+ * Compte CABINET : il agit comme le client dont il a ouvert le dossier (rôle CLIENT, entreprise du client),
+ * avec les droits de son profil. Sans dossier ouvert, il reste en rôle CABINET (portefeuille).
+ */
+async function sessionCabinet(u: UtilisateurSession, choix: string | undefined): Promise<SessionUtilisateur> {
+  if (!u.cabinet) return u;
+  const modeCabinet: ModeCabinet = { cabinetId: u.cabinet.id, nom: u.cabinet.nom, gerant: u.cabinetGerant, demo: u.cabinet.demo, clients: u.clientsCabinet };
+  const client = choix
+    ? await prisma.entreprise.findFirst({
+        where: { AND: [{ id: choix }, { cabinetId: u.cabinet.id, actif: true }, u.clientsCabinet.length ? { id: { in: u.clientsCabinet } } : {}] },
+        include: { abonnement: true, abonnementPaie: true },
+      })
+    : null;
+  if (!client) return { ...u, entreprise: null, entrepriseId: null, modeCabinet };
+  const retires = [...RETIRES_CABINET, ...(u.permissionsRetirees || [])].map((p) => `-${p}`);
+  return {
+    ...u,
+    role: "CLIENT",
+    entrepriseId: client.id,
+    entreprise: { ...client, permissions: [...new Set([...client.permissions, ...retires])] },
+    etablissementId: null,
+    etablissement: null,
+    modeCabinet,
+  };
 }
 
 /**
@@ -44,7 +78,7 @@ export function oublierSessions(userId?: string) {
   else memoireSessions.clear();
 }
 
-export const getSessionBrute = cache(async () => {
+export const getSessionBrute = cache(async (): Promise<SessionUtilisateur | null> => {
   const cookieStore = await cookies();
   // Cookie signé : un cookie modifié ou expiré est refusé
   const jeton = lireJeton(cookieStore.get(NOM_COOKIE)?.value);
@@ -64,6 +98,7 @@ export const getSessionBrute = cache(async () => {
   // Mot de passe changé depuis l'ouverture de la session : la session n'est plus valable
   if (!utilisateur || empreinte(utilisateur.motDePasse) !== jeton.empreinte) return null;
 
+  if (utilisateur.role === "CABINET") return sessionCabinet(utilisateur, cookieStore.get(COOKIE_CLIENT_CABINET)?.value);
   return appliquerPerimetre(utilisateur);
 });
 
@@ -81,6 +116,10 @@ export async function getSession() {
   if (utilisateur.role === "CLIENT" && utilisateur.entreprise && utilisateur.entreprise.actif === false) {
     return null;
   }
+  // Compte cabinet : seulement dans le dossier d'un client (rôle CLIENT). Son portefeuille passe par getSessionCabinet,
+  // pour que le rôle CABINET n'atteigne jamais les pages et API existantes.
+  if (utilisateur.role === "CABINET") return null;
+  if (utilisateur.cabinet && utilisateur.cabinet.actif === false) return null;
   return utilisateur;
 }
 

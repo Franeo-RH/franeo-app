@@ -9,7 +9,9 @@ import { COOKIE_DEMO } from "@/lib/demo-lecture";
 import type { NextResponse } from "next/server";
 
 export const NOM_COOKIE = "franeo_session";
-export const ANCIEN_COOKIE = "userId"; // ancien cookie non signé : ignoré, et effacé à la déconnexion
+export const ANCIEN_COOKIE = "userId";
+/** Dossier client ouvert par un compte cabinet (simple choix : l'accès est contrôlé en base à chaque requête) */
+export const COOKIE_CLIENT_CABINET = "franeo_cabinet_client"; // ancien cookie non signé : ignoré, et effacé à la déconnexion
 
 function secret(): string {
   const s = process.env.SESSION_SECRET;
@@ -101,5 +103,6 @@ export function fermerSession(res: NextResponse) {
   res.cookies.set(NOM_COOKIE, "", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 0 });
   res.cookies.set(COOKIE_DEMO, "", { path: "/", maxAge: 0 });
   res.cookies.set(ANCIEN_COOKIE, "", { path: "/", maxAge: 0 });
+  res.cookies.set(COOKIE_CLIENT_CABINET, "", { path: "/", maxAge: 0 });
   return res;
 }

@@ -33,6 +33,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/entreprises", label: "🏢 Liste des entreprises" },
         { href: "/admin/entreprises/nouveau", label: "➕ Ajouter une entreprise" },
         { href: "/admin/entreprises/nouveaux-clients", label: "🆕 Nouveaux clients" },
+        { href: "/admin/entreprises/cabinets", label: "🏛️ Cabinets comptables" },
         { href: "/admin/entreprises/demandes", label: "📦 Abonnements", badge: demandesEnAttente, aussi: ["/admin/abonnement-paie", "/admin/abonnements-rh"], groupe: "💳 Abonnements & facturation" },
         { href: "/admin/entreprises/facturation", label: "🧾 Facturation", groupe: "💳 Abonnements & facturation" },
         { href: "/admin/entreprises/prestations", label: "➕ Prestations supplémentaires", groupe: "💳 Abonnements & facturation" },

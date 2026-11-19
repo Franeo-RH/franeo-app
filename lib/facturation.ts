@@ -67,7 +67,7 @@ export async function ticketsDuMoisParEntreprise(mois: number, annee: number, en
 
 export type ResultatFacture = { montant: number; details: string[] };
 
-export type CategorieLigne = "ABONNEMENT" | "OPTION" | "SALARIES" | "BULLETINS" | "ARRIVEES" | "SORTIES" | "ESPACE_SALARIE" | "PRESTATION" | "TICKETS" | "RECRUTEMENT";
+export type CategorieLigne = "ABONNEMENT" | "OPTION" | "SALARIES" | "BULLETINS" | "ARRIVEES" | "SORTIES" | "ESPACE_SALARIE" | "PRESTATION" | "TICKETS" | "RECRUTEMENT" | "REMISE";
 
 export type LigneFacture = {
   categorie: CategorieLigne;
@@ -91,6 +91,7 @@ export const LIBELLES_CATEGORIE: Record<CategorieLigne, string> = {
   PRESTATION: "Prestation complémentaire",
   TICKETS: "Tickets RH supplémentaires",
   RECRUTEMENT: "Recrutement",
+  REMISE: "Remise cabinet",
 };
 
 const arrondi = (n: number) => Math.round(n * 100) / 100;
@@ -99,7 +100,7 @@ const arrondi = (n: number) => Math.round(n * 100) / 100;
 export async function lignesFacture(entrepriseId: string, mois: number, annee: number): Promise<LigneFacture[] | null> {
   const entreprise = await prisma.entreprise.findUnique({
     where: { id: entrepriseId },
-    include: { abonnement: true, abonnementPaie: true },
+    include: { abonnement: true, abonnementPaie: true, cabinet: { select: { nom: true, tarifRemise: true, actif: true } } },
   });
   if (!entreprise) return null;
   const abo = entreprise.abonnement;
@@ -212,6 +213,16 @@ export async function lignesFacture(entrepriseId: string, mois: number, annee: n
     if (dansMois(r.finEssaiAt)) ajouter({ categorie: "RECRUTEMENT", libelle: `Recrutement ${r.poste} — prime fin de période d'essai`, quantite: 1, prixUnitaire: cat.finEssai });
   }
 
+  // Client suivi par un cabinet partenaire : remise sur mesure sur les abonnements (paramétrée par FRANEO RH)
+  const remise = entreprise.cabinet?.actif ? entreprise.cabinet.tarifRemise ?? 0 : 0;
+  if (remise > 0) {
+    const base = lignes.filter((l) => l.categorie === "ABONNEMENT").reduce((t, l) => t + l.total, 0);
+    const montant = arrondi((base * Math.min(remise, 100)) / 100);
+    if (montant > 0) {
+      lignes.push({ categorie: "REMISE", libelle: `Remise cabinet ${entreprise.cabinet!.nom} (${remise} % sur les abonnements)`, quantite: 1, prixUnitaire: -montant, total: -montant });
+    }
+  }
+
   return lignes;
 }
 
@@ -220,7 +231,7 @@ export async function calculerFacture(entrepriseId: string, mois: number, annee:
   const lignes = await lignesFacture(entrepriseId, mois, annee);
   if (!lignes) return null;
   const details = lignes.map((l) =>
-    l.categorie === "ABONNEMENT"
+    l.categorie === "ABONNEMENT" || l.categorie === "REMISE"
       ? `${l.libelle} : ${l.total} €`
       : `${l.libelle}${l.quantite > 1 && l.categorie === "PRESTATION" ? ` × ${l.quantite}` : ""} (${l.quantite} × ${l.prixUnitaire} €) : ${l.total} €`
   );

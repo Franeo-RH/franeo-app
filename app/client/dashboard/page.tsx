@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getSession } from "@/lib/session";
+import { getSession, getSessionBrute } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import BandeauCommunications from "@/components/BandeauCommunications";
@@ -25,7 +25,7 @@ const eur = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`;
 export default async function ClientDashboard() {
   await connection();
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session) redirect((await getSessionBrute())?.role === "CABINET" ? "/cabinet" : "/login");
   if (session.role !== "CLIENT") redirect("/admin/dashboard");
 
   const permissions = session.entreprise?.permissions || [];
