@@ -1431,6 +1431,9 @@ model ReglageApp {
   // Commission reversée au parrain : % du CA du filleul, pendant N mois (0 = aucune, vide = sans fin)
   parrainageCommissionPct  Float @default(0)
   parrainageCommissionMois Int?
+  // Marges (pilotage) : coûts directs de production et cotisations / charges, en % du CA après remises
+  margeCoutsDirectsPct Float @default(0)
+  margeChargesPct      Float @default(0)
   maintenanceActive  Boolean   @default(false)   // l'application est bloquée (sauf pour l'admin)
   maintenanceMessage String?
   maintenanceDebut   DateTime?                   // maintenance programmée : annonce avant, blocage à partir de cette date

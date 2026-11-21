@@ -7,6 +7,9 @@ import CadreAdmin from "@/components/CadreAdmin";
 import GraphiqueFactures from "@/components/GraphiqueFactures";
 import { calculerFacture } from "@/lib/facturation";
 import { MOIS_FR } from "@/lib/bulletins";
+import { additionner, margesMois, reglageMarges, MARGE_VIDE } from "@/lib/marges";
+import CascadeMarges from "@/components/CascadeMarges";
+import ReglageMarges from "@/components/ReglageMarges";
 
 export const dynamic = "force-dynamic";
 const eur = (n: number) => n.toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
@@ -53,6 +56,13 @@ export default async function PagePilotage() {
     { l: "Via cabinet", n: actifs.filter((e) => e.cabinetId).length },
     { l: "Sans formule", n: actifs.filter((e) => !e.abonnement && !e.abonnementPaie && !e.cabinetId).length },
   ];
+  // Marges : mois en cours (estimation si pas facturé) et 6 derniers mois
+  const regMarges = await reglageMarges();
+  const six = Array.from({ length: 6 }, (_, i) => { const d = new Date(annee, mois - 6 + i, 1); return { m: d.getMonth() + 1, a: d.getFullYear() }; });
+  const marges6 = await Promise.all(six.map(async ({ m, a }) => ({ m, a, map: await margesMois(m, a, undefined, regMarges).catch(() => new Map()) })));
+  const margesCourant = marges6[marges6.length - 1].map;
+  const totalCourant = margesCourant.size ? additionner([...margesCourant.values()]) : MARGE_VIDE;
+  const parClient = [...margesCourant.entries()].map(([id, m]) => ({ e: entreprises.find((x) => x.id === id), m })).filter((x) => x.e).sort((a, b) => b.m.margeNette - a.m.margeNette);
   const nouveaux30 = entreprises.filter((e) => e.createdAt.getTime() > Date.now() - 30 * 86400000).length;
 
   return (
@@ -78,6 +88,53 @@ export default async function PagePilotage() {
         ))}
       </div>
       <GraphiqueFactures mois={graphique} />
+      <section className="bg-white rounded-xl shadow p-6 flex flex-col gap-6">
+        <div>
+          <h2 className="text-lg font-bold">💰 Marges brute et nette</h2>
+          <p className="text-sm text-gray-500 mt-1">Les remises et codes promo réduisent la marge brute et la marge nette ; les commissions reversées ne réduisent que la marge nette. Hypothèses ci-dessous (0 % par défaut).</p>
+        </div>
+        <ReglageMarges initial={regMarges} />
+        <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>
+          <CascadeMarges m={totalCourant} titre={`${MOIS_FR[mois - 1]} ${annee}`} />
+          <div className="overflow-x-auto">
+            <h3 className="font-bold mb-2">6 derniers mois</h3>
+            <table className="w-full text-sm">
+              <thead><tr className="text-gray-500 border-b"><th className="pb-1 text-left">Mois</th><th className="pb-1 text-right">CA réel</th><th className="pb-1 text-right">Remises</th><th className="pb-1 text-right">Marge brute</th><th className="pb-1 text-right">Commissions</th><th className="pb-1 text-right">Marge nette</th></tr></thead>
+              <tbody>
+                {marges6.map(({ m, a, map }) => { const t = map.size ? additionner([...map.values()]) : MARGE_VIDE; return (
+                  <tr key={`${a}-${m}`} className="border-b last:border-0">
+                    <td className="py-1 capitalize">{MOIS_FR[m - 1].slice(0, 4)}. {a}</td>
+                    <td className="py-1 text-right">{eur(t.caReel)}</td>
+                    <td className="py-1 text-right" style={{ color: "#b91c1c" }}>{t.remises ? `− ${eur(t.remises)}` : "—"}</td>
+                    <td className="py-1 text-right font-semibold">{eur(t.margeBrute)}</td>
+                    <td className="py-1 text-right" style={{ color: "#6d28d9" }}>{t.commissions ? `− ${eur(t.commissions)}` : "—"}</td>
+                    <td className="py-1 text-right font-bold" style={{ color: "#15803d" }}>{eur(t.margeNette)}</td>
+                  </tr>); })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {parClient.length > 0 && (
+          <div className="overflow-x-auto">
+            <h3 className="font-bold mb-2">Par client — {MOIS_FR[mois - 1]}</h3>
+            <table className="w-full text-sm">
+              <thead><tr className="text-gray-500 border-b"><th className="pb-1 text-left">Client</th><th className="pb-1 text-right">CA catalogue</th><th className="pb-1 text-right">Remises</th><th className="pb-1 text-right">Marge brute</th><th className="pb-1 text-right">Commission</th><th className="pb-1 text-right">Marge nette</th></tr></thead>
+              <tbody>
+                {parClient.map(({ e, m }) => (
+                  <tr key={e!.id} className="border-b last:border-0">
+                    <td className="py-1"><Link href={`/admin/entreprises/${e!.id}?onglet=remises`} className="hover:text-orange-600">{e!.nom}</Link>{m.estime && <span className="text-xs text-gray-400"> (estim.)</span>}</td>
+                    <td className="py-1 text-right">{eur(m.caCatalogue)}</td>
+                    <td className="py-1 text-right" style={{ color: "#b91c1c" }}>{m.remises ? `− ${eur(m.remises)}` : "—"}</td>
+                    <td className="py-1 text-right font-semibold">{eur(m.margeBrute)}</td>
+                    <td className="py-1 text-right" style={{ color: "#6d28d9" }}>{m.commissions ? `− ${eur(m.commissions)}` : "—"}</td>
+                    <td className="py-1 text-right font-bold" style={{ color: "#15803d" }}>{eur(m.margeNette)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
       <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))" }}>
         <section className="bg-white rounded-xl shadow p-6">
           <h2 className="text-lg font-bold mb-3">🔁 Clients gagnés et perdus (12 mois)</h2>

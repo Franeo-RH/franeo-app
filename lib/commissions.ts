@@ -12,6 +12,16 @@ function moisSuivant(d = new Date()) {
   return m > 12 ? { mois: 1, annee: d.getFullYear() + 1 } : { mois: m, annee: d.getFullYear() };
 }
 
+/**
+ * Premier mois concerné par une remise ou une commission accordée aujourd'hui : le mois en cours si sa facture
+ * n'est pas encore générée pour ce client (l'estimation en tient compte tout de suite), sinon le mois suivant.
+ */
+export async function moisDepart(entrepriseId: string, d = new Date()) {
+  const mois = d.getMonth() + 1, annee = d.getFullYear();
+  const facture = await prisma.facturation.findFirst({ where: { entrepriseId, mois, annee }, select: { id: true } });
+  return facture ? moisSuivant(d) : { mois, annee };
+}
+
 /** Rang du mois dans la période de commission (0 = premier mois), ou null hors période */
 export function rangCommission(e: { commissionPct: number | null; commissionMoisDebut: number | null; commissionAnneeDebut: number | null; commissionNbMois: number | null }, mois: number, annee: number): number | null {
   if (!(e.commissionPct && e.commissionPct > 0) || !e.commissionMoisDebut || !e.commissionAnneeDebut) return null;
@@ -22,7 +32,7 @@ export function rangCommission(e: { commissionPct: number | null; commissionMois
 }
 
 export async function definirCommission(entrepriseId: string, p: ParamCommission, auteur: string) {
-  const debut = p.debut ?? moisSuivant();
+  const debut = p.debut ?? (await moisDepart(entrepriseId));
   await prisma.entreprise.update({
     where: { id: entrepriseId },
     data: { commissionPct: p.pct, commissionNbMois: p.nbMois, commissionBeneficiaire: p.beneficiaire.slice(0, 120), commissionParrainId: p.parrainId ?? null, commissionMoisDebut: debut.mois, commissionAnneeDebut: debut.annee, commissionSource: p.source },

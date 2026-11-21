@@ -5,6 +5,8 @@ import { calculerFacture, rangRemise } from "@/lib/facturation";
 import { reglageParrainage, texteRecompense } from "@/lib/parrainage";
 import GestionRemises from "@/components/GestionRemises";
 import CommissionEntreprise from "@/components/CommissionEntreprise";
+import CascadeMarges from "@/components/CascadeMarges";
+import { margesMois, MARGE_VIDE } from "@/lib/marges";
 import BoutonAction from "@/components/BoutonAction";
 
 const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
@@ -253,6 +255,7 @@ export async function OngletRemises({ id }: { id: string }) {
     reglageParrainage(),
   ]);
   if (!entreprise) return null;
+  const marge = (await margesMois(mois, annee, [id]).catch(() => new Map())).get(id) ?? MARGE_VIDE;
   const parrain = entreprise.parrainId ? await prisma.entreprise.findUnique({ where: { id: entreprise.parrainId }, select: { id: true, nom: true } }) : null;
   const base = (process.env.NEXT_PUBLIC_URL || process.env.APP_URL || "https://app.franeo-rh.com").replace(/\/$/, "");
   const remises = entreprise.remises.map((r) => ({ id: r.id, libelle: r.libelle, motif: r.motif, type: r.type, valeur: r.valeur, portee: r.portee, ...periodeRemise(r, mois, annee) }));
@@ -272,6 +275,9 @@ export async function OngletRemises({ id }: { id: string }) {
         remises={remises}
         moisCourant={`${annee}-${String(mois).padStart(2, "0")}`}
       />
+      <div className={carte}>
+        <CascadeMarges m={marge} titre={`💰 Impact sur les marges — ${MOIS[mois - 1]} ${annee}`} />
+      </div>
       <CommissionEntreprise
         entrepriseId={id}
         moisCourant={`${annee}-${String(mois).padStart(2, "0")}`}

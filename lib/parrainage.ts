@@ -5,6 +5,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { journaliser } from "@/lib/journal";
+import { moisDepart } from "@/lib/commissions";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sans 0/O, 1/I
 
@@ -73,12 +74,6 @@ function texteRemiseParrainage(r: RecompenseParrainage): string {
   return `${montant} pendant ${r.mois} mois, ${qui}`;
 }
 
-/** Mois suivant (les remises de parrainage démarrent sur la prochaine facture) */
-function moisSuivant(d = new Date()) {
-  const m = d.getMonth() + 2;
-  return m > 12 ? { mois: 1, annee: d.getFullYear() + 1 } : { mois: m, annee: d.getFullYear() };
-}
-
 /**
  * Rattache un filleul à son parrain (par code) et crée les remises prévues par le réglage.
  * Renvoie un message d'erreur, ou null si tout va bien.
@@ -99,11 +94,11 @@ export async function rattacherParrain(filleulId: string, code: string, auteur: 
 
   const r = await reglageParrainage();
   if (r.type !== "AUCUNE" && r.valeur > 0) {
-    const debut = moisSuivant();
-    const base = { type: r.type === "MONTANT" ? "MONTANT" : "POURCENT", valeur: r.valeur, portee: "ABONNEMENTS", moisDebut: debut.mois, anneeDebut: debut.annee, nbMois: r.mois, creePar: auteur };
+    const [dParrain, dFilleul] = await Promise.all([moisDepart(parrain.id), moisDepart(filleulId)]);
+    const base = { type: r.type === "MONTANT" ? "MONTANT" : "POURCENT", valeur: r.valeur, portee: "ABONNEMENTS", nbMois: r.mois, creePar: auteur };
     const data = [
-      ...(r.pour !== "FILLEUL" ? [{ ...base, entrepriseId: parrain.id, motif: "PARRAINAGE", libelle: `Parrainage de ${filleul.nom}` }] : []),
-      ...(r.pour !== "PARRAIN" ? [{ ...base, entrepriseId: filleulId, motif: "FILLEUL", libelle: `Bienvenue (parrainé par ${parrain.nom})` }] : []),
+      ...(r.pour !== "FILLEUL" ? [{ ...base, moisDebut: dParrain.mois, anneeDebut: dParrain.annee, entrepriseId: parrain.id, motif: "PARRAINAGE", libelle: `Parrainage de ${filleul.nom}` }] : []),
+      ...(r.pour !== "PARRAIN" ? [{ ...base, moisDebut: dFilleul.mois, anneeDebut: dFilleul.annee, entrepriseId: filleulId, motif: "FILLEUL", libelle: `Bienvenue (parrainé par ${parrain.nom})` }] : []),
     ];
     if (data.length) await prisma.remise.createMany({ data });
   }
