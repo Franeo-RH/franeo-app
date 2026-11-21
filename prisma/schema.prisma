@@ -50,6 +50,15 @@ model Entreprise {
   bilanMensuel      Boolean            @default(true)
   dateDebutContrat  DateTime?
   remises           Remise[]
+  // Commission à reverser (apporteur d'affaires, parrain…) : % du CA de ce client, à partir d'un mois, pendant N mois (vide = sans fin)
+  commissionPct          Float?
+  commissionBeneficiaire String?
+  commissionParrainId    String?
+  commissionMoisDebut    Int?
+  commissionAnneeDebut   Int?
+  commissionNbMois       Int?
+  commissionSource       String?   // PARRAINAGE | CODE_PROMO | MANUELLE
+  commissionsVersees     CommissionVersee[]
 
   // Cabinet comptable qui suit ce client (accès cabinet)
   cabinetId         String?
@@ -1419,6 +1428,9 @@ model ReglageApp {
   parrainageValeur   Float     @default(0)
   parrainageMois     Int       @default(1)        // durée de la remise, en mois
   parrainagePour     String    @default("PARRAIN") // PARRAIN, FILLEUL, LES_DEUX
+  // Commission reversée au parrain : % du CA du filleul, pendant N mois (0 = aucune, vide = sans fin)
+  parrainageCommissionPct  Float @default(0)
+  parrainageCommissionMois Int?
   maintenanceActive  Boolean   @default(false)   // l'application est bloquée (sauf pour l'admin)
   maintenanceMessage String?
   maintenanceDebut   DateTime?                   // maintenance programmée : annonce avant, blocage à partir de cette date
@@ -1533,6 +1545,27 @@ model CodePromo {
   finValidite     DateTime? // après cette date, le code n'est plus accepté
   maxUtilisations Int?
   utilisations    Int       @default(0)
+  // Commission à reverser au bénéficiaire du code (partenaire, apporteur) : % du CA du client, pendant N mois
+  commissionPct   Float?
+  commissionMois  Int?
+  beneficiaire    String?
   note            String?
   createdAt       DateTime  @default(now())
+}
+
+// Commission reversée pour un mois (trace de paiement à l'apporteur / au parrain)
+model CommissionVersee {
+  id           String     @id @default(cuid())
+  entrepriseId String
+  entreprise   Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  mois         Int
+  annee        Int
+  base         Float      // CA retenu
+  pct          Float
+  montant      Float
+  beneficiaire String?
+  verseLe      DateTime   @default(now())
+  par          String?
+
+  @@unique([entrepriseId, mois, annee])
 }

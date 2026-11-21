@@ -40,6 +40,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/entreprises/pilotage", label: "📈 Pilotage", groupe: "💳 Abonnements & facturation" },
         { href: "/admin/entreprises/prestations", label: "➕ Prestations supplémentaires", groupe: "💳 Abonnements & facturation" },
         { href: "/admin/entreprises/remises", label: "🎁 Remises & parrainage", groupe: "💳 Abonnements & facturation" },
+        { href: "/admin/entreprises/commissions", label: "💶 Commissions à reverser", groupe: "💳 Abonnements & facturation" },
         { href: "/admin/entreprises/devis", label: "🧾 Demandes de devis", groupe: "📬 Demandes des clients" },
         { href: "/admin/entreprises/demandes-services", label: "📬 Apps, options & formations", groupe: "📬 Demandes des clients" },
       ] };

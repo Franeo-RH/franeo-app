@@ -22,7 +22,7 @@ export const MISES_A_JOUR: MiseAJour[] = [
       "📒 Registre unique du personnel : généré automatiquement à partir de vos fiches salariés, en Excel ou en PDF (Gestion RH › Registre du personnel).",
       "📘 Livret d'accueil : commandez-le en quelques clics, FRANEO RH le rédige et vous l'envoie dans l'app.",
       "🗣️ Entretiens : personnalisez les rubriques de vos comptes rendus.",
-      "🏷️ Codes promo acceptés à l'inscription.",
+      "🏷️ Codes promo et codes partenaires acceptés à l'inscription.",
     ],
   },
   {

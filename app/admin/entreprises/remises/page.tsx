@@ -25,7 +25,7 @@ export default async function AdminRemises() {
   const maintenant = new Date();
   const mois = maintenant.getMonth() + 1, annee = maintenant.getFullYear();
   const [reglage, entreprises] = await Promise.all([
-    reglageParrainage().catch(() => ({ type: "AUCUNE", valeur: 0, mois: 1, pour: "PARRAIN" })),
+    reglageParrainage().catch(() => ({ type: "AUCUNE", valeur: 0, mois: 1, pour: "PARRAIN", commissionPct: 0, commissionMois: null })),
     prisma.entreprise.findMany({
       where: { demo: false },
       select: { id: true, nom: true, actif: true, remisePct: true, codeParrainage: true, parrainId: true, remises: true },

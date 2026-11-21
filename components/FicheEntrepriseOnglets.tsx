@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { calculerFacture, rangRemise } from "@/lib/facturation";
 import { reglageParrainage, texteRecompense } from "@/lib/parrainage";
 import GestionRemises from "@/components/GestionRemises";
+import CommissionEntreprise from "@/components/CommissionEntreprise";
 import BoutonAction from "@/components/BoutonAction";
 
 const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
@@ -246,7 +247,7 @@ export async function OngletRemises({ id }: { id: string }) {
   const [entreprise, filleuls, reglage] = await Promise.all([
     prisma.entreprise.findUnique({
       where: { id },
-      select: { remisePct: true, codeParrainage: true, parrainId: true, remises: { orderBy: [{ anneeDebut: "desc" }, { moisDebut: "desc" }] } },
+      select: { remisePct: true, codeParrainage: true, parrainId: true, commissionPct: true, commissionBeneficiaire: true, commissionMoisDebut: true, commissionAnneeDebut: true, commissionNbMois: true, commissionSource: true, remises: { orderBy: [{ anneeDebut: "desc" }, { moisDebut: "desc" }] } },
     }),
     prisma.entreprise.findMany({ where: { parrainId: id }, select: { id: true, nom: true, actif: true, createdAt: true }, orderBy: { createdAt: "desc" } }),
     reglageParrainage(),
@@ -270,6 +271,14 @@ export async function OngletRemises({ id }: { id: string }) {
         parrain={parrain}
         remises={remises}
         moisCourant={`${annee}-${String(mois).padStart(2, "0")}`}
+      />
+      <CommissionEntreprise
+        entrepriseId={id}
+        moisCourant={`${annee}-${String(mois).padStart(2, "0")}`}
+        commission={entreprise.commissionPct ? {
+          pct: entreprise.commissionPct, beneficiaire: entreprise.commissionBeneficiaire, nbMois: entreprise.commissionNbMois, source: entreprise.commissionSource,
+          debut: entreprise.commissionMoisDebut && entreprise.commissionAnneeDebut ? `${entreprise.commissionAnneeDebut}-${String(entreprise.commissionMoisDebut).padStart(2, "0")}` : null,
+        } : null}
       />
       {filleuls.length > 0 && (
         <div className={carte}>

@@ -14,7 +14,13 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ erreur: "Valeur de remise invalide." }, { status: 400 });
   }
   if (!Number.isFinite(mois) || mois < 1 || mois > 24) return NextResponse.json({ erreur: "Durée : 1 à 24 mois." }, { status: 400 });
+  const commissionPct = b.commissionPct === "" || b.commissionPct == null ? 0 : parseFloat(String(b.commissionPct).replace(",", "."));
+  if (!Number.isFinite(commissionPct) || commissionPct < 0 || commissionPct > 100) return NextResponse.json({ erreur: "Commission : pourcentage entre 0 et 100." }, { status: 400 });
+  const commissionMois = b.commissionMois === "" || b.commissionMois == null ? null : parseInt(String(b.commissionMois), 10);
+  if (commissionMois != null && (!Number.isFinite(commissionMois) || commissionMois < 1 || commissionMois > 240)) return NextResponse.json({ erreur: "Durée de commission invalide." }, { status: 400 });
   const data = {
+    parrainageCommissionPct: commissionPct,
+    parrainageCommissionMois: commissionMois,
     parrainageType: type,
     parrainageValeur: valeur,
     parrainageMois: mois,

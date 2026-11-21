@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 const champ = "border rounded-lg px-3 py-2 text-sm";
 
 /** Récompense appliquée automatiquement quand un nouveau client arrive avec un code de parrainage */
-export default function ReglageParrainage({ initial }: { initial: { type: string; valeur: number; mois: number; pour: string } }) {
+export default function ReglageParrainage({ initial }: { initial: { type: string; valeur: number; mois: number; pour: string; commissionPct?: number; commissionMois?: number | null } }) {
   const router = useRouter();
-  const [f, setF] = useState({ ...initial, valeur: String(initial.valeur || ""), mois: String(initial.mois || 1) });
+  const [f, setF] = useState({ ...initial, valeur: String(initial.valeur || ""), mois: String(initial.mois || 1), commissionPct: String(initial.commissionPct || ""), commissionMois: initial.commissionMois ? String(initial.commissionMois) : "" });
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [occupe, setOccupe] = useState(false);
 
@@ -41,6 +41,10 @@ export default function ReglageParrainage({ initial }: { initial: { type: string
           <option value="FILLEUL">La filleule</option>
           <option value="LES_DEUX">Les deux</option>
         </select></label>
+      <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">Reverser au parrain (% du CA du filleul)
+        <input inputMode="decimal" value={f.commissionPct} onChange={(e) => setF({ ...f, commissionPct: e.target.value })} className={champ} placeholder="0 = aucune" /></label>
+      <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">Commission pendant (mois)
+        <input inputMode="numeric" value={f.commissionMois} onChange={(e) => setF({ ...f, commissionMois: e.target.value })} className={champ} placeholder="vide = sans fin" /></label>
       <button type="submit" disabled={occupe} className="bg-orange-500 text-white rounded-lg px-4 py-2 font-semibold text-sm hover:bg-orange-600 disabled:opacity-50">Enregistrer</button>
       {msg && <p className={`text-sm font-semibold col-span-full ${msg.ok ? "text-green-700" : "text-red-600"}`}>{msg.ok ? "✅" : "❌"} {msg.t}</p>}
     </form>

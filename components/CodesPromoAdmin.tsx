@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-type C = { id: string; code: string; type: string; valeur: number; portee: string; nbMois: number | null; actif: boolean; finValidite: string | null; maxUtilisations: number | null; utilisations: number; note: string | null };
+type C = { id: string; code: string; type: string; valeur: number; portee: string; nbMois: number | null; actif: boolean; finValidite: string | null; maxUtilisations: number | null; utilisations: number; note: string | null; commissionPct: number | null; commissionMois: number | null; beneficiaire: string | null };
 const champ = "border rounded-lg px-3 py-2 text-sm";
-const VIDE = { code: "", type: "POURCENT", valeur: "", portee: "ABONNEMENTS", nbMois: "", finValidite: "", maxUtilisations: "", note: "" };
+const VIDE = { code: "", type: "POURCENT", valeur: "", portee: "ABONNEMENTS", nbMois: "", finValidite: "", maxUtilisations: "", note: "", commissionPct: "", commissionMois: "", beneficiaire: "" };
 
 /** Admin › Remises & parrainage › Codes promo (ex. TARTENPION = 10 %) */
 export default function CodesPromoAdmin() {
@@ -30,7 +30,7 @@ export default function CodesPromoAdmin() {
         <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">Type
           <select value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })} className={champ}><option value="POURCENT">%</option><option value="MONTANT">€ par mois</option></select></label>
         <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">Valeur
-          <input required inputMode="decimal" value={f.valeur} onChange={(e) => setF({ ...f, valeur: e.target.value })} placeholder={f.type === "POURCENT" ? "10" : "50"} className={champ} /></label>
+          <input inputMode="decimal" value={f.valeur} onChange={(e) => setF({ ...f, valeur: e.target.value })} placeholder={f.type === "POURCENT" ? "10 (vide = aucune)" : "50"} className={champ} /></label>
         <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">Sur
           <select value={f.portee} onChange={(e) => setF({ ...f, portee: e.target.value })} className={champ}><option value="ABONNEMENTS">Abonnements et options</option><option value="TOUT">Toute la facture</option></select></label>
         <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">Durée (mois)
@@ -41,6 +41,12 @@ export default function CodesPromoAdmin() {
           <input inputMode="numeric" value={f.maxUtilisations} onChange={(e) => setF({ ...f, maxUtilisations: e.target.value })} placeholder="illimité" className={champ} /></label>
         <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">Note
           <input value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} placeholder="Salon, partenaire…" className={champ} /></label>
+        <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">Reverser (% du CA)
+          <input inputMode="decimal" value={f.commissionPct} onChange={(e) => setF({ ...f, commissionPct: e.target.value })} placeholder="vide = rien" className={champ} /></label>
+        <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">À qui
+          <input value={f.beneficiaire} onChange={(e) => setF({ ...f, beneficiaire: e.target.value })} placeholder="Partenaire, apporteur…" className={champ} /></label>
+        <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">Commission pendant (mois)
+          <input inputMode="numeric" value={f.commissionMois} onChange={(e) => setF({ ...f, commissionMois: e.target.value })} placeholder="vide = sans fin" className={champ} /></label>
         <button type="submit" className="bg-orange-500 text-white rounded-lg px-4 py-2 font-semibold text-sm hover:bg-orange-600">➕ Créer le code</button>
       </form>
       {msg && <p className={`text-sm font-semibold ${msg.ok ? "text-green-700" : "text-red-600"}`}>{msg.ok ? "✅" : "❌"} {msg.t}</p>}
@@ -51,7 +57,7 @@ export default function CodesPromoAdmin() {
             {liste.map((c) => (
               <tr key={c.id} className="border-b last:border-0">
                 <td data-label="Code" className="py-2 font-bold tracking-wider">{c.code}{c.note && <span className="block text-xs text-gray-500 font-normal tracking-normal">{c.note}</span>}</td>
-                <td data-label="Remise" className="py-2">{c.type === "MONTANT" ? `${c.valeur} € / mois` : `${c.valeur} %`} {c.portee === "TOUT" ? "sur toute la facture" : "sur les abonnements"} · {c.nbMois ? `${c.nbMois} mois` : "sans fin"}</td>
+                <td data-label="Remise" className="py-2">{c.valeur > 0 ? <>{c.type === "MONTANT" ? `${c.valeur} € / mois` : `${c.valeur} %`} {c.portee === "TOUT" ? "sur toute la facture" : "sur les abonnements"} · {c.nbMois ? `${c.nbMois} mois` : "sans fin"}</> : "Pas de remise"}{c.commissionPct ? <span className="block text-xs font-semibold" style={{ color: "#7c3aed" }}>💶 {c.commissionPct} % du CA reversé{c.beneficiaire ? ` à ${c.beneficiaire}` : ""}{c.commissionMois ? ` · ${c.commissionMois} mois` : ""}</span> : null}</td>
                 <td data-label="Validité" className="py-2">{c.finValidite ? `jusqu'au ${new Date(c.finValidite).toLocaleDateString("fr-FR")}` : "—"}</td>
                 <td data-label="Utilisé" className="py-2">{c.utilisations}{c.maxUtilisations ? ` / ${c.maxUtilisations}` : ""}</td>
                 <td data-label="État" className="py-2">

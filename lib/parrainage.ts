@@ -46,7 +46,7 @@ export async function trouverParrain(code: string | null | undefined) {
   });
 }
 
-export type RecompenseParrainage = { type: string; valeur: number; mois: number; pour: string };
+export type RecompenseParrainage = { type: string; valeur: number; mois: number; pour: string; commissionPct?: number; commissionMois?: number | null };
 
 export async function reglageParrainage(): Promise<RecompenseParrainage> {
   const r = await prisma.reglageApp.findUnique({ where: { id: "global" } }).catch(() => null);
@@ -55,11 +55,19 @@ export async function reglageParrainage(): Promise<RecompenseParrainage> {
     valeur: r?.parrainageValeur ?? 0,
     mois: Math.max(r?.parrainageMois ?? 1, 1),
     pour: r?.parrainagePour ?? "PARRAIN",
+    commissionPct: r?.parrainageCommissionPct ?? 0,
+    commissionMois: r?.parrainageCommissionMois ?? null,
   };
 }
 
 export function texteRecompense(r: RecompenseParrainage): string {
-  if (r.type === "AUCUNE" || !(r.valeur > 0)) return "Aucune récompense automatique";
+  const commission = r.commissionPct && r.commissionPct > 0 ? `${r.commissionPct} % du CA du filleul reversé au parrain${r.commissionMois ? ` pendant ${r.commissionMois} mois` : ""}` : "";
+  const base = texteRemiseParrainage(r);
+  return [base, commission].filter(Boolean).join(" + ") || "Aucune récompense automatique";
+}
+
+function texteRemiseParrainage(r: RecompenseParrainage): string {
+  if (r.type === "AUCUNE" || !(r.valeur > 0)) return "";
   const montant = r.type === "MONTANT" ? `${r.valeur} € de remise par mois` : `${r.valeur} % de remise sur les abonnements`;
   const qui = r.pour === "LES_DEUX" ? "pour le parrain et le filleul" : r.pour === "FILLEUL" ? "pour le filleul" : "pour le parrain";
   return `${montant} pendant ${r.mois} mois, ${qui}`;
