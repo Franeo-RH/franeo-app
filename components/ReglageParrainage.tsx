@@ -15,14 +15,14 @@ export default function ReglageParrainage({ initial }: { initial: { type: string
   async function enregistrer(e: React.FormEvent) {
     e.preventDefault();
     setOccupe(true); setMsg(null);
-    const res = await fetch("/api/admin/parrainage", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(f) });
+    const res = await fetch("/api/admin/parrainage", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(f) }).catch(() => null);
+    if (!res) { setOccupe(false); setMsg({ ok: false, t: "Serveur injoignable." }); return; }
     const d = await res.json().catch(() => ({}));
     setOccupe(false);
     setMsg(res.ok ? { ok: true, t: "Réglage enregistré (s'applique aux prochains parrainages)." } : { ok: false, t: d.erreur || "Erreur" });
     if (res.ok) router.refresh();
   }
 
-  const aucune = f.type === "AUCUNE";
   return (
     <form onSubmit={enregistrer} className="grid gap-3 items-end" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
       <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">Récompense
@@ -32,11 +32,11 @@ export default function ReglageParrainage({ initial }: { initial: { type: string
           <option value="MONTANT">Remise en € par mois</option>
         </select></label>
       <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">Valeur
-        <input disabled={aucune} inputMode="decimal" value={aucune ? "" : f.valeur} onChange={(e) => setF({ ...f, valeur: e.target.value })} className={champ} placeholder={f.type === "MONTANT" ? "€" : "%"} /></label>
+        <input inputMode="decimal" value={f.valeur} onChange={(e) => setF({ ...f, valeur: e.target.value, type: f.type === "AUCUNE" && e.target.value ? "POURCENT" : f.type })} className={champ} placeholder={f.type === "MONTANT" ? "€" : "%"} /></label>
       <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">Pendant (mois)
-        <input disabled={aucune} inputMode="numeric" value={f.mois} onChange={(e) => setF({ ...f, mois: e.target.value })} className={champ} /></label>
+        <input inputMode="numeric" value={f.mois} onChange={(e) => setF({ ...f, mois: e.target.value })} className={champ} /></label>
       <label className="flex flex-col gap-1 text-xs font-semibold text-gray-600">Pour
-        <select disabled={aucune} value={f.pour} onChange={(e) => setF({ ...f, pour: e.target.value })} className={champ}>
+        <select value={f.pour} onChange={(e) => setF({ ...f, pour: e.target.value })} className={champ}>
           <option value="PARRAIN">La marraine</option>
           <option value="FILLEUL">La filleule</option>
           <option value="LES_DEUX">Les deux</option>

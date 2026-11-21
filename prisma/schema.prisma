@@ -302,6 +302,7 @@ model Salarie {
   avantagesMensuels     Json?
 
   titreSejour           DateTime?
+  sexe                  String?  // F | M (registre unique du personnel)
   matricule             String?
   // Indicateurs RH
   etablissement         String?
@@ -1489,6 +1490,8 @@ model Entretien {
   statut       String    @default("PLANIFIE") // PLANIFIE | REALISE
   responsable  String?
   compteRendu  Json?
+  // Rubriques de la trame au moment de la saisie [{ cle, label }] (le compte rendu reste lisible si la trame change)
+  rubriques    Json?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -1505,4 +1508,31 @@ model ModeleEmail {
   ordre     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Trame d'entretien (annuel, professionnel, bilan 6 ans) : modèle FRANEO (entrepriseId vide) ou personnalisé par un client
+model TrameEntretien {
+  id           String   @id @default(cuid())
+  entrepriseId String?
+  type         String   // ANNUEL | PROFESSIONNEL | ETAT_DES_LIEUX
+  rubriques    Json     // [{ cle, label }]
+  updatedAt    DateTime @updatedAt
+
+  @@unique([entrepriseId, type])
+}
+
+// Code promo saisi à l'inscription ou rattaché par l'admin (ex. TARTENPION = 10 % pendant 3 mois)
+model CodePromo {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  type            String    @default("POURCENT") // POURCENT | MONTANT (€ par mois)
+  valeur          Float
+  portee          String    @default("ABONNEMENTS") // ABONNEMENTS | TOUT
+  nbMois          Int?      // vide = sans fin
+  actif           Boolean   @default(true)
+  finValidite     DateTime? // après cette date, le code n'est plus accepté
+  maxUtilisations Int?
+  utilisations    Int       @default(0)
+  note            String?
+  createdAt       DateTime  @default(now())
 }

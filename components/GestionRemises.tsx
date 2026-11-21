@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 type Remise = { id: string; libelle: string; motif: string; type: string; valeur: number; portee: string; periode: string; etat: "EN_COURS" | "A_VENIR" | "TERMINEE" };
 
 const champ = "border rounded-lg px-3 py-2 text-sm";
-const MOTIFS: Record<string, string> = { COMMERCIALE: "Geste commercial", PARRAINAGE: "Parrainage (marraine)", FILLEUL: "Parrainage (filleul)" };
+const MOTIFS: Record<string, string> = { COMMERCIALE: "Geste commercial", PARRAINAGE: "Parrainage (marraine)", FILLEUL: "Parrainage (filleul)", CODE_PROMO: "Code promo" };
 const ETATS: Record<Remise["etat"], [string, string, string]> = {
   EN_COURS: ["En cours", "#15803d", "#dcfce7"],
   A_VENIR: ["À venir", "#1d4ed8", "#dbeafe"],
@@ -30,7 +30,8 @@ export default function GestionRemises({ entrepriseId, code, lienParrainage, par
 
   async function appel(url: string, init: RequestInit, ok: string) {
     setOccupe(true); setMsg(null);
-    const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...init });
+    const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...init }).catch(() => null);
+    if (!res) { setOccupe(false); setMsg({ ok: false, t: "Serveur injoignable." }); return false; }
     const d = await res.json().catch(() => ({}));
     setOccupe(false);
     setMsg(res.ok ? { ok: true, t: ok } : { ok: false, t: d.erreur || "Erreur" });
@@ -70,19 +71,20 @@ export default function GestionRemises({ entrepriseId, code, lienParrainage, par
         </div>
 
         <div className="bg-white rounded-xl shadow p-6">
-          <h2 className="text-lg font-bold mb-2">🤝 Marraine</h2>
+          <h2 className="text-lg font-bold mb-2">🤝 Marraine ou code promo</h2>
           {parrain ? (
             <div className="flex items-center gap-3 flex-wrap">
               <a href={`/admin/entreprises/${parrain.id}?onglet=remises`} className="font-semibold text-orange-600 hover:underline">{parrain.nom}</a>
               <button type="button" disabled={occupe} onClick={() => parrainage({ action: "detacher" }, "Lien retiré.")} className="text-sm text-gray-600 hover:underline">Retirer le lien</button>
             </div>
-          ) : (
-            <form className="flex gap-2 flex-wrap" onSubmit={(e) => { e.preventDefault(); parrainage({ action: "rattacher", code: codeParrain }, "Entreprise rattachée à sa marraine."); }}>
-              <input value={codeParrain} onChange={(e) => setCodeParrain(e.target.value.toUpperCase())} placeholder="Code de la marraine (FRH-…)" className={champ} aria-label="Code de la marraine" />
-              <button type="submit" disabled={occupe || !codeParrain.trim()} className="bg-gray-900 text-white rounded-lg px-4 py-2 font-semibold text-sm disabled:opacity-50">Rattacher</button>
+          ) : <p className="text-sm text-gray-500 mb-2">Pas de marraine.</p>}
+          {(
+            <form className="flex gap-2 flex-wrap mt-2" onSubmit={(e) => { e.preventDefault(); parrainage({ action: "rattacher", code: codeParrain }, "Code appliqué.").then((ok) => ok && setCodeParrain("")); }}>
+              <input value={codeParrain} onChange={(e) => setCodeParrain(e.target.value.toUpperCase())} placeholder="FRH-… ou code promo" className={champ} aria-label="Code de parrainage ou code promo" />
+              <button type="submit" disabled={occupe || !codeParrain.trim()} className="bg-gray-900 text-white rounded-lg px-4 py-2 font-semibold text-sm disabled:opacity-50">Appliquer</button>
             </form>
           )}
-          <p className="text-xs text-gray-500 mt-2">Le rattachement crée les remises prévues dans Paramètres → Parrainage (aucune par défaut).</p>
+          <p className="text-xs text-gray-500 mt-2">Un code de parrainage rattache l&apos;entreprise à sa marraine ; un code promo (Remises & parrainage › Codes promo) crée directement sa remise.</p>
         </div>
       </div>
 

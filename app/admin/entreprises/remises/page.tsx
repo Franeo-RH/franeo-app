@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import ReglageParrainage from "@/components/ReglageParrainage";
+import CodesPromoAdmin from "@/components/CodesPromoAdmin";
 import { lignesFacturesMois, rangRemise } from "@/lib/facturation";
 import { reglageParrainage, texteRecompense } from "@/lib/parrainage";
 
@@ -24,7 +25,7 @@ export default async function AdminRemises() {
   const maintenant = new Date();
   const mois = maintenant.getMonth() + 1, annee = maintenant.getFullYear();
   const [reglage, entreprises] = await Promise.all([
-    reglageParrainage(),
+    reglageParrainage().catch(() => ({ type: "AUCUNE", valeur: 0, mois: 1, pour: "PARRAIN" })),
     prisma.entreprise.findMany({
       where: { demo: false },
       select: { id: true, nom: true, actif: true, remisePct: true, codeParrainage: true, parrainId: true, remises: true },
@@ -61,6 +62,12 @@ export default async function AdminRemises() {
             <h2 className="text-lg font-bold">🤝 Récompense de parrainage</h2>
             <p className="text-sm text-gray-500 mt-1 mb-4">Actuellement : <b>{texteRecompense(reglage)}</b>. Créée automatiquement quand un nouveau client arrive avec un code (formulaire d&apos;inscription ou rattachement manuel), à partir de la facture du mois suivant.</p>
             <ReglageParrainage initial={reglage} />
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-6">
+            <h2 className="text-lg font-bold">🏷️ Codes promo</h2>
+            <p className="text-sm text-gray-500 mt-1 mb-4">Créez vos codes (ex. « TARTENPION » = 10 %) : un prospect qui le saisit à l&apos;inscription reçoit la remise automatiquement.</p>
+            <CodesPromoAdmin />
           </div>
 
           <div className="bg-white rounded-xl shadow p-6">

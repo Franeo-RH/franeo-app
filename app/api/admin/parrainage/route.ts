@@ -20,6 +20,10 @@ export async function PUT(request: NextRequest) {
     parrainageMois: mois,
     parrainagePour: ["PARRAIN", "FILLEUL", "LES_DEUX"].includes(b.pour) ? b.pour : "PARRAIN",
   };
-  await prisma.reglageApp.upsert({ where: { id: "global" }, create: { id: "global", ...data }, update: data });
+  try {
+    await prisma.reglageApp.upsert({ where: { id: "global" }, create: { id: "global", ...data }, update: data });
+  } catch (e) {
+    return NextResponse.json({ erreur: `Enregistrement impossible : la base n'est pas à jour (lancez « npx prisma db push »). ${String((e as Error)?.message || "").slice(0, 120)}` }, { status: 500 });
+  }
   return NextResponse.json({ succes: true });
 }

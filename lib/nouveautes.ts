@@ -15,6 +15,17 @@ export type MiseAJour = {
 
 export const MISES_A_JOUR: MiseAJour[] = [
   {
+    version: "V73",
+    date: "novembre 2026",
+    titre: "Registre du personnel, livret d'accueil, trames d'entretien",
+    clients: [
+      "📒 Registre unique du personnel : généré automatiquement à partir de vos fiches salariés, en Excel ou en PDF (Gestion RH › Registre du personnel).",
+      "📘 Livret d'accueil : commandez-le en quelques clics, FRANEO RH le rédige et vous l'envoie dans l'app.",
+      "🗣️ Entretiens : personnalisez les rubriques de vos comptes rendus.",
+      "🏷️ Codes promo acceptés à l'inscription.",
+    ],
+  },
+  {
     version: "V71",
     date: "novembre 2026",
     titre: "Bulletins en ligne, arrivées et départs, entretiens, bilan mensuel",

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { TRAME_ENTRETIEN, TYPES_ENTRETIEN, prochainsEntretiens, statutDate } from "@/lib/entretiens";
+import { TYPES_ENTRETIEN, prochainsEntretiens, statutDate } from "@/lib/entretiens";
 
 type E = { id: string; type: string; date: string; statut: string; responsable: string | null };
 type S = { id: string; prenom: string; nom: string; poste: string; dateDebut: string | null; entretiens: E[] };
@@ -14,7 +14,7 @@ const COULEUR: Record<string, string> = { retard: "#dc2626", bientot: "#ea580c",
 export default function EntretiensClient({ modifiable }: { modifiable: boolean }) {
   const [liste, setListe] = useState<S[]>([]);
   const [plan, setPlan] = useState<{ salarieId: string; type: string; date: string; responsable: string } | null>(null);
-  const [cr, setCr] = useState<{ e: E; s: S; valeurs: Record<string, string> } | null>(null);
+  const [cr, setCr] = useState<{ e: E; s: S; valeurs: Record<string, string>; rubriques: { cle: string; label: string }[] } | null>(null);
   const [msg, setMsg] = useState("");
   const charger = () => fetch("/api/entretiens").then((r) => r.json()).then((d) => Array.isArray(d) && setListe(d)).catch(() => {});
   useEffect(() => { charger(); }, []);
@@ -29,7 +29,7 @@ export default function EntretiensClient({ modifiable }: { modifiable: boolean }
   }
   async function ouvrirCr(e: E, s: S) {
     const d = await fetch(`/api/entretiens/${e.id}/cr`).then((r) => r.json()).catch(() => ({}));
-    setCr({ e, s, valeurs: d.compteRendu ?? {} });
+    setCr({ e, s, valeurs: d.compteRendu ?? {}, rubriques: d.rubriques ?? [] });
   }
   async function enregistrerCr(realise: boolean) {
     if (!cr) return;
@@ -54,7 +54,7 @@ export default function EntretiensClient({ modifiable }: { modifiable: boolean }
             <h2 className="text-lg font-bold">📝 {TYPES_ENTRETIEN[cr.e.type]?.label} — {cr.s.prenom} {cr.s.nom} · {fr(cr.e.date)}</h2>
             <button type="button" onClick={() => setCr(null)} className="text-gray-500">Fermer ✕</button>
           </div>
-          {TRAME_ENTRETIEN.filter((t) => !t.types || t.types.includes(cr.e.type)).map((t) => (
+          {cr.rubriques.map((t) => (
             <label key={t.cle} className="text-sm font-semibold">{t.label}
               <textarea rows={2} disabled={!modifiable} className="w-full border rounded-lg px-3 py-2 mt-1 font-normal" value={cr.valeurs[t.cle] ?? ""} onChange={(e) => setCr({ ...cr, valeurs: { ...cr.valeurs, [t.cle]: e.target.value } })} />
             </label>

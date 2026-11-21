@@ -114,7 +114,8 @@ export default async function FicheEntrepriseAdmin({
 
           {onglet === "infos" && (
           <>
-          <div className="mb-6">
+          <div className="mb-6 flex gap-3 flex-wrap items-start">
+            <Link href={`/admin/entreprises/${id}/registre-personnel`} className="bg-white border-2 border-gray-300 text-gray-700 px-5 py-2 rounded-lg font-semibold hover:bg-gray-50">📒 Registre du personnel</Link>
             <EnvoyerEmailClient
               entrepriseId={id}
               entreprise={entreprise.nom}

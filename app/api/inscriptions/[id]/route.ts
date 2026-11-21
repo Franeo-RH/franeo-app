@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { niveauRH, permissionsFormule } from "@/lib/droits";
 import { prisma } from "@/lib/prisma";
-import { rattacherParrain } from "@/lib/parrainage";
+import { appliquerCode } from "@/lib/codes-promo";
 import { envoyerActivation, motDePasseProvisoire } from "@/lib/invitation";
 import { getSession } from "@/lib/session";
 
@@ -47,11 +47,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     data: { email: d.email, prenom: d.prenom, role: "CLIENT", entrepriseId: entreprise.id, motDePasse: await motDePasseProvisoire() },
   });
   // Code de parrainage saisi par le prospect : rattachement à la marraine (et remises prévues par le réglage)
-  const erreurParrainage = d.codeParrainage ? await rattacherParrain(entreprise.id, d.codeParrainage, session.email || "Admin") : null;
+  const erreurParrainage = d.codeParrainage ? await appliquerCode(entreprise.id, d.codeParrainage, session.email || "Admin") : null;
   await prisma.demandeInscription.update({ where: { id }, data: { statut: "VALIDEE", traiteeAt: new Date(), entrepriseId: entreprise.id } });
 
   const activation = await envoyerActivation(request, { email: d.email, prenom: d.prenom, entreprise: entreprise.nom, premierCompte: true });
-  return NextResponse.json({ succes: true, entrepriseId: entreprise.id, email: d.email, ...(erreurParrainage ? { avertissement: `Parrainage non appliqué : ${erreurParrainage}` } : {}), ...activation });
+  return NextResponse.json({ succes: true, entrepriseId: entreprise.id, email: d.email, ...(erreurParrainage ? { avertissement: `Code non appliqué : ${erreurParrainage}` } : {}), ...activation });
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

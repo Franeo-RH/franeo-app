@@ -1,7 +1,8 @@
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { TRAME_ENTRETIEN, TYPES_ENTRETIEN } from "@/lib/entretiens";
+import { TYPES_ENTRETIEN } from "@/lib/entretiens";
+import { nettoyerRubriques, trameEntretien } from "@/lib/trames-entretien";
 import BoutonImprimer from "@/components/BoutonImprimer";
 
 /** Compte rendu d'entretien prêt à imprimer (ou enregistrer en PDF depuis le navigateur) */
@@ -14,6 +15,8 @@ export default async function ImprimerEntretien({ params }: { params: Promise<{ 
   });
   if (!e) notFound();
   const cr = (e.compteRendu ?? {}) as Record<string, string>;
+  const figees = nettoyerRubriques(e.rubriques);
+  const rubriques = figees.length ? figees : (await trameEntretien(e.entrepriseId, e.type)).rubriques;
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: 32, fontFamily: "Arial, sans-serif", color: "#111827", background: "#fff" }}>
       <div className="fr-pas-imprimer" style={{ marginBottom: 16 }}><BoutonImprimer /></div>
@@ -26,7 +29,7 @@ export default async function ImprimerEntretien({ params }: { params: Promise<{ 
           <tr><td style={{ padding: 6, border: "1px solid #e5e7eb", fontWeight: 700 }}>Date d&apos;entrée</td><td style={{ padding: 6, border: "1px solid #e5e7eb" }}>{e.salarie.dateDebut ? new Date(e.salarie.dateDebut).toLocaleDateString("fr-FR") : "—"}</td></tr>
         </tbody>
       </table>
-      {TRAME_ENTRETIEN.filter((t) => (!t.types || t.types.includes(e.type)) && cr[t.cle]?.trim()).map((t) => (
+      {rubriques.filter((t) => cr[t.cle]?.trim()).map((t) => (
         <div key={t.cle} style={{ marginBottom: 14, breakInside: "avoid" }}>
           <h2 style={{ fontSize: 15, margin: "0 0 4px", color: "#c2410c" }}>{t.label}</h2>
           <p style={{ whiteSpace: "pre-line", margin: 0, fontSize: 14 }}>{cr[t.cle]}</p>

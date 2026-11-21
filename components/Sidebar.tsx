@@ -54,6 +54,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/salaries/rgpd", label: "🔐 Journal d'activité & RGPD", groupe: "📜 Journaux" },
         { href: "/admin/salaries/acces", label: "📱 Accès des salariés", groupe: "🔑 Accès" },
         { href: "/admin/documentaire/modeles", label: "📄 Modèles de contrats", groupe: "📝 Modèles" },
+        { href: "/admin/documentaire/entretiens", label: "🗣️ Modèles d'entretien", groupe: "📝 Modèles" },
         { href: "/admin/salaries/courriers", label: "✉️ Modèles de courriers", groupe: "📝 Modèles" },
         { href: "/admin/salaries/contrats", label: "🧐 Contrats générés", groupe: "📝 Modèles" },
       ] };
@@ -116,6 +117,8 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
       { href: "/client/salaries/services", label: "🧩 Services", groupe: "👥 Équipe" },
       { href: "/client/salaries/mouvements", label: "🔄 Mouvements", groupe: "👥 Équipe" },
       { href: "/client/salaries/arrivees-departs", label: "✅ Arrivées & départs", groupe: "👥 Équipe" },
+      { href: "/client/salaries/registre-personnel", label: "📒 Registre du personnel", groupe: "👥 Équipe" },
+      { href: "/client/salaries/livret-accueil", label: "📘 Livret d'accueil", groupe: "👥 Équipe" },
       { href: "/client/salaries/entretiens", label: "🗣️ Entretiens", groupe: "👥 Équipe" },
       { href: "/client/salaries/demandes", label: "📝 Mes demandes", aussi: ["/client/salaries/nouveau"], groupe: "👥 Équipe" },
       { href: "/client/salaries/releves", label: "⏱️ Relevés", groupe: "🕒 Temps & absences" },

@@ -28,9 +28,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const entreprise = await prisma.entreprise.findUnique({ where: { id }, select: { id: true } });
   if (!entreprise) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
 
-  const remise = await prisma.remise.create({
-    data: { entrepriseId: id, libelle, motif, type, valeur, portee: b.portee === "TOUT" ? "TOUT" : "ABONNEMENTS", moisDebut: +m[2], anneeDebut: +m[1], nbMois, creePar: session.email },
-  });
+  let remise;
+  try {
+    remise = await prisma.remise.create({
+      data: { entrepriseId: id, libelle, motif, type, valeur, portee: b.portee === "TOUT" ? "TOUT" : "ABONNEMENTS", moisDebut: +m[2], anneeDebut: +m[1], nbMois, creePar: session.email },
+    });
+  } catch (e) {
+    return NextResponse.json({ erreur: `Enregistrement impossible : la base n'est pas à jour (lancez « npx prisma db push »). ${String((e as Error)?.message || "").slice(0, 120)}` }, { status: 500 });
+  }
   await journaliser(id, session.email, "Remise", `${libelle} : ${valeur}${type === "MONTANT" ? " €/mois" : " %"} dès ${m[2]}/${m[1]}${nbMois ? ` pendant ${nbMois} mois` : " (sans fin)"}`);
   return NextResponse.json({ succes: true, remise });
 }

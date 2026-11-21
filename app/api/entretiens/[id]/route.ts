@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { aDroit } from "@/lib/droits";
-import { TRAME_ENTRETIEN } from "@/lib/entretiens";
+import { nettoyerRubriques, trameEntretien } from "@/lib/trames-entretien";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -19,14 +19,17 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
   if (!e) return NextResponse.json({ erreur: "Introuvable" }, { status: 404 });
   const b = await request.json().catch(() => ({}));
   const cr: Record<string, string> = {};
-  if (b.compteRendu && typeof b.compteRendu === "object") for (const t of TRAME_ENTRETIEN) if (typeof b.compteRendu[t.cle] === "string") cr[t.cle] = b.compteRendu[t.cle].slice(0, 4000);
+  // Trame figée au premier enregistrement du compte rendu (reste lisible si la trame change ensuite)
+  const figees = nettoyerRubriques(e.rubriques);
+  const rubriques = figees.length ? figees : (await trameEntretien(e.entrepriseId, e.type)).rubriques;
+  if (b.compteRendu && typeof b.compteRendu === "object") for (const t of rubriques) if (typeof b.compteRendu[t.cle] === "string") cr[t.cle] = b.compteRendu[t.cle].slice(0, 4000);
   await prisma.entretien.update({
     where: { id: e.id },
     data: {
       ...(/^\d{4}-\d{2}-\d{2}$/.test(String(b.date)) ? { date: new Date(`${b.date}T12:00:00`) } : {}),
       ...(typeof b.responsable === "string" ? { responsable: b.responsable.trim().slice(0, 100) || null } : {}),
       ...(b.statut === "REALISE" || b.statut === "PLANIFIE" ? { statut: b.statut } : {}),
-      ...(b.compteRendu ? { compteRendu: cr } : {}),
+      ...(b.compteRendu ? { compteRendu: cr, rubriques } : {}),
     },
   });
   return NextResponse.json({ succes: true });

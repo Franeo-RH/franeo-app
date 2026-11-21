@@ -98,7 +98,7 @@ export default function DemandeAcces({ variante = "bandeau" }: { variante?: "ban
                   </div>
                 </fieldset>
                 <textarea rows={3} placeholder="Message (facultatif)" value={f.message} onChange={(e) => setF({ ...f, message: e.target.value })} style={{ ...champ, resize: "vertical" }} aria-label="Message" />
-                <input placeholder="Code de parrainage (facultatif)" value={f.codeParrainage} onChange={(e) => setF({ ...f, codeParrainage: e.target.value.toUpperCase() })} style={champ} aria-label="Code de parrainage" maxLength={30} />
+                <input placeholder="Code de parrainage ou code promo (facultatif)" value={f.codeParrainage} onChange={(e) => setF({ ...f, codeParrainage: e.target.value.toUpperCase() })} style={champ} aria-label="Code de parrainage ou code promo" maxLength={30} />
                 <input tabIndex={-1} autoComplete="off" value={f.siteWeb} onChange={(e) => setF({ ...f, siteWeb: e.target.value })} style={{ position: "absolute", left: "-9999px" }} aria-hidden="true" />
                 {etat && !etat.ok && <p style={{ margin: 0, color: "#b91c1c", fontWeight: 600, fontSize: "14px" }}>{etat.texte}</p>}
                 <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
