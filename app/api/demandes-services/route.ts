@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { SELECT_PJ } from "@/lib/pieces-jointes";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { aDroit } from "@/lib/droits";
+import { aDroit, aAccesDocuments } from "@/lib/droits";
 import { notifierAdmin } from "@/lib/notifications";
 import { appFraneo, estAbonne, REMISE_APPS, REMISE_AUDIT, TYPES_DEMANDE } from "@/lib/apps-franeo";
 
@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ erreur: "Votre demande est déjà en cours de traitement." }, { status: 400 });
     }
   }
+  if (type === "LIVRET" && !aAccesDocuments(session.entreprise)) return NextResponse.json({ erreur: "Le livret d'accueil est inclus avec l'option Documents & contrats." }, { status: 403 });
   if (type === "AUTRE" && !message) return NextResponse.json({ erreur: "Décrivez votre besoin." }, { status: 400 });
   const options = Array.isArray(b.options) ? b.options.filter((o: unknown) => typeof o === "string").slice(0, 20).map((o: string) => o.slice(0, 200)) : [];
   const abonne = estAbonne(session.entreprise);
