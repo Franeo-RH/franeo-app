@@ -90,7 +90,7 @@ export async function lireJetonLien(jeton: string) {
 export type ActionAudit =
   | "LOGIN" | "LOGIN_ECHEC" | "LOGIN_BLOQUE" | "LOGOUT" | "MDP_CHANGE" | "MDP_RESET" | "MDP_OUBLIE"
   | "EXPORT" | "DROITS" | "SALARIE_SUPPR" | "COMPTE_SUPPR" | "RGPD_EXPORT" | "RGPD_ANONYMISATION" | "LOGO"
-  | "CODE_ENVOYE" | "CODE_ECHEC";
+  | "CODE_ENVOYE" | "CODE_ECHEC" | "EMAIL";
 
 export async function journaliser(e: {
   action: ActionAudit; utilisateur?: { id: string; email?: string | null; role?: string | null; entrepriseId?: string | null } | null;

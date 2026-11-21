@@ -46,6 +46,8 @@ model Entreprise {
   remisePct         Float?
   codeParrainage    String?            @unique
   parrainId         String?
+  // Bilan mensuel envoyé au dirigeant le 1er du mois
+  bilanMensuel      Boolean            @default(true)
   dateDebutContrat  DateTime?
   remises           Remise[]
 
@@ -119,6 +121,9 @@ model Entreprise {
 
 model Facturation {
   id              String      @id @default(cuid())
+  // Relances automatiques d'impayé (après la date limite)
+  relances        Int         @default(0)
+  derniereRelance DateTime?
   mois            Int
   annee           Int
   montant         Float
@@ -313,6 +318,9 @@ model Salarie {
   formations            Formation[]
   rappels               RappelSalarie[]
   compte                Utilisateur?
+  bulletins             Bulletin[]
+  checklists            ChecklistSalarie[]
+  entretiens            Entretien[]
 
   documents             Document[]
   variablesPaie         VariablePaie[]
@@ -1435,4 +1443,66 @@ model Remise {
   createdAt    DateTime   @default(now())
 
   @@index([entrepriseId])
+}
+// Bulletin de paie déposé par FRANEO RH, visible par le salarié (espace salarié) et par l'employeur
+model Bulletin {
+  id           String    @id @default(cuid())
+  salarieId    String
+  salarie      Salarie   @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+  entrepriseId String
+  mois         Int
+  annee        Int
+  nom          String
+  contenu      Bytes?
+  cle          String?
+  taille       Int
+  vuLe         DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@unique([salarieId, annee, mois])
+  @@index([entrepriseId, annee, mois])
+}
+
+// Checklist d'arrivée ou de départ d'un salarié (DPAE, mutuelle, solde de tout compte…)
+model ChecklistSalarie {
+  id           String    @id @default(cuid())
+  salarieId    String
+  salarie      Salarie   @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+  entrepriseId String
+  type         String    // ARRIVEE | DEPART
+  faits        String[]  @default([])   // clés des étapes cochées
+  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime  @default(now())
+
+  @@unique([salarieId, type])
+  @@index([entrepriseId])
+}
+
+// Entretien annuel ou professionnel (tous les 2 ans, état des lieux à 6 ans)
+model Entretien {
+  id           String    @id @default(cuid())
+  salarieId    String
+  salarie      Salarie   @relation(fields: [salarieId], references: [id], onDelete: Cascade)
+  entrepriseId String
+  type         String    // ANNUEL | PROFESSIONNEL | ETAT_DES_LIEUX
+  date         DateTime
+  statut       String    @default("PLANIFIE") // PLANIFIE | REALISE
+  responsable  String?
+  compteRendu  Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([entrepriseId, date])
+  @@index([salarieId])
+}
+
+// Modèles d'e-mails de FRANEO RH (bienvenue, relance, fin d'essai…), envoyés depuis la fiche d'un client
+model ModeleEmail {
+  id        String   @id @default(cuid())
+  nom       String
+  sujet     String
+  corps     String
+  ordre     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

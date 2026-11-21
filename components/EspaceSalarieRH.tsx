@@ -12,6 +12,7 @@ import EtiquettesTableaux from "@/components/EtiquettesTableaux";
 import TableauPresences from "@/components/TableauPresences";
 import BoutonTheme from "@/components/BoutonTheme";
 import Image from "next/image";
+import MesBulletins from "@/components/MesBulletins";
 
 const carte: React.CSSProperties = { background: "#ffffff", borderRadius: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", padding: "18px" };
 const champ: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: "1px solid #d1d5db", borderRadius: "10px", padding: "11px", fontSize: "16px", background: "#ffffff", marginTop: "4px" };
@@ -281,6 +282,7 @@ export default function EspaceSalarieRH({
   if (avecQuestions) ajouter({ id: "questions", label: "Poser une question", icone: "💬", groupe: "Mes démarches", badge: questionsEnAttente, contenu: blocQuestions }, "#6366f1");
   if (recap) ajouter({ id: "recap", label: "Récapitulatif", icone: "📋", groupe: "Mon suivi", contenu: recap }, "#64748b");
   if (releve) ajouter({ id: "releve", label: "Relevé mensuel", icone: "⏱️", groupe: "Mon suivi", contenu: releve }, "#f97316");
+  ajouter({ id: "bulletins", label: "Mes bulletins", icone: "📄", groupe: "Mon suivi", contenu: <MesBulletins /> }, "#0f766e");
   if (avecBadge) {
     ajouter({ id: "badge", label: "Pointer", icone: "📍", groupe: "Mon suivi", contenu: <BadgeSalarie /> });
     ajouter({ id: "badge-historique", label: "Mes pointages", icone: "🕓", groupe: "Mon suivi", contenu: <HistoriqueBadge /> });

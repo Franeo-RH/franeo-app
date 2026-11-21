@@ -18,6 +18,7 @@ import OptionDocuments from "@/components/OptionDocuments";
 import OptionMedical from "@/components/OptionMedical";
 import OptionProjets from "@/components/OptionProjets";
 import MandatPrelevement from "@/components/MandatPrelevement";
+import ChoixBilanMensuel from "@/components/ChoixBilanMensuel";
 import { stripeActif } from "@/lib/stripe";
 import { enregistrerMandat } from "@/lib/prelevement";
 
@@ -148,6 +149,8 @@ export default async function EntrepriseClient({ searchParams }: { searchParams:
               </>
               )}
             </div>
+
+            <ChoixBilanMensuel actif={entreprise.bilanMensuel} />
 
             <MandatPrelevement
               statut={entreprise.mandatStatut}

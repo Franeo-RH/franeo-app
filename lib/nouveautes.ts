@@ -15,6 +15,18 @@ export type MiseAJour = {
 
 export const MISES_A_JOUR: MiseAJour[] = [
   {
+    version: "V71",
+    date: "novembre 2026",
+    titre: "Bulletins en ligne, arrivées et départs, entretiens, bilan mensuel",
+    clients: [
+      "📄 Bulletins de paie : FRANEO RH les dépose chaque mois, retrouvez-les dans Paie › Bulletins de paie. Vos salariés reçoivent le leur dans leur espace, avec un e-mail.",
+      "✅ Arrivées & départs : une checklist par salarié qui arrive ou qui part (DPAE, mutuelle, visite, solde de tout compte, attestation France Travail…), dans Gestion RH.",
+      "🗣️ Entretiens : l'app calcule les entretiens professionnels (tous les 2 ans) et le bilan à 6 ans, vous planifiez et le compte rendu s'imprime en PDF.",
+      "📊 Bilan mensuel par e-mail le 1er du mois : effectif, absences, variables, échéances et facture (désactivable dans Mon entreprise).",
+    ],
+    salaries: ["📄 Vos bulletins de paie sont maintenant dans votre espace, rubrique « Mes bulletins »."],
+  },
+  {
     version: "V64",
     date: "novembre 2026",
     titre: "L'accès pour votre cabinet comptable",

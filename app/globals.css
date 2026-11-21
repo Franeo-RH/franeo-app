@@ -332,7 +332,7 @@ body {
    Impression / PDF (Indicateurs RH) : seulement le contenu
    ========================================================= */
 @media print {
-  .fr-nav, .fr-pas-imprimer, aside.fr-sidebar, .fr-bandeau-hors-ligne { display: none !important; }
+  .fr-nav, .fr-pas-imprimer, aside.fr-sidebar, .fr-bandeau-hors-ligne, .fr-buddy, .fr-cab-bandeau { display: none !important; }
   body, .bg-gray-100 { background: #ffffff !important; }
   .fr-indicateurs .shadow { box-shadow: none !important; border: 1px solid #e5e7eb; }
   .fr-indicateurs section, .fr-indicateurs .rounded-xl { break-inside: avoid; }

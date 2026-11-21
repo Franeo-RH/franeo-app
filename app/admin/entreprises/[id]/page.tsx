@@ -16,6 +16,7 @@ import LogoEntreprise from "@/components/LogoEntreprise";
 import AccesEtablissements from "@/components/AccesEtablissements";
 import RepriseConges from "@/components/RepriseConges";
 import { STATUTS_MANDAT } from "@/lib/prelevement-textes";
+import EnvoyerEmailClient from "@/components/EnvoyerEmailClient";
 import { BarreOnglets, ONGLETS_FICHE, OngletDemandes, OngletFacturation, OngletJournal, OngletRemises, OngletSalaries } from "@/components/FicheEntrepriseOnglets";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ export default async function FicheEntrepriseAdmin({
 
   const { id } = await params;
   const sp = await searchParams;
+  const derniereFacture = await prisma.facturation.findFirst({ where: { entrepriseId: id }, orderBy: [{ annee: "desc" }, { mois: "desc" }], select: { montant: true } });
   const onglet = ONGLETS_FICHE.some((o) => o.id === sp.onglet) ? sp.onglet! : "infos";
 
   const session = await getSession();
@@ -112,6 +114,18 @@ export default async function FicheEntrepriseAdmin({
 
           {onglet === "infos" && (
           <>
+          <div className="mb-6">
+            <EnvoyerEmailClient
+              entrepriseId={id}
+              entreprise={entreprise.nom}
+              destinataires={[
+                ...entreprise.utilisateurs.filter((u) => u.role === "CLIENT" && u.actif).map((u) => ({ email: u.email, prenom: u.prenom })),
+                ...(entreprise.email && !entreprise.utilisateurs.some((u) => u.email.toLowerCase() === entreprise.email!.toLowerCase()) ? [{ email: entreprise.email, prenom: "" }] : []),
+              ]}
+              montant={derniereFacture ? derniereFacture.montant.toLocaleString("fr-FR", { style: "currency", currency: "EUR" }) : "—"}
+              lien={(process.env.NEXT_PUBLIC_URL || process.env.APP_URL || "https://app.franeo-rh.com").replace(/\/$/, "")}
+            />
+          </div>
           <div className="grid grid-cols-2 gap-6">
 
             <div className="bg-white rounded-xl shadow p-6">

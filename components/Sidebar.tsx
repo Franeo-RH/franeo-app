@@ -36,6 +36,8 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/entreprises/cabinets", label: "🏛️ Cabinets comptables" },
         { href: "/admin/entreprises/demandes", label: "📦 Abonnements", badge: demandesEnAttente, aussi: ["/admin/abonnement-paie", "/admin/abonnements-rh"], groupe: "💳 Abonnements & facturation" },
         { href: "/admin/entreprises/facturation", label: "🧾 Facturation", groupe: "💳 Abonnements & facturation" },
+        { href: "/admin/entreprises/impayes", label: "💸 Impayés & relances", groupe: "💳 Abonnements & facturation" },
+        { href: "/admin/entreprises/pilotage", label: "📈 Pilotage", groupe: "💳 Abonnements & facturation" },
         { href: "/admin/entreprises/prestations", label: "➕ Prestations supplémentaires", groupe: "💳 Abonnements & facturation" },
         { href: "/admin/entreprises/remises", label: "🎁 Remises & parrainage", groupe: "💳 Abonnements & facturation" },
         { href: "/admin/entreprises/devis", label: "🧾 Demandes de devis", groupe: "📬 Demandes des clients" },
@@ -63,6 +65,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/paie/releves", label: "⏱️ Relevés d'heures" },
         { href: "/admin/paie/historique", label: "📋 Historique" },
         { href: "/admin/paie/clotures", label: "🔒 Clôtures & journal" },
+        { href: "/admin/paie/bulletins", label: "📄 Bulletins de paie" },
         { href: "/admin/paie/absences", label: "🏖️ Absences" },
         { href: "/admin/paie/demandes", label: "📝 Demandes de modification" },
       ] };
@@ -73,6 +76,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
         { href: "/admin/actualites", label: "📰 Actualité RH" },
         { href: "/admin/faq", label: "❓ FAQ" },
         { href: "/admin/communication/buddy", label: "🤖 Buddy (questions et réponses)" },
+        { href: "/admin/communication/emails", label: "✉️ Modèles d'e-mails" },
         { href: "/admin/communication/maintenance", label: "🛠️ Maintenance & mises à jour" },
       ] };
     }
@@ -111,6 +115,8 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
       { href: "/client/salaries", label: "👥 Liste des salariés", groupe: "👥 Équipe" },
       { href: "/client/salaries/services", label: "🧩 Services", groupe: "👥 Équipe" },
       { href: "/client/salaries/mouvements", label: "🔄 Mouvements", groupe: "👥 Équipe" },
+      { href: "/client/salaries/arrivees-departs", label: "✅ Arrivées & départs", groupe: "👥 Équipe" },
+      { href: "/client/salaries/entretiens", label: "🗣️ Entretiens", groupe: "👥 Équipe" },
       { href: "/client/salaries/demandes", label: "📝 Mes demandes", aussi: ["/client/salaries/nouveau"], groupe: "👥 Équipe" },
       { href: "/client/salaries/releves", label: "⏱️ Relevés", groupe: "🕒 Temps & absences" },
       { href: "/client/salaries/pointages", label: "📍 Badge & présences", groupe: "🕒 Temps & absences" },
@@ -141,6 +147,7 @@ function rubrique(pathname: string, role: "ADMIN" | "CLIENT", demandesEnAttente:
       { href: "/client/paie/import", label: "📥 Importer en masse" },
       { href: "/client/paie/sorties", label: "🚪 Déclarer une sortie" },
       { href: "/client/paie/controle", label: "🔎 Contrôle avant paie" },
+      { href: "/client/paie/bulletins", label: "📄 Bulletins de paie" },
       { href: "/client/paie/historique", label: "📋 Historique" },
       { href: "/client/paie/journal", label: "🕓 Journal des saisies" },
     ] };

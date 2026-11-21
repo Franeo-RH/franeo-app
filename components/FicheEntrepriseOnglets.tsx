@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { calculerFacture, rangRemise } from "@/lib/facturation";
 import { reglageParrainage, texteRecompense } from "@/lib/parrainage";
 import GestionRemises from "@/components/GestionRemises";
+import BoutonAction from "@/components/BoutonAction";
 
 const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 const eur = (n: number) => n.toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
@@ -119,11 +120,14 @@ export async function OngletFacturation({ id }: { id: string }) {
       <div className={carte}>
         <div className="flex justify-between items-center gap-3 flex-wrap mb-4">
           <h2 className="text-lg font-bold">🧾 Factures ({factures.length})</h2>
-          <Link href="/admin/entreprises/facturation" className="text-sm font-semibold text-orange-600 hover:underline">Gérer la facturation →</Link>
+          <span className="flex gap-4 items-center">
+            <BoutonAction url="/api/admin/bilan-mensuel" corps={{ entrepriseId: id }} label="📊 Envoyer le bilan du mois dernier" confirmer="Envoyer maintenant le bilan du mois dernier aux dirigeants ?" />
+            <Link href="/admin/entreprises/facturation" className="text-sm font-semibold text-orange-600 hover:underline">Gérer la facturation →</Link>
+          </span>
         </div>
         {factures.length === 0 ? <p className="text-sm text-gray-500">Aucune facture pour l&apos;instant.</p> : (
           <table className="w-full text-sm text-left">
-            <thead><tr className="text-gray-500 border-b"><th className="pb-2">Mois</th><th className="pb-2">Montant</th><th className="pb-2">Statut</th><th className="pb-2">Date limite</th></tr></thead>
+            <thead><tr className="text-gray-500 border-b"><th className="pb-2">Mois</th><th className="pb-2">Montant</th><th className="pb-2">Statut</th><th className="pb-2">Date limite</th><th className="pb-2">Relances</th></tr></thead>
             <tbody>
               {factures.map((f) => (
                 <tr key={f.id} className="border-b last:border-0">
@@ -131,6 +135,10 @@ export async function OngletFacturation({ id }: { id: string }) {
                   <td data-label="Montant" className="py-2">{eur(f.montant)}</td>
                   <td data-label="Statut" className="py-2">{f.statut === "Payé" ? pastille("Payé", "#15803d", "#dcfce7") : pastille(f.statut, "#b45309", "#fef3c7")}</td>
                   <td data-label="Date limite" className="py-2">{date(f.dateLimitePaie)}</td>
+                  <td data-label="Relances" className="py-2">
+                    {f.relances ? `${f.relances} (le ${date(f.derniereRelance)}) ` : ""}
+                    {f.statut !== "Payé" && <BoutonAction url="/api/admin/relances" corps={{ facturationId: f.id }} label="✉️ Relancer" confirmer="Envoyer une relance de paiement au client ?" />}
+                  </td>
                 </tr>
               ))}
             </tbody>
