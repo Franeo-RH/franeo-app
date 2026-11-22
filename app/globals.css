@@ -556,3 +556,61 @@ html[data-theme="dark"] .fr-nav-logo-client { box-shadow: 0 0 0 1px #404040; }
 @media (prefers-reduced-motion: reduce) {
   .buddy-flotte, .buddy-visage .buddy-yeux, .buddy-visage .buddy-pupilles, .buddy-visage .buddy-antenne, .buddy-bulle { animation: none !important; }
 }
+
+/* =========================================================
+   Téléphone : aucun défilement horizontal, tout tient dans la largeur de l'écran
+   (on ne fait que monter et descendre)
+   ========================================================= */
+@media (max-width: 768px) {
+  html, body { overflow-x: hidden; max-width: 100vw; }
+  body * { max-width: 100%; }
+  main, main * { min-width: 0; box-sizing: border-box; }
+  main [style*="min-width"], main [class*="min-w-"] { min-width: 0 !important; }
+  main [style*="width:"][style*="px"]:not(img):not(svg):not(canvas) { max-width: 100% !important; }
+
+  /* Textes longs (codes, e-mails, liens) : coupés à la ligne */
+  main, main p, main td, main th, main span, main a, main code, main li, main h1, main h2, main h3 { overflow-wrap: anywhere; word-break: normal; }
+  main .whitespace-nowrap, main .truncate { white-space: normal !important; }
+  main pre, main code { white-space: pre-wrap !important; }
+
+  /* Rangées de boutons, badges, filtres : passent à la ligne */
+  main .flex:not(.flex-col):not(.flex-nowrap) { flex-wrap: wrap; }
+  main .shrink-0, main .flex-shrink-0 { flex-shrink: 1 !important; }
+
+  /* Grilles écrites à la main (style en ligne) : une colonne, sauf les tuiles prévues en 2 colonnes */
+  main [style*="grid-template-columns"]:not(.fr-grille-tuiles):not(.fr-es-raccourcis):not(.fr-cab-chiffres) { grid-template-columns: minmax(0, 1fr) !important; }
+
+  /* Onglets et puces : sur plusieurs lignes au lieu d'un bandeau qui défile de côté */
+  main [role="tablist"] { flex-wrap: wrap !important; overflow-x: visible !important; }
+  main [role="tablist"] > * { flex: 1 1 auto !important; white-space: normal !important; text-align: center; }
+  .fr-es-nav { flex-wrap: wrap !important; overflow-x: visible !important; }
+  .fr-es-lien { white-space: normal !important; }
+  .fr-cab-liens { flex-wrap: wrap; overflow-x: visible !important; }
+
+  /* Zones « défilement horizontal » : le contenu se replie à la place */
+  main .overflow-x-auto, main .overflow-x-scroll, main [style*="overflow-x: auto"], main [style*="overflow: auto"] { overflow-x: visible !important; }
+
+  /* Tableaux comparatifs : tenus dans la largeur (colonnes resserrées) au lieu de défiler */
+  main table.fr-tableau-fixe { width: 100% !important; min-width: 0 !important; table-layout: fixed; }
+  main table.fr-tableau-fixe th, main table.fr-tableau-fixe td { font-size: 11px !important; padding: 4px 3px !important; overflow-wrap: anywhere; }
+  main table.fr-tableau-fixe tr > :first-child { position: static; min-width: 0; max-width: none; box-shadow: none; width: 30%; }
+
+  /* Petits tableaux à deux colonnes (détail des marges) : gardés en tableau */
+  main table.fr-tableau-simple { display: table; width: 100%; }
+  main table.fr-tableau-simple tbody { display: table-row-group; }
+  main table.fr-tableau-simple tr { display: table-row; border: none !important; padding: 0; margin: 0; background: none; border-radius: 0; }
+  main table.fr-tableau-simple td { display: table-cell; width: auto; font-size: 13px; padding: 4px 0 !important; }
+  main table.fr-tableau-simple td::before { content: none !important; }
+
+  /* Champs de formulaire : jamais plus larges que l'écran ; 16 px évite le zoom automatique sur iPhone */
+  main input, main select, main textarea { max-width: 100%; font-size: 16px !important; }
+  main input:not([type="checkbox"]):not([type="radio"]), main select, main textarea { width: 100%; }
+  main form .w-48, main form .w-40, main form .w-32 { width: 100% !important; }
+
+  /* Fenêtres (modales) : marges réduites, défilement vertical si besoin */
+  [role="dialog"] { padding: 8px !important; }
+  [role="dialog"] > * { max-width: calc(100vw - 16px) !important; max-height: calc(100vh - 16px); overflow-y: auto; }
+
+  /* Graphiques en barres : barres resserrées */
+  main svg { max-width: 100%; height: auto; }
+}

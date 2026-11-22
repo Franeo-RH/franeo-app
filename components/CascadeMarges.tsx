@@ -18,7 +18,7 @@ export default function CascadeMarges({ m, titre }: { m: Marge; titre?: string }
   return (
     <div>
       {titre && <h3 className="font-bold mb-2">{titre}{m.estime ? <span className="text-xs text-gray-500 font-normal"> · estimation (facture pas encore générée)</span> : null}</h3>}
-      <table className="w-full text-sm">
+      <table className="w-full text-sm fr-tableau-simple">
         <tbody>
           {lignes.map((x) => (
             <tr key={x.l} className={x.fort ? "border-t" : ""}>

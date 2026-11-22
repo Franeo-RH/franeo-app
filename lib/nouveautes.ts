@@ -23,6 +23,7 @@ export const MISES_A_JOUR: MiseAJour[] = [
       "📘 Livret d'accueil : commandez-le en quelques clics, FRANEO RH le rédige et vous l'envoie dans l'app.",
       "🗣️ Entretiens : personnalisez les rubriques de vos comptes rendus.",
       "🏷️ Codes promo et codes partenaires acceptés à l'inscription.",
+      "📱 Affichage sur téléphone revu : tout tient dans la largeur de l'écran, plus besoin de glisser de gauche à droite.",
     ],
   },
   {

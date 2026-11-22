@@ -103,12 +103,12 @@ export default async function PagePilotage() {
               <tbody>
                 {marges6.map(({ m, a, map }) => { const t = map.size ? additionner([...map.values()]) : MARGE_VIDE; return (
                   <tr key={`${a}-${m}`} className="border-b last:border-0">
-                    <td className="py-1 capitalize">{MOIS_FR[m - 1].slice(0, 4)}. {a}</td>
-                    <td className="py-1 text-right">{eur(t.caReel)}</td>
-                    <td className="py-1 text-right" style={{ color: "#b91c1c" }}>{t.remises ? `− ${eur(t.remises)}` : "—"}</td>
-                    <td className="py-1 text-right font-semibold">{eur(t.margeBrute)}</td>
-                    <td className="py-1 text-right" style={{ color: "#6d28d9" }}>{t.commissions ? `− ${eur(t.commissions)}` : "—"}</td>
-                    <td className="py-1 text-right font-bold" style={{ color: "#15803d" }}>{eur(t.margeNette)}</td>
+                    <td data-label="Mois" className="py-1 capitalize">{MOIS_FR[m - 1].slice(0, 4)}. {a}</td>
+                    <td data-label="CA réel" className="py-1 text-right">{eur(t.caReel)}</td>
+                    <td data-label="Remises" className="py-1 text-right" style={{ color: "#b91c1c" }}>{t.remises ? `− ${eur(t.remises)}` : "—"}</td>
+                    <td data-label="Marge brute" className="py-1 text-right font-semibold">{eur(t.margeBrute)}</td>
+                    <td data-label="Commissions" className="py-1 text-right" style={{ color: "#6d28d9" }}>{t.commissions ? `− ${eur(t.commissions)}` : "—"}</td>
+                    <td data-label="Marge nette" className="py-1 text-right font-bold" style={{ color: "#15803d" }}>{eur(t.margeNette)}</td>
                   </tr>); })}
               </tbody>
             </table>
@@ -122,12 +122,12 @@ export default async function PagePilotage() {
               <tbody>
                 {parClient.map(({ e, m }) => (
                   <tr key={e!.id} className="border-b last:border-0">
-                    <td className="py-1"><Link href={`/admin/entreprises/${e!.id}?onglet=remises`} className="hover:text-orange-600">{e!.nom}</Link>{m.estime && <span className="text-xs text-gray-400"> (estim.)</span>}</td>
-                    <td className="py-1 text-right">{eur(m.caCatalogue)}</td>
-                    <td className="py-1 text-right" style={{ color: "#b91c1c" }}>{m.remises ? `− ${eur(m.remises)}` : "—"}</td>
-                    <td className="py-1 text-right font-semibold">{eur(m.margeBrute)}</td>
-                    <td className="py-1 text-right" style={{ color: "#6d28d9" }}>{m.commissions ? `− ${eur(m.commissions)}` : "—"}</td>
-                    <td className="py-1 text-right font-bold" style={{ color: "#15803d" }}>{eur(m.margeNette)}</td>
+                    <td data-label="Client" className="py-1"><Link href={`/admin/entreprises/${e!.id}?onglet=remises`} className="hover:text-orange-600">{e!.nom}</Link>{m.estime && <span className="text-xs text-gray-400"> (estim.)</span>}</td>
+                    <td data-label="CA catalogue" className="py-1 text-right">{eur(m.caCatalogue)}</td>
+                    <td data-label="Remises" className="py-1 text-right" style={{ color: "#b91c1c" }}>{m.remises ? `− ${eur(m.remises)}` : "—"}</td>
+                    <td data-label="Marge brute" className="py-1 text-right font-semibold">{eur(m.margeBrute)}</td>
+                    <td data-label="Commission" className="py-1 text-right" style={{ color: "#6d28d9" }}>{m.commissions ? `− ${eur(m.commissions)}` : "—"}</td>
+                    <td data-label="Marge nette" className="py-1 text-right font-bold" style={{ color: "#15803d" }}>{eur(m.margeNette)}</td>
                   </tr>
                 ))}
               </tbody>

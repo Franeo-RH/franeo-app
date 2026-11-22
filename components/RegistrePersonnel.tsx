@@ -32,7 +32,7 @@ export default function RegistrePersonnel({ entreprise, colonnes, lignes: initia
             {lignes.map((l) => (
               <tr key={l.id}>
                 {l.cellules.map((c, i) => (
-                  <td key={i} className="border px-2 py-1 align-top" style={c === "À renseigner" ? { color: "#b91c1c", fontWeight: 600 } : undefined}>
+                  <td key={i} data-label={colonnes[i]} className="border px-2 py-1 align-top" style={c === "À renseigner" ? { color: "#b91c1c", fontWeight: 600 } : undefined}>
                     {i === 3 && modifiable ? (
                       <>
                         <select value={l.sexe ?? ""} onChange={(e) => sexe(l.id, e.target.value)} className="border rounded px-1 fr-pas-imprimer"><option value="">?</option><option value="F">F</option><option value="M">M</option></select>
