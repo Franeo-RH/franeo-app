@@ -1438,6 +1438,9 @@ model ReglageApp {
   maintenanceMessage String?
   maintenanceDebut   DateTime?                   // maintenance programmée : annonce avant, blocage à partir de cette date
   maintenanceFin     DateTime?                   // fin prévue (affichée)
+  // Démo : remise à zéro automatique chaque nuit (désactivable depuis le portail pour garder des modifications)
+  demoResetAuto      Boolean   @default(true)
+  demoDernierReset   DateTime?
   updatedAt          DateTime  @updatedAt
 }
 

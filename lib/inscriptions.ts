@@ -5,4 +5,5 @@ export const STATUTS_INSCRIPTION: Record<string, { label: string; fond: string; 
   NOUVELLE: { label: "🆕 Nouvelle", fond: "#fff7ed", texte: "#c2410c" },
   VALIDEE: { label: "✅ Validée", fond: "#dcfce7", texte: "#15803d" },
   REFUSEE: { label: "Refusée", fond: "#f3f4f6", texte: "#6b7280" },
+  TRAITEE: { label: "✔️ Traitée", fond: "#eff6ff", texte: "#1d4ed8" },
 };

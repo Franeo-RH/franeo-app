@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { reinitialiserDemo } from "@/lib/demo";
+import { prisma } from "@/lib/prisma";
 import { purgerDonneesExpirees } from "@/lib/rgpd";
 import { relancesAutomatiques } from "@/lib/relances";
 import { envoyerBilans } from "@/lib/bilan-mensuel";
@@ -18,7 +19,12 @@ export async function GET(req: NextRequest) {
   if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ erreur: "Non autorisé." }, { status: 401 });
   }
-  await reinitialiserDemo();
+  // Démo remise à zéro, sauf si la remise automatique a été coupée depuis le portail
+  const reglage = await prisma.reglageApp.findUnique({ where: { id: "global" } }).catch(() => null);
+  if (reglage?.demoResetAuto !== false) {
+    await reinitialiserDemo();
+    await prisma.reglageApp.upsert({ where: { id: "global" }, create: { id: "global", demoDernierReset: new Date() }, update: { demoDernierReset: new Date() } }).catch(() => {});
+  }
   // Relances d'impayés (chaque nuit) et bilan mensuel des dirigeants (le 1er du mois)
   const relances = await relancesAutomatiques().catch((e) => { console.error("[Relances]", e); return 0; });
   const bilans = new Date().getDate() === 1 ? await envoyerBilans().catch((e) => { console.error("[Bilans]", e); return 0; }) : 0;
