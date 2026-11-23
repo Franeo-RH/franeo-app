@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import EnregistrerSW from "@/components/EnregistrerSW";
 
@@ -12,6 +12,9 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+// Police du portail admin FRANEO (pages affichées dans le portail)
+const policePortail = Plus_Jakarta_Sans({ variable: "--font-portail", subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   title: "Franeo",
@@ -36,14 +39,14 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${policePortail.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
         {/* Thème sombre / clair appliqué avant l'affichage (pas de flash blanc) */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("franeo-theme");if(t==="dark")document.documentElement.dataset.theme="dark";}catch(e){}`,
+            __html: `try{var t=localStorage.getItem("franeo-theme");if(t==="dark")document.documentElement.dataset.theme="dark";}catch(e){}try{if(window.top!==window.self)document.documentElement.classList.add("fr-integre");}catch(e){document.documentElement.classList.add("fr-integre");}`,
           }}
         />
       </head>

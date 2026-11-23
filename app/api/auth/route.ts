@@ -46,6 +46,13 @@ export async function POST(request: NextRequest) {
 
   await effacerEchecs(cleCompte);
 
+  // L'administration se fait depuis le portail admin FRANEO (connexion unique) ; secours : variable ADMIN_DIRECT=1
+  if (utilisateur.role === "ADMIN" && process.env.HUB_SECRET && process.env.ADMIN_DIRECT !== "1") {
+    await journaliser({ action: "LOGIN_ECHEC", utilisateur, request });
+    const portail = (process.env.HUB_PORTAIL_URL || "https://admin.franeo-rh.com").replace(/\/$/, "");
+    return NextResponse.json({ erreur: `L'administration de Franeo se fait depuis le portail FRANEO : ${portail}` }, { status: 403 });
+  }
+
   // Maintenance en cours : seul l'admin peut se connecter
   if (utilisateur.role !== "ADMIN" && (await etatMaintenance()).bloque) {
     return NextResponse.json({ erreur: "Franeo est en cours de mise à jour. Réessayez dans quelques instants." }, { status: 503 });

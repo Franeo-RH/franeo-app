@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const dev = process.env.NODE_ENV !== "production";
+// Portail admin FRANEO : seul site autorisé à afficher l'app dans son cadre (admin intégré)
+const portail = (process.env.HUB_PORTAIL_URL || "https://admin.franeo-rh.com").replace(/\/$/, "");
 
 // En-têtes de sécurité envoyés avec chaque page et chaque réponse d'API
 const politiqueContenu = [
@@ -13,7 +15,7 @@ const politiqueContenu = [
   "media-src 'self' blob:",
   "worker-src 'self'",
   "manifest-src 'self'",
-  "frame-ancestors 'none'",
+  `frame-ancestors 'self' ${portail}`,
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
@@ -21,7 +23,6 @@ const politiqueContenu = [
 
 const entetesSecurite = [
   { key: "Content-Security-Policy", value: politiqueContenu },
-  { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   // Position : seulement pour le badge (sur ce site) ; caméra et micro : Buddy (dictée vocale) et photos d'arrêt de travail

@@ -28,7 +28,8 @@ export async function notifierAdmin(options: {
   }
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const url = options.lien ? `${APP_URL}${options.lien}` : APP_URL;
+    const portail = process.env.HUB_SECRET && process.env.HUB_PORTAIL_URL ? process.env.HUB_PORTAIL_URL.replace(/\/$/, "") : "";
+    const url = portail ? `${portail}/gerer/rh${options.lien ? `?page=${encodeURIComponent(options.lien)}` : ""}` : options.lien ? `${APP_URL}${options.lien}` : APP_URL;
     await resend.emails.send({
       from: EXPEDITEUR,
       to: DESTINATAIRE,

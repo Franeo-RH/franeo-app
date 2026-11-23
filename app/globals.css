@@ -614,3 +614,100 @@ html[data-theme="dark"] .fr-nav-logo-client { box-shadow: 0 0 0 1px #404040; }
   /* Graphiques en barres : barres resserrées */
   main svg { max-width: 100%; height: auto; }
 }
+
+/* =========================================================
+   Admin intégré dans le portail FRANEO : seul le contenu s'affiche
+   (la navigation est celle du portail)
+   ========================================================= */
+html.fr-integre .fr-nav, html.fr-integre aside.fr-sidebar, html.fr-integre .fr-buddy, html.fr-integre .fr-bandeau-hors-ligne { display: none !important; }
+html.fr-integre body { background: #f6f3ef; }
+html.fr-integre main { padding-top: 16px !important; }
+
+/* =========================================================
+   Thème du portail admin FRANEO : appliqué aux pages de l'app quand elles s'affichent dans le portail
+   (même police, même fond, mêmes cartes arrondies, mêmes boutons) — une seule apparence pour toutes les apps
+   ========================================================= */
+html.fr-integre { --p-orange: #f97316; --p-noir: #111827; --p-gris: #6b7280; --p-trait: #eef0f3; --p-fond: #f6f3ef; --p-ombre: 0 1px 2px rgba(17, 24, 39, .04), 0 10px 30px rgba(17, 24, 39, .06); }
+html.fr-integre[data-theme="dark"] { filter: none; }
+html.fr-integre[data-theme="dark"] main img, html.fr-integre[data-theme="dark"] .fr-garder-couleurs { filter: none !important; }
+html.fr-integre body {
+  font-family: var(--font-portail), "Plus Jakarta Sans", Arial, sans-serif; color: var(--p-noir);
+  background: radial-gradient(900px 520px at 8% -8%, rgba(249, 115, 22, .12), transparent 62%), var(--p-fond) !important;
+}
+html.fr-integre .min-h-screen.bg-gray-100, html.fr-integre .min-h-screen.bg-gray-50, html.fr-integre .min-h-screen { background: transparent !important; min-height: 0; }
+html.fr-integre main { padding: 18px 20px 28px !important; gap: 18px; }
+
+/* Cartes */
+html.fr-integre main .bg-white.rounded-xl, html.fr-integre main .bg-white.rounded-lg.shadow, html.fr-integre main .bg-white.rounded-2xl, html.fr-integre main .bg-white.shadow {
+  border-radius: 24px !important; box-shadow: var(--p-ombre) !important; border: 1px solid rgba(17, 24, 39, .04);
+}
+html.fr-integre main .bg-gray-50.rounded-xl, html.fr-integre main .bg-gray-50.rounded-lg, html.fr-integre main .bg-orange-50.rounded-xl, html.fr-integre main .bg-orange-50.rounded-lg { border-radius: 18px !important; }
+html.fr-integre main .bg-gray-50 { background-color: #faf7f4 !important; }
+html.fr-integre main .bg-orange-50 { background-color: #fff3e8 !important; }
+
+/* Titres */
+html.fr-integre main h1, html.fr-integre main .text-3xl { font-weight: 800 !important; letter-spacing: -.02em; }
+html.fr-integre main h2, html.fr-integre main .text-lg.font-bold, html.fr-integre main .text-xl.font-bold { font-weight: 800 !important; letter-spacing: -.01em; }
+html.fr-integre main .text-gray-500 { color: var(--p-gris) !important; }
+
+/* Boutons : pilules (orange pour l'action principale, noir pour les autres) */
+html.fr-integre main button.rounded-lg, html.fr-integre main a.rounded-lg[class*="bg-"], html.fr-integre main button.rounded-xl, html.fr-integre main a.rounded-xl[class*="bg-orange"] { border-radius: 999px !important; font-weight: 700; }
+html.fr-integre main .bg-orange-500 { background-color: var(--p-orange) !important; }
+html.fr-integre main button.bg-orange-500, html.fr-integre main a.bg-orange-500 { box-shadow: 0 6px 16px rgba(249, 115, 22, .28); }
+html.fr-integre main .bg-orange-500:hover, html.fr-integre main .hover\:bg-orange-600:hover { background-color: #ea580c !important; }
+html.fr-integre main .bg-black, html.fr-integre main .bg-gray-900 { background-color: var(--p-noir) !important; }
+html.fr-integre main button.border, html.fr-integre main a.border.rounded-lg { background-color: #fff; border-color: #ece7e1 !important; }
+
+/* Onglets des fiches : pilules, onglet actif en noir */
+html.fr-integre main [role="tablist"] a, html.fr-integre main [role="tablist"] button { border-radius: 999px !important; }
+html.fr-integre main [role="tablist"] .bg-orange-500 { background-color: var(--p-noir) !important; box-shadow: none; }
+
+/* Champs */
+html.fr-integre main input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), html.fr-integre main select, html.fr-integre main textarea {
+  border-radius: 12px !important; border: 1px solid #e5e7eb !important; background-color: #faf9f7; font-family: inherit;
+}
+html.fr-integre main input:focus, html.fr-integre main select:focus, html.fr-integre main textarea:focus { outline: 2px solid var(--p-orange); outline-offset: 0; border-color: transparent !important; }
+html.fr-integre main input[type="checkbox"], html.fr-integre main input[type="radio"] { accent-color: var(--p-orange); }
+
+/* Tableaux */
+html.fr-integre main table thead th, html.fr-integre main table thead tr.text-gray-500 th { font-size: 12px; font-weight: 700; color: var(--p-gris); }
+html.fr-integre main table tbody tr { border-color: var(--p-trait) !important; }
+html.fr-integre main table tbody tr:hover { background: #faf7f4; }
+
+/* Pastilles et badges */
+html.fr-integre main .rounded-full.text-xs, html.fr-integre main .rounded-full.px-2 { font-weight: 700; }
+html.fr-integre { background: var(--p-fond); min-height: 100%; }
+html.fr-integre body { min-height: 100vh; background-attachment: fixed !important; }
+html.fr-integre main .border-b:not([class*="border-orange"]):not([class*="border-red"]):not([class*="border-green"]):not([class*="border-blue"]),
+html.fr-integre main .border-t:not([class*="border-orange"]):not([class*="border-red"]):not([class*="border-green"]):not([class*="border-blue"]),
+html.fr-integre main hr { border-color: var(--p-trait) !important; }
+
+/* Portail : effet « liquid glass » sur les pages affichées dans le portail */
+html.fr-integre body { background: #f4eee7 !important; }
+html.fr-integre body::before {
+  content: ""; position: fixed; inset: -15%; z-index: -1; pointer-events: none; filter: blur(30px);
+  background:
+    radial-gradient(38% 34% at 12% 10%, rgba(249, 115, 22, .34), transparent 70%),
+    radial-gradient(30% 30% at 88% 6%, rgba(251, 191, 36, .26), transparent 70%),
+    radial-gradient(34% 30% at 78% 78%, rgba(249, 115, 22, .18), transparent 70%),
+    radial-gradient(30% 28% at 18% 88%, rgba(17, 24, 39, .12), transparent 70%);
+}
+html.fr-integre main .bg-white.rounded-xl, html.fr-integre main .bg-white.rounded-lg.shadow, html.fr-integre main .bg-white.rounded-2xl, html.fr-integre main .bg-white.shadow {
+  background: linear-gradient(135deg, rgba(255, 255, 255, .8), rgba(255, 255, 255, .5)) !important;
+  border: 1px solid rgba(255, 255, 255, .72) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 10px 30px rgba(17, 24, 39, .08), 0 1px 2px rgba(17, 24, 39, .05) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+}
+html.fr-integre main [role="tablist"] .bg-white, html.fr-integre main button.border, html.fr-integre main a.border.rounded-lg,
+html.fr-integre main input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), html.fr-integre main select, html.fr-integre main textarea {
+  background-color: rgba(255, 255, 255, .55) !important; border-color: rgba(255, 255, 255, .8) !important;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+html.fr-integre main button.bg-orange-500, html.fr-integre main a.bg-orange-500 { background: linear-gradient(180deg, #fb923c, #f97316 55%, #ea580c) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 6px 16px rgba(249, 115, 22, .3); }
+html.fr-integre main table tbody tr:hover { background: rgba(255, 255, 255, .45); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html.fr-integre main .bg-white.rounded-xl, html.fr-integre main .bg-white.shadow { background: rgba(255, 255, 255, .95) !important; }
+}
+html.fr-integre { background: #f4eee7 !important; }
+html.fr-integre body { background: transparent !important; }
+html.fr-integre main [role="tablist"] a.bg-orange-500, html.fr-integre main [role="tablist"] button.bg-orange-500 { background: #111827 !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2), 0 4px 12px rgba(17, 24, 39, .2) !important; }
