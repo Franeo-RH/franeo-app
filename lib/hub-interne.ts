@@ -83,5 +83,15 @@ export const ACTIONS: Record<string, (p: Record<string, unknown>) => { chemin: s
   "inscription.refuser": (p) => (sur(p.id) ? { chemin: `/api/inscriptions/${sur(p.id)}`, methode: "PUT", corps: { action: "refuser" } } : null),
   "prestation.statut": (p) => (sur(p.id) && ["A_FAIRE", "FAITE", "ANNULEE"].includes(String(p.statut)) ? { chemin: `/api/prestations/${sur(p.id)}`, methode: "PATCH", corps: { statut: p.statut } } : null),
   "bilan.envoyer": (p) => (sur(p.entrepriseId) ? { chemin: "/api/admin/bilan-mensuel", methode: "POST", corps: { entrepriseId: sur(p.entrepriseId) } } : null),
+  // Création d'un client depuis le formulaire commun du portail (le choix de la formule se fait ensuite dans la fiche)
+  "client.creer": (p) => {
+    const t = (v: unknown, n = 200) => (typeof v === "string" ? v.trim().slice(0, n) : "");
+    if (!t(p.nom) || !t(p.emailContact)) return null;
+    return { chemin: "/api/entreprises", methode: "POST", corps: {
+      nom: t(p.nom, 120), siret: t(p.siret, 20), email: t(p.email), telephone: t(p.telephone, 30), siteWeb: "",
+      rue: t(p.rue), codePostal: t(p.codePostal, 10), ville: t(p.ville, 80), pays: "France", abonnementId: t(p.abonnementId, 40),
+      banque: "", iban: "", bic: "", prenomClient: t(p.prenomContact, 60), emailClient: t(p.emailContact),
+    } };
+  },
   "remise.ajouter": (p) => (sur(p.entrepriseId) ? { chemin: `/api/entreprises/${sur(p.entrepriseId)}/remises`, methode: "POST", corps: { libelle: p.libelle, type: p.type, valeur: p.valeur, portee: p.portee, debut: p.debut, nbMois: p.nbMois } } : null),
 };

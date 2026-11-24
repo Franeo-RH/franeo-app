@@ -46,7 +46,7 @@ export default function RootLayout({
         {/* Thème sombre / clair appliqué avant l'affichage (pas de flash blanc) */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("franeo-theme");if(t==="dark")document.documentElement.dataset.theme="dark";}catch(e){}try{if(window.top!==window.self)document.documentElement.classList.add("fr-integre");}catch(e){document.documentElement.classList.add("fr-integre");}`,
+            __html: `var h=document.documentElement;try{if(window.top!==window.self)h.classList.add("fr-integre");}catch(e){h.classList.add("fr-integre");}try{var t=localStorage.getItem("franeo-theme");if(t==="dark"&&!h.classList.contains("fr-integre")&&location.pathname.indexOf("/admin")!==0)h.dataset.theme="dark";}catch(e){}`,
           }}
         />
       </head>
