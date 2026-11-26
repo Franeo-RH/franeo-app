@@ -9,6 +9,7 @@ import BoutonDemandeEvolution from "@/components/BoutonDemandeEvolution";
 import BandeauCabinet from "@/components/cabinet/BandeauCabinet";
 import { filtreClients } from "@/lib/cabinet";
 import { etatMaintenance } from "@/lib/maintenance";
+import VisiteGuidee from "@/components/VisiteGuidee";
 import PageMaintenance, { BandeauMaintenance } from "@/components/PageMaintenance";
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -84,6 +85,7 @@ export default async function ClientLayout({ children }: { children: React.React
       {clientsCabinet && session?.modeCabinet && <BandeauCabinet cabinet={session.modeCabinet.nom} clientId={session.entrepriseId!} clients={clientsCabinet} />}
       <GardeDroits>{children}</GardeDroits>
       <BuddyChat />
+      {session?.role === "CLIENT" && !session.modeCabinet && <VisiteGuidee profil="dirigeant" afficher={!session.entreprise?.demo && !session.visiteVueLe} />}
     </>
   );
 }

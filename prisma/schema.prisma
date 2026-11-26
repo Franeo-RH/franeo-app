@@ -205,6 +205,9 @@ model Utilisateur {
   entrepriseId String?
   entreprise   Entreprise? @relation(fields: [entrepriseId], references: [id])
 
+  // Présentation guidée vue (première connexion) ; vide = à montrer
+  visiteVueLe  DateTime?
+
   // Espace salarié : compte relié à une fiche salarié
   salarieId    String?     @unique
   salarie      Salarie?    @relation(fields: [salarieId], references: [id], onDelete: Cascade)

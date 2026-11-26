@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSessionCabinet } from "@/lib/cabinet";
 import EnteteCabinet from "@/components/cabinet/EnteteCabinet";
 import BandeauDemo from "@/components/BandeauDemo";
+import VisiteGuidee from "@/components/VisiteGuidee";
 import { etatMaintenance } from "@/lib/maintenance";
 import PageMaintenance, { BandeauMaintenance } from "@/components/PageMaintenance";
 
@@ -17,6 +18,7 @@ export default async function CabinetLayout({ children }: { children: React.Reac
       {session.modeCabinet.demo && <BandeauDemo />}
       <EnteteCabinet cabinet={session.modeCabinet.nom} prenom={session.prenom} gerant={session.modeCabinet.gerant} />
       <main className="fr-cab-page">{children}</main>
+      <VisiteGuidee profil="cabinet" afficher={!session.modeCabinet.demo && !session.visiteVueLe} />
     </div>
   );
 }

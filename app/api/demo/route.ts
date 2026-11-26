@@ -18,6 +18,7 @@ export async function POST(request: Request) {
     const cabinet = corps?.profil === "cabinet";
     const userId = cabinet ? await preparerDemoCabinet() : corps?.profil === "manager" ? await preparerDemoManager() : corps?.profil === "salarie" ? await preparerDemoSalarie() : (await preparerDemo()).userId;
     const res = NextResponse.json({ ok: true, role: cabinet ? "CABINET" : salarie ? "SALARIE" : "CLIENT" });
+    res.cookies.set("fr_visite", "1", { path: "/", maxAge: 3600, sameSite: "lax" }); // démo : présentation à chaque ouverture
     res.cookies.set(COOKIE_CLIENT_CABINET, "", { path: "/", maxAge: 0 }); // le cabinet démo commence par son portefeuille
     const compte = await prisma.utilisateur.findUnique({ where: { id: userId }, select: { id: true, motDePasse: true } });
     if (!compte) throw new Error("Compte démo introuvable");
