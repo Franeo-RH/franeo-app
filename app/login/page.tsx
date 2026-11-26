@@ -121,41 +121,41 @@ export default function LoginPage() {
     { val: "manager", lib: "🧑‍💼 Manager", desc: "Vous êtes Karim : validez relevés, absences et frais de votre équipe." },
     { val: "cabinet", lib: "🏛️ Cabinet", desc: "Vous êtes Claire, expert-comptable : 4 dossiers clients dans un seul accès." },
   ] as const;
-  const champ = "w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 sm:py-3.5 text-[16px] text-gray-900 outline-none transition focus:border-orange-500";
+  const champ = "w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 sm:py-3 text-[16px] text-gray-900 outline-none transition focus:border-orange-500";
 
   return (
-    <main className="grid min-h-[100dvh] bg-[#f3f1ec] lg:grid-cols-[1.05fr_1fr]">
+    <main className="grid min-h-[100dvh] bg-[#f3f1ec] lg:h-[100dvh] lg:grid-cols-[1.05fr_1fr] lg:overflow-hidden">
       {/* Gauche : présentation */}
-      <section className="relative hidden flex-col justify-between overflow-hidden px-14 py-12 text-white lg:flex"
+      <section className="fr-cx-gauche relative hidden flex-col justify-between overflow-hidden px-12 py-8 text-white lg:flex xl:px-16"
         style={{ background: "radial-gradient(90% 70% at 85% 10%, rgba(249,115,22,.22), transparent 60%), linear-gradient(160deg, #1b1f2e 0%, #11141d 55%, #0b0d13 100%)" }}>
         <div>
-          <Image src="/FRANEO-Logo-Orange-H.png" alt="Franeo RH" width={900} height={335} priority style={{ width: 230, height: "auto" }} />
-          <h1 className="mt-12 max-w-[560px] text-[46px] font-bold leading-[1.08] tracking-[-.02em]">Votre RH et votre paie,<br />enfin simplifiées.</h1>
-          <p className="mt-5 max-w-[540px] text-[17px] leading-relaxed text-gray-400">Paie, contrats, salariés et échéances : tout au même endroit, avec un gestionnaire Franeo à vos côtés.</p>
-          <ul className="mt-10 flex max-w-[560px] flex-col gap-6">
+          <Image src="/FRANEO-Logo-Orange-H.png" alt="Franeo RH" width={900} height={335} priority style={{ width: 180, height: "auto" }} />
+          <h1 className="fr-cx-titre mt-7 max-w-[560px] text-[38px] font-bold leading-[1.08] tracking-[-.02em]">Votre RH et votre paie,<br />enfin simplifiées.</h1>
+          <p className="mt-3 max-w-[540px] text-[16px] leading-relaxed text-gray-400">Paie, contrats, salariés et échéances : tout au même endroit, avec un gestionnaire Franeo à vos côtés.</p>
+          <ul className="fr-cx-atouts mt-7 flex max-w-[560px] flex-col gap-4">
             {ATOUTS.map((a) => (
               <li key={a.titre} className="flex gap-4">
-                <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white/[.06] text-[22px]">{a.ico}</span>
-                <span><b className="block text-[17px] font-semibold">{a.titre}</b><span className="text-[15px] text-gray-400">{a.texte}</span></span>
+                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/[.06] text-[19px]">{a.ico}</span>
+                <span><b className="block text-[16px] font-semibold">{a.titre}</b><span className="fr-cx-detail text-[14px] text-gray-400">{a.texte}</span></span>
               </li>
             ))}
           </ul>
-          <a href="https://www.franeo-rh.com" target="_blank" rel="noopener noreferrer" className="mt-10 flex max-w-[560px] items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[.05] px-6 py-5 transition hover:bg-white/[.09]">
-            <span><b className="block text-[17px] font-semibold">📣 Pas encore client ? Découvrez nos offres</b><span className="text-[14px] text-gray-400">Paie, RH, recrutement et formation : sans engagement, adapté aux TPE et PME.</span></span>
+          <a href="https://www.franeo-rh.com" target="_blank" rel="noopener noreferrer" className="mt-7 flex max-w-[560px] items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[.05] px-5 py-3.5 transition hover:bg-white/[.09]">
+            <span><b className="block text-[16px] font-semibold">📣 Pas encore client ? Découvrez nos offres</b><span className="text-[14px] text-gray-400">Paie, RH, recrutement et formation : sans engagement, adapté aux TPE et PME.</span></span>
             <span className="text-2xl" aria-hidden="true">→</span>
           </a>
         </div>
-        <p className="mt-10 text-sm text-gray-500">Un service FRANEO RH · <a href="https://www.franeo-rh.com" className="underline hover:text-gray-300">franeo-rh.com</a> · <Link href="/mentions-legales" className="hover:text-gray-300">Mentions légales</Link> · <Link href="/confidentialite" className="hover:text-gray-300">Confidentialité</Link></p>
+        <p className="mt-6 text-sm text-gray-500">Un service FRANEO RH · <a href="https://www.franeo-rh.com" className="underline hover:text-gray-300">franeo-rh.com</a> · <Link href="/mentions-legales" className="hover:text-gray-300">Mentions légales</Link> · <Link href="/confidentialite" className="hover:text-gray-300">Confidentialité</Link></p>
       </section>
 
       {/* Droite : connexion */}
-      <section className="flex items-center justify-center px-3 py-3 sm:px-8 sm:py-8">
-        <div className="w-full max-w-[470px] rounded-[24px] border border-black/[.06] bg-white px-5 py-5 shadow-[0_20px_60px_rgba(17,24,39,.08)] sm:p-10">
+      <section className="flex items-center justify-center px-3 py-3 sm:px-8 sm:py-6 lg:overflow-y-auto">
+        <div className="w-full max-w-[470px] rounded-[24px] border border-black/[.06] bg-white px-5 py-5 shadow-[0_20px_60px_rgba(17,24,39,.08)] sm:px-9 sm:py-7">
           <div className="fr-cx-logo mb-3 flex justify-center lg:hidden">
             <Image src="/FRANEO-Logo-Orange-H.png" alt="Franeo RH" width={900} height={335} priority style={{ width: 120, height: "auto" }} />
           </div>
-          <h2 className="text-[22px] sm:text-[30px] font-bold tracking-[-.02em] text-gray-900">Bon retour 👋</h2>
-          <p className="fr-cx-cache mb-4 mt-0.5 text-[14px] text-gray-500 sm:mb-7 sm:mt-1 sm:text-[16px]">Gérez vos ressources humaines simplement.</p>
+          <h2 className="text-[22px] sm:text-[28px] font-bold tracking-[-.02em] text-gray-900">Bon retour 👋</h2>
+          <p className="fr-cx-cache mb-4 mt-0.5 text-[14px] text-gray-500 sm:mb-5 sm:mt-1 sm:text-[16px]">Gérez vos ressources humaines simplement.</p>
 
           {etapeCode ? (
             <form onSubmit={validerCode} className="flex flex-col gap-4">
@@ -188,13 +188,13 @@ export default function LoginPage() {
               <p className="text-center text-xs text-gray-400">Pas reçu ? Regardez dans vos courriers indésirables.</p>
             </form>
           ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:gap-5">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:gap-4">
               <div>
-                <label htmlFor="email" className="mb-1 block text-[14px] sm:mb-2 sm:text-[16px] font-semibold text-gray-900">E-mail</label>
+                <label htmlFor="email" className="mb-1 block text-[14px] sm:mb-1.5 sm:text-[16px] font-semibold text-gray-900">E-mail</label>
                 <input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={champ} placeholder="votre@email.fr" required />
               </div>
               <div>
-                <div className="mb-1 flex items-baseline justify-between sm:mb-2">
+                <div className="mb-1 flex items-baseline justify-between sm:mb-1.5">
                   <label htmlFor="mdp" className="text-[14px] sm:text-[16px] font-semibold text-gray-900">Mot de passe</label>
                   <Link href="/mot-de-passe-oublie" className="text-[15px] font-semibold text-orange-600 hover:underline">Oublié ?</Link>
                 </div>
@@ -204,13 +204,13 @@ export default function LoginPage() {
                 </div>
               </div>
               {erreur && <p className="text-sm text-red-500">{erreur}</p>}
-              <button type="submit" disabled={chargement} className="rounded-xl bg-orange-500 py-3 sm:py-4 text-[16px] sm:text-[17px] font-semibold text-white shadow-[0_8px_20px_rgba(249,115,22,.25)] transition hover:bg-orange-600 disabled:opacity-60">
+              <button type="submit" disabled={chargement} className="rounded-xl bg-orange-500 py-3 sm:py-3.5 text-[16px] sm:text-[17px] font-semibold text-white shadow-[0_8px_20px_rgba(249,115,22,.25)] transition hover:bg-orange-600 disabled:opacity-60">
                 {chargement ? "Connexion..." : "Se connecter"}
               </button>
             </form>
           )}
 
-          <div className="fr-cx-sep my-3 flex items-center gap-3 sm:my-6">
+          <div className="fr-cx-sep my-3 flex items-center gap-3 sm:my-4">
             <div className="flex-1 border-t border-gray-200" />
             <span className="text-[14px] text-gray-500">ou testez sans inscription</span>
             <div className="flex-1 border-t border-gray-200" />
@@ -220,20 +220,20 @@ export default function LoginPage() {
             {DEMOS.map((d) => (
               <button key={d.val} type="button" disabled={chargementDemo} onClick={() => testerLaDemo(d.val)}
                 onMouseEnter={() => !chargementDemo && setProfilDemo(d.val)} onFocus={() => setProfilDemo(d.val)}
-                className={`rounded-xl border-2 px-2 py-2 sm:px-3 sm:py-3 text-[14px] sm:text-[15px] font-semibold transition disabled:opacity-60 ${profilDemo === d.val ? "border-orange-500 text-orange-600" : "border-gray-200 text-gray-800 hover:border-orange-300"}`}>
+                className={`rounded-xl border-2 px-2 py-2 sm:px-3 sm:py-2.5 text-[14px] sm:text-[15px] font-semibold transition disabled:opacity-60 ${profilDemo === d.val ? "border-orange-500 text-orange-600" : "border-gray-200 text-gray-800 hover:border-orange-300"}`}>
                 {chargementDemo && profilDemo === d.val ? "Ouverture…" : d.lib}
               </button>
             ))}
           </div>
-          <p className="mt-3 hidden text-center text-[14px] text-gray-500 sm:block">{DEMOS.find((d) => d.val === profilDemo)?.desc} Données fictives, remises à zéro chaque nuit.</p>
+          <p className="fr-cx-desc mt-2 hidden text-center text-[13px] text-gray-500 sm:block">{DEMOS.find((d) => d.val === profilDemo)?.desc} Données fictives, remises à zéro chaque nuit.</p>
 
-          <div className="fr-cx-sep my-3 border-t border-gray-200 sm:my-6" />
+          <div className="fr-cx-sep my-3 border-t border-gray-200 sm:my-4" />
 
           <div className="flex flex-col gap-2 sm:gap-3">
-            <div className="flex items-center justify-center rounded-xl bg-orange-50 px-3 py-2 text-center sm:py-3.5"><DemandeAcces variante="lien" /></div>
+            <div className="flex items-center justify-center rounded-xl bg-orange-50 px-3 py-2 text-center sm:py-2.5"><DemandeAcces variante="lien" /></div>
             <div className="fr-connexion-2 grid grid-cols-2 gap-2 sm:gap-3">
-              <a href="https://www.franeo-rh.com" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center rounded-xl bg-gray-100 px-2 py-2 sm:px-3 sm:py-3 text-center text-[13px] sm:text-[14px] font-bold text-gray-800 hover:bg-gray-200">🌐 Nos offres</a>
-              <div className="flex items-center justify-center rounded-xl bg-gray-100 px-2 py-2 text-center sm:px-3 sm:py-3"><InstallerApp style={{ background: "none", border: "none", color: "#1f2937", fontWeight: 700, fontSize: "13px", cursor: "pointer", padding: 0 }} /></div>
+              <a href="https://www.franeo-rh.com" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center rounded-xl bg-gray-100 px-2 py-2 sm:px-3 sm:py-2.5 text-center text-[13px] sm:text-[14px] font-bold text-gray-800 hover:bg-gray-200">🌐 Nos offres</a>
+              <div className="flex items-center justify-center rounded-xl bg-gray-100 px-2 py-2 text-center sm:px-3 sm:py-2.5"><InstallerApp style={{ background: "none", border: "none", color: "#1f2937", fontWeight: 700, fontSize: "13px", cursor: "pointer", padding: 0 }} /></div>
             </div>
           </div>
           <p className="fr-cx-cache mt-3 text-center text-[11px] text-gray-400 lg:hidden">
