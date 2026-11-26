@@ -733,3 +733,7 @@ main .grid.fr-connexion-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !im
   .fr-cx-cache, .fr-cx-desc { display: none !important; }
   .fr-cx-sep { margin-top: 10px !important; margin-bottom: 10px !important; }
 }
+
+/* Affichée dans le portail en mode nuit : même rendu sombre que l'app (inversion des couleurs, images conservées) */
+html.fr-integre.fr-nuit { filter: invert(0.92) hue-rotate(180deg); }
+html.fr-integre.fr-nuit main img:not(.invert), html.fr-integre.fr-nuit main video, html.fr-integre.fr-nuit main canvas, html.fr-integre.fr-nuit main picture, html.fr-integre.fr-nuit .fr-garder-couleurs { filter: invert(1) hue-rotate(180deg) !important; }

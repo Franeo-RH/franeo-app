@@ -1,3 +1,4 @@
+import { scriptPontPortail } from "@/lib/pont-portail";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
@@ -49,6 +50,8 @@ export default function RootLayout({
             __html: `var h=document.documentElement;try{if(window.top!==window.self)h.classList.add("fr-integre");}catch(e){h.classList.add("fr-integre");}try{var t=localStorage.getItem("franeo-theme");if(t==="dark"&&!h.classList.contains("fr-integre")&&location.pathname.indexOf("/admin")!==0)h.dataset.theme="dark";}catch(e){}`,
           }}
         />
+        {/* Affichée dans le portail admin : thème et navigation pilotés par le portail */}
+        <script dangerouslySetInnerHTML={{ __html: scriptPontPortail("fr-nuit") }} />
       </head>
       <body className="min-h-full flex flex-col">
         {children}
