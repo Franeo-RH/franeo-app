@@ -27,6 +27,7 @@ export default function LoginPage() {
   const [code, setCode] = useState("");
   const [confiance, setConfiance] = useState(true);
   const [info, setInfo] = useState("");
+  const [voirMdp, setVoirMdp] = useState(false);
 
   async function entrer(role: string) {
     await viderCacheHorsLigne(); oublierDroits(); // nouvelle session : on repart d'un cache vide
@@ -87,11 +88,13 @@ export default function LoginPage() {
     await entrer(data.role);
   }
 
-  async function testerLaDemo() {
+  async function testerLaDemo(choix?: "client" | "salarie" | "manager" | "cabinet") {
+    const profil = choix ?? profilDemo;
+    setProfilDemo(profil);
     setChargementDemo(true);
     setErreur("");
     try {
-      const res = await fetch("/api/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ profil: profilDemo }) });
+      const res = await fetch("/api/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ profil }) });
       const data = await res.json();
       if (!res.ok) {
         setErreur(data.erreur || "La démo est indisponible pour le moment.");
@@ -99,141 +102,147 @@ export default function LoginPage() {
         return;
       }
       await viderCacheHorsLigne(); oublierDroits(); // nouvelle session : on repart d'un cache vide
-      router.push(profilDemo === "client" ? "/client/dashboard" : profilDemo === "cabinet" ? "/cabinet" : "/salarie");
+      router.push(profil === "client" ? "/client/dashboard" : profil === "cabinet" ? "/cabinet" : "/salarie");
     } catch {
       setErreur("Problème de connexion, réessayez.");
       setChargementDemo(false);
     }
   }
 
+  const ATOUTS = [
+    { ico: "💶", titre: "Une paie sans stress", texte: "Variables, absences et relevés d'heures centralisés, bulletins déposés chaque mois." },
+    { ico: "📄", titre: "Contrats et documents en un clic", texte: "Contrats, courriers, livret d'accueil et registre du personnel générés pour vous." },
+    { ico: "👥", titre: "Des salariés autonomes", texte: "Congés, frais, pointage et questions au manager depuis leur téléphone." },
+    { ico: "⏰", titre: "Aucune échéance oubliée", texte: "Fins de période d'essai, CDD et visites médicales rappelés à temps." },
+  ];
+  const DEMOS = [
+    { val: "client", lib: "🏢 Dirigeant", desc: "Entreprise fictive : salariés, paie, documents et demandes RH." },
+    { val: "salarie", lib: "📱 Salarié", desc: "Vous êtes Sophie : relevé, absences, frais et questions à votre manager." },
+    { val: "manager", lib: "🧑‍💼 Manager", desc: "Vous êtes Karim : validez relevés, absences et frais de votre équipe." },
+    { val: "cabinet", lib: "🏛️ Cabinet", desc: "Vous êtes Claire, expert-comptable : 4 dossiers clients dans un seul accès." },
+  ] as const;
+  const champ = "w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 sm:py-3.5 text-[16px] text-gray-900 outline-none transition focus:border-orange-500";
+
   return (
-    <main className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white rounded-xl shadow p-10 w-full max-w-md">
-        <div className="flex justify-center mb-6">
-          <Image src="/FRANEO-Logo-Orange.png" alt="Franeo RH" width={180} height={221} style={{ objectFit: "contain", width: "min(180px, 50vw)", height: "auto" }} priority />
+    <main className="grid min-h-[100dvh] bg-[#f3f1ec] lg:grid-cols-[1.05fr_1fr]">
+      {/* Gauche : présentation */}
+      <section className="relative hidden flex-col justify-between overflow-hidden px-14 py-12 text-white lg:flex"
+        style={{ background: "radial-gradient(90% 70% at 85% 10%, rgba(249,115,22,.22), transparent 60%), linear-gradient(160deg, #1b1f2e 0%, #11141d 55%, #0b0d13 100%)" }}>
+        <div>
+          <Image src="/FRANEO-Logo-Orange-H.png" alt="Franeo RH" width={900} height={335} priority style={{ width: 230, height: "auto" }} />
+          <h1 className="mt-12 max-w-[560px] text-[46px] font-bold leading-[1.08] tracking-[-.02em]">Votre RH et votre paie,<br />enfin simplifiées.</h1>
+          <p className="mt-5 max-w-[540px] text-[17px] leading-relaxed text-gray-400">Paie, contrats, salariés et échéances : tout au même endroit, avec un gestionnaire Franeo à vos côtés.</p>
+          <ul className="mt-10 flex max-w-[560px] flex-col gap-6">
+            {ATOUTS.map((a) => (
+              <li key={a.titre} className="flex gap-4">
+                <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white/[.06] text-[22px]">{a.ico}</span>
+                <span><b className="block text-[17px] font-semibold">{a.titre}</b><span className="text-[15px] text-gray-400">{a.texte}</span></span>
+              </li>
+            ))}
+          </ul>
+          <a href="https://www.franeo-rh.com" target="_blank" rel="noopener noreferrer" className="mt-10 flex max-w-[560px] items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[.05] px-6 py-5 transition hover:bg-white/[.09]">
+            <span><b className="block text-[17px] font-semibold">📣 Pas encore client ? Découvrez nos offres</b><span className="text-[14px] text-gray-400">Paie, RH, recrutement et formation : sans engagement, adapté aux TPE et PME.</span></span>
+            <span className="text-2xl" aria-hidden="true">→</span>
+          </a>
         </div>
+        <p className="mt-10 text-sm text-gray-500">Un service FRANEO RH · <a href="https://www.franeo-rh.com" className="underline hover:text-gray-300">franeo-rh.com</a> · <Link href="/mentions-legales" className="hover:text-gray-300">Mentions légales</Link> · <Link href="/confidentialite" className="hover:text-gray-300">Confidentialité</Link></p>
+      </section>
 
-        <p className="text-gray-500 text-center mb-8">Gérez vos ressources humaines simplement et efficacement.</p>
+      {/* Droite : connexion */}
+      <section className="flex items-center justify-center px-3 py-3 sm:px-8 sm:py-8">
+        <div className="w-full max-w-[470px] rounded-[24px] border border-black/[.06] bg-white px-5 py-5 shadow-[0_20px_60px_rgba(17,24,39,.08)] sm:p-10">
+          <div className="fr-cx-logo mb-3 flex justify-center lg:hidden">
+            <Image src="/FRANEO-Logo-Orange-H.png" alt="Franeo RH" width={900} height={335} priority style={{ width: 120, height: "auto" }} />
+          </div>
+          <h2 className="text-[22px] sm:text-[30px] font-bold tracking-[-.02em] text-gray-900">Bon retour 👋</h2>
+          <p className="fr-cx-cache mb-4 mt-0.5 text-[14px] text-gray-500 sm:mb-7 sm:mt-1 sm:text-[16px]">Gérez vos ressources humaines simplement.</p>
 
-        {etapeCode ? (
-          <form onSubmit={validerCode} className="flex flex-col gap-4">
-            <div className="text-center">
-              <p className="text-lg font-bold">🔐 Vérification en deux étapes</p>
-              <p className="text-sm text-gray-500 mt-1">Nous avons envoyé un code à 6 chiffres à <strong>{etapeCode.email}</strong>. Il est valable 10 minutes.</p>
+          {etapeCode ? (
+            <form onSubmit={validerCode} className="flex flex-col gap-4">
+              <div>
+                <p className="text-lg font-bold">🔐 Vérification en deux étapes</p>
+                <p className="mt-1 text-sm text-gray-500">Nous avons envoyé un code à 6 chiffres à <strong>{etapeCode.email}</strong>. Il est valable 10 minutes.</p>
+              </div>
+              <input
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                inputMode="numeric" autoComplete="one-time-code" autoFocus
+                aria-label="Code reçu par e-mail" placeholder="••••••"
+                className={`${champ} text-center text-2xl font-bold`}
+                style={{ letterSpacing: "0.5em" }}
+                required
+              />
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input type="checkbox" checked={confiance} onChange={(e) => setConfiance(e.target.checked)} />
+                Faire confiance à cet appareil pendant 30 jours (pas sur un ordinateur partagé)
+              </label>
+              {erreur && <p className="text-sm text-red-500">{erreur}</p>}
+              {info && <p className="text-sm text-green-700">{info}</p>}
+              <button type="submit" disabled={chargement || code.length !== 6} className="rounded-xl bg-orange-500 py-4 text-[17px] font-semibold text-white transition hover:bg-orange-600 disabled:opacity-50">
+                {chargement ? "Vérification..." : "Valider le code"}
+              </button>
+              <div className="flex justify-between text-sm">
+                <button type="button" onClick={renvoyerCode} className="font-semibold text-orange-600 hover:underline">Renvoyer un code</button>
+                <button type="button" onClick={() => { setEtapeCode(null); setErreur(""); setInfo(""); }} className="text-gray-500 hover:underline">← Retour</button>
+              </div>
+              <p className="text-center text-xs text-gray-400">Pas reçu ? Regardez dans vos courriers indésirables.</p>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:gap-5">
+              <div>
+                <label htmlFor="email" className="mb-1 block text-[14px] sm:mb-2 sm:text-[16px] font-semibold text-gray-900">E-mail</label>
+                <input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={champ} placeholder="votre@email.fr" required />
+              </div>
+              <div>
+                <div className="mb-1 flex items-baseline justify-between sm:mb-2">
+                  <label htmlFor="mdp" className="text-[14px] sm:text-[16px] font-semibold text-gray-900">Mot de passe</label>
+                  <Link href="/mot-de-passe-oublie" className="text-[15px] font-semibold text-orange-600 hover:underline">Oublié ?</Link>
+                </div>
+                <div className="relative">
+                  <input id="mdp" type={voirMdp ? "text" : "password"} autoComplete="current-password" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} className={`${champ} pr-24`} placeholder="••••••••" required />
+                  <button type="button" onClick={() => setVoirMdp(!voirMdp)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[15px] font-semibold text-orange-600 hover:underline">{voirMdp ? "Masquer" : "Afficher"}</button>
+                </div>
+              </div>
+              {erreur && <p className="text-sm text-red-500">{erreur}</p>}
+              <button type="submit" disabled={chargement} className="rounded-xl bg-orange-500 py-3 sm:py-4 text-[16px] sm:text-[17px] font-semibold text-white shadow-[0_8px_20px_rgba(249,115,22,.25)] transition hover:bg-orange-600 disabled:opacity-60">
+                {chargement ? "Connexion..." : "Se connecter"}
+              </button>
+            </form>
+          )}
+
+          <div className="fr-cx-sep my-3 flex items-center gap-3 sm:my-6">
+            <div className="flex-1 border-t border-gray-200" />
+            <span className="text-[14px] text-gray-500">ou testez sans inscription</span>
+            <div className="flex-1 border-t border-gray-200" />
+          </div>
+
+          <div className="fr-connexion-2 grid grid-cols-2 gap-2 sm:gap-3">
+            {DEMOS.map((d) => (
+              <button key={d.val} type="button" disabled={chargementDemo} onClick={() => testerLaDemo(d.val)}
+                onMouseEnter={() => !chargementDemo && setProfilDemo(d.val)} onFocus={() => setProfilDemo(d.val)}
+                className={`rounded-xl border-2 px-2 py-2 sm:px-3 sm:py-3 text-[14px] sm:text-[15px] font-semibold transition disabled:opacity-60 ${profilDemo === d.val ? "border-orange-500 text-orange-600" : "border-gray-200 text-gray-800 hover:border-orange-300"}`}>
+                {chargementDemo && profilDemo === d.val ? "Ouverture…" : d.lib}
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 hidden text-center text-[14px] text-gray-500 sm:block">{DEMOS.find((d) => d.val === profilDemo)?.desc} Données fictives, remises à zéro chaque nuit.</p>
+
+          <div className="fr-cx-sep my-3 border-t border-gray-200 sm:my-6" />
+
+          <div className="flex flex-col gap-2 sm:gap-3">
+            <div className="flex items-center justify-center rounded-xl bg-orange-50 px-3 py-2 text-center sm:py-3.5"><DemandeAcces variante="lien" /></div>
+            <div className="fr-connexion-2 grid grid-cols-2 gap-2 sm:gap-3">
+              <a href="https://www.franeo-rh.com" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center rounded-xl bg-gray-100 px-2 py-2 sm:px-3 sm:py-3 text-center text-[13px] sm:text-[14px] font-bold text-gray-800 hover:bg-gray-200">🌐 Nos offres</a>
+              <div className="flex items-center justify-center rounded-xl bg-gray-100 px-2 py-2 text-center sm:px-3 sm:py-3"><InstallerApp style={{ background: "none", border: "none", color: "#1f2937", fontWeight: 700, fontSize: "13px", cursor: "pointer", padding: 0 }} /></div>
             </div>
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              inputMode="numeric" autoComplete="one-time-code" autoFocus
-              aria-label="Code reçu par e-mail" placeholder="••••••"
-              className="w-full border-2 rounded-lg px-4 py-3 text-black text-center text-2xl font-bold"
-              style={{ letterSpacing: "0.5em" }}
-              required
-            />
-            <label className="flex items-center gap-2 text-sm text-gray-600">
-              <input type="checkbox" checked={confiance} onChange={(e) => setConfiance(e.target.checked)} />
-              Faire confiance à cet appareil pendant 30 jours (pas sur un ordinateur partagé)
-            </label>
-            {erreur && <p className="text-red-500 text-sm">{erreur}</p>}
-            {info && <p className="text-green-700 text-sm">{info}</p>}
-            <button type="submit" disabled={chargement || code.length !== 6} className="bg-orange-500 text-white rounded-lg py-3 font-semibold hover:bg-orange-600 transition disabled:opacity-50">
-              {chargement ? "Vérification..." : "Valider le code"}
-            </button>
-            <div className="flex justify-between text-sm">
-              <button type="button" onClick={renvoyerCode} className="text-orange-500 hover:underline">Renvoyer un code</button>
-              <button type="button" onClick={() => { setEtapeCode(null); setErreur(""); setInfo(""); }} className="text-gray-500 hover:underline">← Retour</button>
-            </div>
-            <p className="text-xs text-gray-400 text-center">Pas reçu ? Regardez dans vos courriers indésirables.</p>
-          </form>
-        ) : (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm font-semibold mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border rounded-lg px-4 py-3 text-black"
-              placeholder="votre@email.fr"
-              required
-            />
           </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-1">Mot de passe</label>
-            <input
-              type="password"
-              value={motDePasse}
-              onChange={(e) => setMotDePasse(e.target.value)}
-              className="w-full border rounded-lg px-4 py-3 text-black"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
-          <div className="text-right">
-            <Link href="/mot-de-passe-oublie" className="text-orange-500 text-sm hover:underline">
-              Mot de passe oublié ?
-            </Link>
-          </div>
-
-          {erreur && <p className="text-red-500 text-sm">{erreur}</p>}
-
-          <button
-            type="submit"
-            disabled={chargement}
-            className="bg-orange-500 text-white rounded-lg py-3 font-semibold mt-2 hover:bg-orange-600 transition"
-          >
-            {chargement ? "Connexion..." : "Se connecter"}
-          </button>
-        </form>
-        )}
-
-        <div className="flex items-center gap-3 my-6">
-          <div className="flex-1 border-t" />
-          <span className="text-xs text-gray-400">ou</span>
-          <div className="flex-1 border-t" />
+          <p className="fr-cx-cache mt-3 text-center text-[11px] text-gray-400 lg:hidden">
+            <Link href="/mentions-legales" className="hover:underline">Mentions légales</Link>
+            {" · "}
+            <Link href="/confidentialite" className="hover:underline">Confidentialité</Link>
+          </p>
         </div>
-
-        <div role="tablist" aria-label="Type de démo" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))", gap: "2px", background: "#f3f4f6", borderRadius: "10px", padding: "4px", marginBottom: "10px" }}>
-          {([["client", "🏢 Dirigeant"], ["salarie", "📱 Salarié"], ["manager", "🧑‍💼 Manager"], ["cabinet", "🏛️ Cabinet"]] as const).map(([val, lib]) => (
-            <button
-              key={val}
-              type="button"
-              role="tab"
-              aria-selected={profilDemo === val}
-              onClick={() => setProfilDemo(val)}
-              style={{ flex: 1, border: "none", borderRadius: "8px", padding: "9px", fontSize: "14px", fontWeight: 600, cursor: "pointer", background: profilDemo === val ? "#ffffff" : "transparent", color: profilDemo === val ? "#ea580c" : "#6b7280", boxShadow: profilDemo === val ? "0 1px 2px rgba(0,0,0,0.1)" : "none" }}
-            >
-              {lib}
-            </button>
-          ))}
-        </div>
-
-        <button
-          type="button"
-          onClick={testerLaDemo}
-          disabled={chargementDemo}
-          className="w-full border-2 border-orange-500 text-orange-600 rounded-lg py-3 font-semibold hover:bg-orange-50 transition disabled:opacity-60"
-        >
-          {chargementDemo ? "Ouverture de la démo..." : profilDemo === "salarie" ? "🧪 Tester l'espace salarié" : profilDemo === "manager" ? "🧪 Tester l'espace manager" : profilDemo === "cabinet" ? "🧪 Tester l'accès cabinet" : "🧪 Tester la démo"}
-        </button>
-        <p className="text-xs text-gray-400 text-center mt-2">{profilDemo === "salarie" ? "Vous êtes Sophie, salariée de l'entreprise démo : relevé, absences, frais et questions à votre manager." : profilDemo === "manager" ? "Vous êtes Karim, manager de 4 salariés : validez relevés, absences et frais, répondez aux questions de l'équipe." : profilDemo === "cabinet" ? "Vous êtes Claire, expert-comptable : 4 dossiers clients dans un seul accès, avec vos collaborateurs." : "Sans inscription, avec des données fictives."}</p>
-
-        <div style={{ textAlign: "center", marginTop: "12px" }}>
-          <DemandeAcces variante="lien" />
-        </div>
-
-        <InstallerApp
-          style={{ width: "100%", marginTop: "16px", background: "#111827", color: "#ffffff", border: "none", borderRadius: "8px", padding: "12px", fontWeight: 600, cursor: "pointer" }}
-        />
-
-        <p className="text-xs text-gray-400 text-center mt-6">
-          <Link href="/mentions-legales" className="hover:underline">Mentions légales</Link>
-          {" · "}
-          <Link href="/confidentialite" className="hover:underline">Confidentialité</Link>
-        </p>
-      </div>
+      </section>
     </main>
   );
 }
