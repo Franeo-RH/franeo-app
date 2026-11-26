@@ -1,3 +1,4 @@
+import { destinatairesAdmin } from "@/lib/destinataires-portail";
 // lib/notifications.ts
 // Mails automatiques à l'administrateur (tickets RH, helpdesk, demandes sur les salariés…).
 // Variables Vercel facultatives : MAIL_ADMIN (destinataire), MAIL_FROM (expéditeur d'un domaine validé
@@ -32,7 +33,7 @@ export async function notifierAdmin(options: {
     const url = portail ? `${portail}/gerer/rh${options.lien ? `?page=${encodeURIComponent(options.lien)}` : ""}` : options.lien ? `${APP_URL}${options.lien}` : APP_URL;
     await resend.emails.send({
       from: EXPEDITEUR,
-      to: DESTINATAIRE,
+      to: await destinatairesAdmin("rh", options.entrepriseId, [DESTINATAIRE]),
       subject: `[Franeo] ${options.sujet}`,
       html: `
         <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;color:#111827">
