@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { BESOINS, EFFECTIFS } from "@/lib/inscriptions";
 
 /** Bouton + formulaire « Demander mon accès / Nous contacter » (démo et page de connexion) */
-export default function DemandeAcces({ variante = "bandeau" }: { variante?: "bandeau" | "lien" }) {
+export default function DemandeAcces({ variante = "bandeau", texte, className, typeInitial = "INSCRIPTION" }: { variante?: "bandeau" | "lien" | "tuile"; texte?: React.ReactNode; className?: string; typeInitial?: "INSCRIPTION" | "CONTACT" }) {
   const [ouvert, setOuvert] = useState(false);
   const [type, setType] = useState<"INSCRIPTION" | "CONTACT">("INSCRIPTION");
   const [f, setF] = useState({ societe: "", prenom: "", nom: "", email: "", telephone: "", effectif: "", message: "", codeParrainage: "", siteWeb: "" });
@@ -44,6 +44,8 @@ export default function DemandeAcces({ variante = "bandeau" }: { variante?: "ban
             ✉️ Nous contacter
           </button>
         </span>
+      ) : variante === "tuile" ? (
+        <button type="button" onClick={() => ouvrir(typeInitial)} className={className}>{texte}</button>
       ) : (
         <button type="button" onClick={() => ouvrir("INSCRIPTION")} style={{ background: "none", border: "none", color: "#ea580c", fontWeight: 700, fontSize: "14px", cursor: "pointer", textDecoration: "underline" }}>
           Pas encore client ? Demander un accès

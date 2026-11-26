@@ -714,12 +714,15 @@ html.fr-integre main [role="tablist"] a.bg-orange-500, html.fr-integre main [rol
 
 /* Page de connexion : les grilles de 2 restent sur 2 colonnes sur téléphone (tout tient sur un écran) */
 main .grid.fr-connexion-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+main .grid.fr-connexion-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
 /* Petits écrans (iPhone SE…) : on retire le superflu pour éviter tout défilement */
 @media (max-width: 640px) and (max-height: 760px) {
   .fr-cx-cache { display: none !important; }
   .fr-cx-logo { margin-bottom: 6px !important; }
   .fr-cx-logo img { width: 96px !important; }
   .fr-cx-sep { margin-top: 8px !important; margin-bottom: 8px !important; }
+  .fr-cx-desc { display: none !important; }
+  .fr-cx-voir { margin-top: 6px !important; }
 }
 /* Ordinateur à petit écran (hauteur ≤ 780 px) : la présentation se resserre pour tout voir sans défiler */
 @media (min-width: 1024px) and (max-height: 780px) {

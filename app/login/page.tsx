@@ -115,19 +115,13 @@ export default function LoginPage() {
     { ico: "👥", titre: "Des salariés autonomes", texte: "Congés, frais, pointage et questions au manager depuis leur téléphone." },
     { ico: "⏰", titre: "Aucune échéance oubliée", texte: "Fins de période d'essai, CDD et visites médicales rappelés à temps." },
   ];
-  const DEMOS = [
-    { val: "client", lib: "🏢 Dirigeant", desc: "Entreprise fictive : salariés, paie, documents et demandes RH." },
-    { val: "salarie", lib: "📱 Salarié", desc: "Vous êtes Sophie : relevé, absences, frais et questions à votre manager." },
-    { val: "manager", lib: "🧑‍💼 Manager", desc: "Vous êtes Karim : validez relevés, absences et frais de votre équipe." },
-    { val: "cabinet", lib: "🏛️ Cabinet", desc: "Vous êtes Claire, expert-comptable : 4 dossiers clients dans un seul accès." },
-  ] as const;
   const champ = "w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 sm:py-3 text-[16px] text-gray-900 outline-none transition focus:border-orange-500";
 
   return (
     <main className="grid min-h-[100dvh] bg-[#f3f1ec] lg:h-[100dvh] lg:grid-cols-[1.05fr_1fr] lg:overflow-hidden">
       {/* Gauche : présentation */}
       <section className="fr-cx-gauche relative hidden flex-col justify-between overflow-hidden px-12 py-8 text-white lg:flex xl:px-16"
-        style={{ background: "radial-gradient(90% 70% at 85% 10%, rgba(249,115,22,.22), transparent 60%), linear-gradient(160deg, #1b1f2e 0%, #11141d 55%, #0b0d13 100%)" }}>
+        style={{ background: "radial-gradient(70% 60% at 90% 15%, rgba(37,52,110,.75), transparent 65%), radial-gradient(50% 40% at 10% 100%, rgba(249,115,22,.12), transparent 70%), linear-gradient(160deg, #0d1324 0%, #0a0e18 55%, #07090f 100%)" }}>
         <div>
           <Image src="/FRANEO-Logo-Orange-H.png" alt="Franeo RH" width={900} height={335} priority style={{ width: 180, height: "auto" }} />
           <h1 className="fr-cx-titre mt-7 max-w-[560px] text-[38px] font-bold leading-[1.08] tracking-[-.02em]">Votre RH et votre paie,<br />enfin simplifiées.</h1>
@@ -154,7 +148,7 @@ export default function LoginPage() {
           <div className="fr-cx-logo mb-3 flex justify-center lg:hidden">
             <Image src="/FRANEO-Logo-Orange-H.png" alt="Franeo RH" width={900} height={335} priority style={{ width: 120, height: "auto" }} />
           </div>
-          <h2 className="text-[22px] sm:text-[28px] font-bold tracking-[-.02em] text-gray-900">Bon retour 👋</h2>
+          <h2 className="text-[22px] sm:text-[30px] font-bold tracking-[-.02em] text-gray-900">Bon retour 👋</h2>
           <p className="fr-cx-cache mb-4 mt-0.5 text-[14px] text-gray-500 sm:mb-5 sm:mt-1 sm:text-[16px]">Gérez vos ressources humaines simplement.</p>
 
           {etapeCode ? (
@@ -217,24 +211,28 @@ export default function LoginPage() {
           </div>
 
           <div className="fr-connexion-2 grid grid-cols-2 gap-2 sm:gap-3">
-            {DEMOS.map((d) => (
-              <button key={d.val} type="button" disabled={chargementDemo} onClick={() => testerLaDemo(d.val)}
-                onMouseEnter={() => !chargementDemo && setProfilDemo(d.val)} onFocus={() => setProfilDemo(d.val)}
-                className={`rounded-xl border-2 px-2 py-2 sm:px-3 sm:py-2.5 text-[14px] sm:text-[15px] font-semibold transition disabled:opacity-60 ${profilDemo === d.val ? "border-orange-500 text-orange-600" : "border-gray-200 text-gray-800 hover:border-orange-300"}`}>
-                {chargementDemo && profilDemo === d.val ? "Ouverture…" : d.lib}
-              </button>
-            ))}
+            <button type="button" disabled={chargementDemo} onClick={() => testerLaDemo("client")} className="rounded-xl border-2 border-orange-500 px-2 py-2.5 text-[15px] font-semibold text-orange-600 transition hover:bg-orange-50 disabled:opacity-60 sm:py-3 sm:text-[16px]">
+              {chargementDemo && profilDemo === "client" ? "Ouverture…" : "🧪 Démo client"}
+            </button>
+            <button type="button" disabled={chargementDemo} onClick={() => testerLaDemo("cabinet")} className="rounded-xl border-2 border-gray-200 px-2 py-2.5 text-[15px] font-semibold text-gray-900 transition hover:border-gray-300 disabled:opacity-60 sm:py-3 sm:text-[16px]">
+              {chargementDemo && profilDemo === "cabinet" ? "Ouverture…" : "🧮 Démo comptable"}
+            </button>
           </div>
-          <p className="fr-cx-desc mt-2 hidden text-center text-[13px] text-gray-500 sm:block">{DEMOS.find((d) => d.val === profilDemo)?.desc} Données fictives, remises à zéro chaque nuit.</p>
+          <p className="fr-cx-voir mt-2 text-center text-[13px] text-gray-500 sm:mt-3 sm:text-[14px]">
+            <span className="fr-cx-desc">Entreprise fictive, données remises à zéro chaque nuit. </span>Voir aussi l&apos;espace{" "}
+            <button type="button" disabled={chargementDemo} onClick={() => testerLaDemo("salarie")} className="font-semibold text-orange-600 hover:underline">salarié</button>{" "}ou{" "}
+            <button type="button" disabled={chargementDemo} onClick={() => testerLaDemo("manager")} className="font-semibold text-orange-600 hover:underline">manager</button>.
+          </p>
 
           <div className="fr-cx-sep my-3 border-t border-gray-200 sm:my-4" />
 
-          <div className="flex flex-col gap-2 sm:gap-3">
-            <div className="flex items-center justify-center rounded-xl bg-orange-50 px-3 py-2 text-center sm:py-2.5"><DemandeAcces variante="lien" /></div>
-            <div className="fr-connexion-2 grid grid-cols-2 gap-2 sm:gap-3">
-              <a href="https://www.franeo-rh.com" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center rounded-xl bg-gray-100 px-2 py-2 sm:px-3 sm:py-2.5 text-center text-[13px] sm:text-[14px] font-bold text-gray-800 hover:bg-gray-200">🌐 Nos offres</a>
-              <div className="flex items-center justify-center rounded-xl bg-gray-100 px-2 py-2 text-center sm:px-3 sm:py-2.5"><InstallerApp style={{ background: "none", border: "none", color: "#1f2937", fontWeight: 700, fontSize: "13px", cursor: "pointer", padding: 0 }} /></div>
-            </div>
+          <div className="fr-connexion-3 grid grid-cols-3 gap-2 sm:gap-3">
+            <a href="https://www.franeo-rh.com" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center rounded-xl bg-green-50 px-2 py-2.5 text-center text-[13px] font-bold leading-tight text-green-700 hover:bg-green-100 sm:py-3 sm:text-[15px]">🌐 Nos offres</a>
+            <DemandeAcces variante="tuile" texte="🚀 Demander un accès" className="flex items-center justify-center rounded-xl bg-orange-50 px-2 py-2.5 text-center text-[13px] font-bold leading-tight text-orange-700 hover:bg-orange-100 sm:py-3 sm:text-[15px]" />
+            <DemandeAcces variante="tuile" typeInitial="CONTACT" texte="✉️ Nous contacter" className="flex items-center justify-center rounded-xl bg-blue-50 px-2 py-2.5 text-center text-[13px] font-bold leading-tight text-blue-700 hover:bg-blue-100 sm:py-3 sm:text-[15px]" />
+          </div>
+          <div className="fr-cx-cache mt-3 flex justify-center">
+            <InstallerApp style={{ background: "none", border: "none", color: "#ea580c", fontWeight: 700, fontSize: "15px", cursor: "pointer", padding: 0 }} />
           </div>
           <p className="fr-cx-cache mt-3 text-center text-[11px] text-gray-400 lg:hidden">
             <Link href="/mentions-legales" className="hover:underline">Mentions légales</Link>
