@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const entreprises = await prisma.entreprise.findMany({ where: { demo: false, actif: true, OR: [{ abonnementPaieId: { not: null } }, { cabinetId: { not: null } }, { permissions: { has: "paie" } }] }, select: { id: true, nom: true, abonnementPaie: { select: { nom: true } } }, orderBy: { nom: "asc" } });
+  const entreprises = await prisma.entreprise.findMany({ where: { demo: false, actif: true, abonnementPaieId: { not: null } } /* clients en paie = abonnés à une formule paie */, select: { id: true, nom: true, abonnementPaie: { select: { nom: true } } }, orderBy: { nom: "asc" } });
   const ids = entreprises.map((e) => e.id);
   const [sal, vars, abs, bul, clo] = await Promise.all([
     prisma.salarie.groupBy({ by: ["entrepriseId"], where: { entrepriseId: { in: ids }, ...presents }, _count: { _all: true } }),
