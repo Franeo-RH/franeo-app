@@ -95,3 +95,11 @@ export const ACTIONS: Record<string, (p: Record<string, unknown>) => { chemin: s
   },
   "remise.ajouter": (p) => (sur(p.entrepriseId) ? { chemin: `/api/entreprises/${sur(p.entrepriseId)}/remises`, methode: "POST", corps: { libelle: p.libelle, type: p.type, valeur: p.valeur, portee: p.portee, debut: p.debut, nbMois: p.nbMois } } : null),
 };
+
+/** Même chose qu'appelInterne, avec un formulaire (envoi de fichiers, ex. bulletins de paie) */
+export async function appelInterneFormulaire(request: NextRequest, email: string | null, chemin: string, form: FormData) {
+  const u = await compteAdmin(email);
+  if (!u) return new Response(JSON.stringify({ erreur: "Aucun compte ADMIN dans l'app." }), { status: 400, headers: { "Content-Type": "application/json" } });
+  const base = (process.env.HUB_URL_INTERNE || request.nextUrl.origin).replace(/\/$/, "");
+  return fetch(`${base}${chemin}`, { method: "POST", headers: { Cookie: `${NOM_COOKIE}=${creerJeton(u.id, u.motDePasse, 300)}` }, body: form, cache: "no-store", redirect: "manual" });
+}
