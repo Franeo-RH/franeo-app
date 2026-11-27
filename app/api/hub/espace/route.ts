@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { appelDuPortail } from "@/lib/hub";
+import { lireSuivi, agirSuivi } from "@/lib/hub-espace-suivi";
+import { lireClient, agirClient } from "@/lib/hub-espace-client";
+import { lirePilotage, agirPilotage } from "@/lib/hub-espace-pilotage";
+import { trameEntretien } from "@/lib/trames-entretien";
+import { TYPES_ENTRETIEN } from "@/lib/entretiens";
+import { appelInterne } from "@/lib/hub-interne";
 
 export const dynamic = "force-dynamic";
 const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
@@ -13,6 +19,18 @@ export async function GET(request: NextRequest) {
   const p = request.nextUrl.searchParams;
   const q = (p.get("q") ?? "").trim();
   const ilike = { contains: q, mode: "insensitive" as const };
+  if (p.get("vue") === "client") {
+    const d = await lireClient(p.get("id") ?? "");
+    return d ? NextResponse.json(d) : NextResponse.json({ erreur: "Client introuvable" }, { status: 404 });
+  }
+  if (String(p.get("vue")).startsWith("pilotage.")) {
+    const d = await lirePilotage(String(p.get("vue")), p);
+    return d ? NextResponse.json(d) : NextResponse.json({ erreur: "Page inconnue" }, { status: 404 });
+  }
+  if (String(p.get("vue")).startsWith("suivi.")) {
+    const d = await lireSuivi(String(p.get("vue")), p);
+    return d ? NextResponse.json(d) : NextResponse.json({ erreur: "Page inconnue" }, { status: 404 });
+  }
   switch (p.get("vue")) {
     case "bord.accueil": {
       const now = new Date();
@@ -60,6 +78,14 @@ export async function GET(request: NextRequest) {
       const l = await prisma.trameContrat.findMany({ where: q ? { nom: ilike } : {}, orderBy: { createdAt: "desc" }, select: { id: true, nom: true, champs: true, createdAt: true, entreprise: { select: { nom: true } } } });
       return NextResponse.json({ lignes: l.map((x) => ({ id: x.id, nom: x.nom, client: x.entreprise?.nom ?? "Tous les clients", champs: x.champs.length, date: x.createdAt })) });
     }
+    case "documentaire.entretiens": {
+      const l = await Promise.all(Object.entries(TYPES_ENTRETIEN).map(async ([type, t]) => ({ type, label: t.label, ...(await trameEntretien(null, type)) })));
+      const sel = l.find((x) => x.type === p.get("id"));
+      return NextResponse.json({
+        lignes: l.map((x) => ({ id: x.type, nom: x.label, rubriques: x.rubriques.length, origine: x.origine === "DEFAUT" ? "Trame par défaut" : "Modèle FRANEO personnalisé" })),
+        ...(sel ? { fiche: { titre: sel.label, sousTitre: sel.origine === "DEFAUT" ? "Trame par défaut" : "Modèle FRANEO personnalisé", sections: [{ titre: "Rubriques", lignes: sel.rubriques.map((r) => ({ titre: r.label })) }] } } : {}),
+      });
+    }
     case "cabinets.cabinets": {
       const l = await prisma.cabinet.findMany({ where: { demo: false, ...(q ? { nom: ilike } : {}) }, orderBy: { nom: "asc" }, include: { _count: { select: { entreprises: true } } } });
       return NextResponse.json({ lignes: l.map((c) => ({ id: c.id, nom: c.nom, ville: c.ville, clients: c._count.entreprises, tarif: [c.tarifForfait ? `${c.tarifForfait} €/mois` : "", c.tarifParClient ? `${c.tarifParClient} €/client` : ""].filter(Boolean).join(" + ") || c.tarifNote || "—", statut: c.actif ? "Actif" : "Désactivé" })) });
@@ -72,6 +98,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   if (!appelDuPortail(request.headers.get("authorization"))) return NextResponse.json({ erreur: "Non autorisé" }, { status: 401 });
   const b = await request.json().catch(() => ({}));
+  if (b.vue === "client") return agirClient(request, b);
+  if (String(b.vue ?? "").startsWith("pilotage.")) { const r = await agirPilotage(request, b); if (r) return r; }
+  if (String(b.vue ?? "").startsWith("suivi.")) { const r = await agirSuivi(request, b); if (r) return r; }
   const v = (b.valeurs ?? {}) as Record<string, unknown>;
   const id = /^[\w-]{1,60}$/.test(String(b.id ?? "")) ? String(b.id) : "";
   const ok = (message: string) => NextResponse.json({ succes: true, message });
@@ -98,6 +127,23 @@ export async function POST(request: NextRequest) {
         await prisma.modeleEmail.delete({ where: { id } }); return ok("Modèle d'e-mail supprimé");
       case "documentaire.contrats:supprimer":
         await prisma.trameContrat.delete({ where: { id } }); return ok("Trame supprimée");
+      case "documentaire.entretiens:modifier": {
+        const lignes = String(v.rubriques ?? "").split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 60);
+        if (!lignes.length) return ko("Écrivez au moins une rubrique (une par ligne).");
+        const r = await appelInterne(request, typeof b.email === "string" ? b.email : null, "/api/trames-entretien", { methode: "PUT", corps: { type: id, rubriques: lignes.map((label) => ({ label })) } });
+        const d = await r.json().catch(() => ({}));
+        return r.ok ? ok("✓ Trame enregistrée pour tous les clients") : ko(d?.erreur ?? `Refusé (${r.status})`, r.status);
+      }
+      case "documentaire.entretiens:defaut": {
+        const r = await appelInterne(request, typeof b.email === "string" ? b.email : null, `/api/trames-entretien?type=${encodeURIComponent(id)}`, { methode: "DELETE" });
+        return r.ok ? ok("Trame par défaut rétablie") : ko(`Refusé (${r.status})`, r.status);
+      }
+      case "releves.releves:valider":
+      case "releves.releves:refuser": {
+        const r = await appelInterne(request, typeof b.email === "string" ? b.email : null, "/api/admin/modifier", { methode: "POST", corps: { modele: "releveMois", id, data: b.action === "valider" ? { statut: "Validé" } : { statut: "Refusé", motifRefus: t(v.motif, 500) || null } } });
+        const d = await r.json().catch(() => ({}));
+        return r.ok ? ok(b.action === "valider" ? "✓ Relevé validé" : "Relevé refusé") : ko(d?.erreur ?? `Refusé (${r.status})`, r.status);
+      }
       case "cabinets.cabinets:creer":
         if (!t(v.nom)) return ko("Le nom du cabinet est obligatoire.");
         await prisma.cabinet.create({ data: { nom: t(v.nom), siret: t(v.siret) || null, ville: t(v.ville) || null, email: t(v.email) || null, telephone: t(v.telephone, 30) || null, tarifForfait: num(v.tarifForfait), tarifParClient: num(v.tarifParClient) } });
