@@ -1,6 +1,7 @@
 import BuddyChat from "@/components/BuddyChat";
 import GardeDroits from "@/components/GardeDroits";
 import BandeauDemo from "@/components/BandeauDemo";
+import BandeauIntervention from "@/components/BandeauIntervention";
 import { getSessionBrute } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { estSessionDemo } from "@/lib/demo";
@@ -81,6 +82,7 @@ export default async function ClientLayout({ children }: { children: React.React
   return (
     <>
       <BandeauMaintenance etat={maintenance} />
+      <BandeauIntervention />
       {estSessionDemo(session) && <BandeauDemo />}
       {clientsCabinet && session?.modeCabinet && <BandeauCabinet cabinet={session.modeCabinet.nom} clientId={session.entrepriseId!} clients={clientsCabinet} />}
       <GardeDroits>{children}</GardeDroits>

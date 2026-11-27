@@ -22,7 +22,7 @@ export function appelDuPortail(authorization: string | null): boolean {
 
 const utilises = new Map<string, number>(); // jetons déjà utilisés (mémoire courte, le jeton expire en 60 s)
 
-export type JetonSso = { email: string; app: string; exp: number; n: string; retour?: string; integre?: boolean };
+export type JetonSso = { email: string; app: string; exp: number; n: string; retour?: string; integre?: boolean; client?: string; nom?: string };
 
 export function lireJetonSso(jeton: string | null, app: string): JetonSso | null {
   if (!hubActif() || !jeton || jeton.length > 1500) return null;
