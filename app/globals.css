@@ -619,7 +619,8 @@ html[data-theme="dark"] .fr-nav-logo-client { box-shadow: 0 0 0 1px #404040; }
    Admin intégré dans le portail FRANEO : seul le contenu s'affiche
    (la navigation est celle du portail)
    ========================================================= */
-html.fr-integre .fr-nav, html.fr-integre aside.fr-sidebar, html.fr-integre .fr-buddy, html.fr-integre .fr-bandeau-hors-ligne { display: none !important; }
+/* Intervention d'un admin FRANEO dans l'espace d'un client : le menu du client reste visible pour naviguer partout */
+html.fr-integre:not(.fr-intervention) .fr-nav, html.fr-integre:not(.fr-intervention) aside.fr-sidebar, html.fr-integre .fr-buddy, html.fr-integre .fr-bandeau-hors-ligne { display: none !important; }
 html.fr-integre body { background: #f6f3ef; }
 html.fr-integre main { padding-top: 16px !important; }
 

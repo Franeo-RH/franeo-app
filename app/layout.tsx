@@ -47,7 +47,7 @@ export default function RootLayout({
         {/* Thème sombre / clair appliqué avant l'affichage (pas de flash blanc) */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `var h=document.documentElement;try{if(window.top!==window.self)h.classList.add("fr-integre");}catch(e){h.classList.add("fr-integre");}try{var t=localStorage.getItem("franeo-theme");if(t==="dark"&&!h.classList.contains("fr-integre")&&location.pathname.indexOf("/admin")!==0)h.dataset.theme="dark";}catch(e){}`,
+            __html: `var h=document.documentElement;try{if(window.top!==window.self)h.classList.add("fr-integre");}catch(e){h.classList.add("fr-integre");}try{if(document.cookie.indexOf("franeo_intervention=")>-1)h.classList.add("fr-intervention");}catch(e){}try{var t=localStorage.getItem("franeo-theme");if(t==="dark"&&!h.classList.contains("fr-integre")&&location.pathname.indexOf("/admin")!==0)h.dataset.theme="dark";}catch(e){}`,
           }}
         />
         {/* Affichée dans le portail admin : thème et navigation pilotés par le portail */}
