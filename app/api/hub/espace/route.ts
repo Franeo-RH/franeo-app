@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { appelDuPortail } from "@/lib/hub";
+import { chargerEcheances } from "@/lib/rappels-serveur";
 import { lireSuivi, agirSuivi } from "@/lib/hub-espace-suivi";
 import { lireClient, agirClient } from "@/lib/hub-espace-client";
 import { lirePilotage, agirPilotage } from "@/lib/hub-espace-pilotage";
@@ -43,7 +44,17 @@ export async function GET(request: NextRequest) {
         prisma.ticket.count({ where: { statut: { in: ["Ouvert", "En cours"] }, entreprise: { demo: false } } }).catch(() => 0),
         prisma.demandeRecrutement.count({ where: { statut: { notIn: ["Terminé", "Annulé"] }, entreprise: { demo: false } } }).catch(() => 0),
       ]);
+      // Pastilles des onglets du portail (ce qui attend une action)
+      const [absences, demandesSal, impayes, recrusRecus, echeancesRetard] = await Promise.all([
+        prisma.absence.count({ where: { statut: "En attente", entreprise: { demo: false } } }).catch(() => 0),
+        prisma.demandeSalarie.count({ where: { statut: "EN_ATTENTE", entreprise: { demo: false } } }).catch(() => 0),
+        prisma.facturation.count({ where: { statut: { not: "Payé" }, dateLimitePaie: { lt: now }, entreprise: { demo: false } } }).catch(() => 0),
+        prisma.demandeRecrutement.count({ where: { statut: "Reçue", entreprise: { demo: false } } }).catch(() => 0),
+        chargerEcheances({ sansDemo: true }).then((l) => l.filter((e) => e.jours < 0).length).catch(() => 0),
+      ]);
+      const pastilles: Record<string, number> = { paie: variables + clotures, "releves.releves": releves, "suivi.absences": absences, "suivi.demandes": demandesSal, "suivi.echeances": echeancesRetard, "pilotage.impayes": impayes, "pilotage.recrutement": recrusRecus };
       return NextResponse.json({
+        pastilles,
         kpis: [{ label: "Clients actifs", valeur: String(clients) }, { label: "Salariés suivis", valeur: String(salaries) }, { label: "Variables à valider", valeur: String(variables), alerte: variables > 0 }, { label: "Relevés à valider", valeur: String(releves), alerte: releves > 0 }, { label: "Clôtures à traiter", valeur: String(clotures), alerte: clotures > 0 }, { label: "Tickets ouverts", valeur: String(tickets) }, { label: "Recrutements en cours", valeur: String(recrutements) }],
         aTraiter: [
           ...(variables ? [{ titre: `${variables} variable(s) de paie à valider`, lien: "/paie" }] : []),
